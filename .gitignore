@@ -1,4 +1,5 @@
 omdb_api.txt
+goto_locs.json
 settings.ini
 mariadb_read.py
 mariadb_test.py
