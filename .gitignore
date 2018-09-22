@@ -1,2 +1,4 @@
 omdb_api.txt
 settings.ini
+mariadb_read.py
+mariadb_test.py
