@@ -4,20 +4,18 @@
 
 import argparse
 import os
-import paths
-import user_input
 import shlex
 import subprocess
 import re
-from printout import print_class as pr
+import str_o
 import filetools as ftool
 import tvshow as tvtool
 import movie as mtool
 import db_mov as movie_database
-import subscene
+#import subscene
 
 DB_MOV = movie_database.database()
-PRINT = pr(os.path.basename(__file__))
+PRINT = str_o.PrintClass(os.path.basename(__file__))
 
 PARSER = argparse.ArgumentParser(description='subTools')
 PARSER.add_argument('command', type=str, help='commands: ripall, renameall')
