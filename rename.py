@@ -1,11 +1,12 @@
 #!/usr/bin/env python3.6
 
-'''File renaming functions pass --dir file/dir to process'''
+'''File renaming functions pass --dir file/dir to process, requires unidecode library'''
 
 import os
 import argparse
 import sys
 import re
+from unidecode import unidecode
 
 
 def op_spaces_to_char(file_path, replace_char='_'):
@@ -65,6 +66,12 @@ def op_add_leading_zeroes(file_path):
     return file_name
 
 
+def op_unidecode(file_path):
+    ''' Runs unidecode lib on string/filename '''
+    file_name = str(os.path.basename(file_path))
+    return unidecode(file_name)
+
+
 def rename_operation(file_path, operations):
     '''Runs string operations on filename, then renames the file'''
     file_name = str(os.path.basename(file_path))
@@ -86,7 +93,8 @@ OPERATIONS = [op_spaces_to_char,
               op_trim_extras,
               op_replace_special_chars,
               op_remove_special_chars,
-              op_add_leading_zeroes]
+              op_add_leading_zeroes,
+              op_unidecode]
 
 
 if __name__ == "__main__":
