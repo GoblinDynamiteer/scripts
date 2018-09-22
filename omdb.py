@@ -1,12 +1,18 @@
-# -*- coding: utf-8 -*-
-import json, sys, re, os, urllib.parse, urllib.request
+#!/usr/bin/env python3.6
 
-site = "http://www.omdbapi.com"
+import json
+import re
+import os
+import urllib.parse
+import urllib.request
+
+URL = "http://www.omdbapi.com"
+
 
 class omdb_search:
     def __init__(self, query,
-        type = None, year = None, api_key = None,
-        season = None, episode = None):
+                 type=None, year=None, api_key=None,
+                 season=None, episode=None):
         _apk = self._load_api_key()
         self.url_args = {}
         if not _apk and api_key:
@@ -14,7 +20,7 @@ class omdb_search:
             _apk = api_key
         elif not _apk:
             print("no valid API-key found or passed, quitting")
-            quit();
+            quit()
         self.url_args['apikey'] = _apk
         self.json_data = ""
         if self._is_imdb(query):
@@ -30,18 +36,18 @@ class omdb_search:
             self.url_args['Season'] = season
         if episode:
             self.url_args['Episode'] = episode
-        self.search_string_url = site + "?" + urllib.parse.urlencode(self.url_args)
-        self._search();
+        self.search_string_url = URL + "?" + \
+            urllib.parse.urlencode(self.url_args)
+        self._search()
 
     def get_url(self):
+        ''' Returns generated URL used for query '''
         return self.search_string_url
-
-    def get_api(self):
-        return self.url_args['apikey']
 
     def _search(self):
         try:
-            response = urllib.request.urlopen(self.search_string_url, timeout=4).read().decode("utf-8")
+            response = urllib.request.urlopen(
+                self.search_string_url, timeout=4).read().decode("utf-8")
             self.json_data = json.loads(response)
         except:
             self.json_data = None
@@ -68,21 +74,21 @@ class omdb_search:
         except:
             return None
 
-    # Check if string is an IMDB-id
-    def _is_imdb(self, string):
-        re_imdb = re.compile("^tt\d{1,}")
+    @staticmethod
+    def _is_imdb(string):
+        re_imdb = re.compile(r"^tt\d{1,}")
         return True if re_imdb.search(string) else False
 
-    #Check that string is valid type
-    def _valid_type(self, string):
-        if string == None:
+    @staticmethod
+    def _valid_type(string):
+        if string is None:
             return False
-        re_type = re.compile("(^movie$|^series$|^episode$)")
+        re_type = re.compile(r"(^movie$|^series$|^episode$)")
         return True if re_type.search(string) else False
 
-    #Check that string is valid year
-    def _valid_year(self, string):
-        if string == None:
+    @staticmethod
+    def _valid_year(string):
+        if string is None:
             return False
-        re_year = re.compile("^[1-2]\d{3}$")
+        re_year = re.compile(r"^[1-2]\d{3}$")
         return True if (re_year.search(string) or string != None) else False
