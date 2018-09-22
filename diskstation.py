@@ -5,12 +5,11 @@
 import os
 import platform
 import subprocess
-from config import configuration_manager as cfg
-from printout import print_class as pr
-import paths
+import config
+import str_o
 
-PRINT = pr(os.path.basename(__file__))
-CONFIG = cfg()
+PRINT = str_o.PrintClass(os.path.basename(__file__))
+CONFIG = config.ConfigurationManager()
 NAS_IP = "192.168.0.101"
 
 

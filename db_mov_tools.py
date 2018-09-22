@@ -1,11 +1,15 @@
-# -*- coding: utf-8 -*-
-import paths, json, os, argparse
+#!/usr/bin/env python3.6
+
+'''Movie Database tools'''
+
+import os
+import argparse
 import db_mov as movie_database
 import filetools as ftool
 import movie as mtool
-from printout import print_class as pr
+import str_o
 
-pr = pr(os.path.basename(__file__))
+pr = str_o.PrintClass(os.path.basename(__file__))
 db = movie_database.database()
 if not db.load_success():
     pr.error("database read error, quitting...")
@@ -16,14 +20,15 @@ mlist = db.list_movies()
 letters = os.listdir(mov_root)
 letters.sort()
 
-_valid_letters = { "#", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
-    "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "VW", "X", "Y", "Z" }
+_valid_letters = {"#", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
+                  "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "VW", "X", "Y", "Z"}
+
 
 def try_add_nfo(mov):
-    imdbid_omdb = db.omdb_data(mov,'imdbID')
-    let = db.movie_data(mov,'letter')
+    imdbid_omdb = db.omdb_data(mov, 'imdbID')
+    let = db.movie_data(mov, 'letter')
     path = os.path.join(mov_root, let, mov)
-    if mtool.has_nfo(path): # user probably manually added nfo
+    if mtool.has_nfo(path):  # user probably manually added nfo
         imdb_id = mtool.nfo_to_imdb(path)
         db.update(mov, 'nfo', True)
         db.update(mov, 'imdb', imdb_id)
@@ -36,6 +41,7 @@ def try_add_nfo(mov):
         return True
     return False
 
+
 def update_omdb_search(mov):
     movie_data = db.movie_data(mov)
     omdb_data = mtool.omdb_search(movie_data)
@@ -44,31 +50,34 @@ def update_omdb_search(mov):
         return True
     return False
 
+
 def scan_for_deleted_movies():
-    pr.info("scanning for deleted movies...")
+    PRINT.info("scanning for deleted movies...")
     need_save = False
     for mov in mlist:
         if db.movie_data(mov, 'status') == "deleted":
             continue
         path_to_check = os.path.join(mov_root, db.movie_data(mov, 'letter'),
-            db.movie_data(mov, 'folder'))
+                                     db.movie_data(mov, 'folder'))
         if not os.path.isdir(path_to_check):
-            pr.info("folder deleted: {}".format(path_to_check))
+            PRINT.info("folder deleted: {}".format(path_to_check))
             db.update(mov, 'status', "deleted")
             need_save = True
     if need_save:
         db.save()
         ftool.copy_dbs_to_webserver("movie")
     else:
-        pr.info("nothing updated")
+        PRINT.info("nothing updated")
+
 
 def db_maintainance():
-    pr.info("running moviedb maintainance...")
+    PRINT.info("running moviedb maintainance...")
     need_save = False
     for mov in mlist:
         if db.movie_data(mov, 'status') == "deleted":
             continue
-        full_path = os.path.join(mov_root, db.movie_data(mov, 'letter'), db.movie_data(mov, 'folder'))
+        full_path = os.path.join(mov_root, db.movie_data(
+            mov, 'letter'), db.movie_data(mov, 'folder'))
         # Update movies with missing status
         if not db.movie_data(mov, 'status'):
             if os.path.isdir(full_path):
@@ -84,14 +93,15 @@ def db_maintainance():
                 need_save = True
         # Wrong title...
         elif "Title" in data and data['Title'].startswith("#"):
-            pr.warning(f"{mov} has faulty title: [{data['Title']}]")
+            PRINT.warning(f"{mov} has faulty title: [{data['Title']}]")
             if update_omdb_search(mov):
                 if "Title" in data and not data['Title'].startswith("#"):
                     need_save = True
                 elif data['Title'].startswith("#"):
-                    pr.info("omdb data still contains faulty title, using folder as title")
+                    PRINT.info(
+                        "omdb data still contains faulty title, using folder as title")
                     title = mtool.determine_title(db.movie_data(mov, 'folder'))
-                    pr.info(f"guessed title: [{title}]")
+                    PRINT.info(f"guessed title: [{title}]")
                     data['Title'] = title
                     db.update(mov, 'omdb', data)
                     need_save = True
@@ -100,7 +110,7 @@ def db_maintainance():
             if not sub_data[lang]:
                 sub = mtool.has_subtitle(full_path, lang)
                 if sub:
-                    pr.info(f"found [{lang}] sub for {mov}")
+                    PRINT.info(f"found [{lang}] sub for {mov}")
                     sub_data[lang] = sub
                     db.update(mov, 'subs', sub_data)
                     need_save = True
@@ -108,10 +118,12 @@ def db_maintainance():
         db.save()
         ftool.copy_dbs_to_webserver("movie")
     else:
-        pr.info("nothing updated")
+        PRINT.info("nothing updated")
+
 
 parser = argparse.ArgumentParser(description='MovieDb tools')
-parser.add_argument('func', type=str, help='MovieDb command: maintain, checkdeleted')
+parser.add_argument(
+    'func', type=str, help='MovieDb command: maintain, checkdeleted')
 args = parser.parse_args()
 
 if args.func == "maintain":

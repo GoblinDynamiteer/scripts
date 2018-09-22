@@ -5,20 +5,20 @@
 
 import argparse
 import os
-import paths
-import user_input
+import str_i
+import str_o
 import re
 import shutil
 import subprocess
 import movie
 import filetools
 import tvshow
-from config import configuration_manager as cfg
-from printout import print_class as pr
+import config
 
-PRINT = pr(os.path.basename(__file__))
-CONFIG = cfg()
-script = os.path.basename(__file__)
+PRINT = str_o.PrintClass(os.path.basename(__file__))
+INPUT = str_i
+CONFIG = config.ConfigurationManager()
+SCRIPT = os.path.basename(__file__)
 PARSER = argparse.ArgumentParser(description='TV/Movie UnRarer')
 PARSER.add_argument('dir', type=str, help='Path to movie or tv source')
 ARGS = PARSER.parse_args()
@@ -56,7 +56,7 @@ def move_mov(file_name_s, folder_name=None):
                         movie.determine_letter(file_name_s), folder, file_dest)
     PRINT.info(f'move [{file_name_s}]')
     PRINT.info(f'---> [{dest}]')
-    if user_input.yes_no("Proceed with move?", script_name=None):
+    if str_i.yes_no("Proceed with move?", script_name=None):
         if not os.path.exists(dest):
             os.makedirs(dest)
         command = _generate_mv_command(src, dest)
@@ -69,7 +69,7 @@ def move_ep(file_name_s):
     dest = tvshow.show_season_path_from_ep_s(file_name_s)
     PRINT.info(f'move [{file_name_s}]')
     PRINT.info(f'---> [{dest}]')
-    if user_input.yes_no("Proceed with move?", script_name=None):
+    if INPUT.yes_no("Proceed with move?", script_name=None):
         os.system("mv {} \"{}\"".format(src, dest))
         PRINT.info("File moved!")
 
@@ -85,7 +85,7 @@ def extract_ep(folder):
     PRINT.info(f"found rar-file: [{rar_file}]")
     PRINT.info(f'extract [{folder}]')
     PRINT.info(f'------> [{dest}]')
-    if user_input.yes_no("proceed with extraction?", script_name=None):
+    if INPUT.yes_no("proceed with extraction?", script_name=None):
         os.system("unrar e \"{}\" \"{}\"".format(src_rar, dest))
         PRINT.info("done!")
 
@@ -103,8 +103,8 @@ def extract_mov(folder):
         return
     source_file = os.path.join(source_path, rar_file)
     PRINT.info("Found rar-file: [ {} ]".format(os.path.basename(source_file)))
-    if user_input.yes_no("Extract to: [ {} ]".format(dest_path),
-                         script_name=os.path.basename(__file__)):
+    if INPUT.yes_no("Extract to: [ {} ]".format(dest_path),
+                    script_name=os.path.basename(__file__)):
         os.system("unrar e \"{}\" \"{}\"".format(source_file, dest_path))
     else:
         return
@@ -133,7 +133,7 @@ def extract_season(folder):
     season = tvshow.guess_season(folder)
     PRINT.info("guessed season: {}".format(season))
     dest_path = os.path.join(dest_path, f"S{season:02d}")
-    if user_input.yes_no("Extract to: {}".format(dest_path), script_name=script):
+    if INPUT.yes_no("Extract to: {}".format(dest_path), script_name=SCRIPT):
         move_subs(source_path, folder)
         if not os.path.exists(dest_path):
             os.makedirs(dest_path)

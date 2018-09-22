@@ -1,21 +1,29 @@
-# -*- coding: utf-8 -*-
-import json, argparse, tvmaze, sys
+#!/usr/bin/env python3.6
 
-parser = argparse.ArgumentParser(description='TVMaze search')
-parser.add_argument('query', type = str, help='Search query, Show title'\
-    ' or IMDb-id')
-parser.add_argument('-episode', '-e', dest='episode', help='Episode',
-    default=None)
-parser.add_argument('-season', '-s', dest='season', help='Season',
-    default=None)
+''' Search TVMaze '''
 
-args = parser.parse_args()
-maze = tvmaze.tvmaze_search(args.query)
-search = tvmaze.tvmaze_search(args.query, episode=args.episode, season=args.season)
+import json
+import argparse
+import sys
+import tvmaze
 
-if search.data() == None:
-    print("Error searching for {}".format(args.query))
-    print("String Generated: {}".format(search.get_url()))
+
+PARSER = argparse.ArgumentParser(description='TVMaze search')
+PARSER.add_argument('query', type=str, help='Search query, Show title'
+                    ' or IMDb-id')
+PARSER.add_argument('-episode', '-e', dest='episode', help='Episode',
+                    default=None)
+PARSER.add_argument('-season', '-s', dest='season', help='Season',
+                    default=None)
+
+ARGS = PARSER.parse_args()
+MAZE = tvmaze.tvmaze_search(ARGS.query)
+SEARCH_RESULT = tvmaze.tvmaze_search(
+    ARGS.query, episode=ARGS.episode, season=ARGS.season)
+
+if not SEARCH_RESULT.data():
+    print(f"Error searching for: {ARGS.query}")
+    print(f"String Generated: {SEARCH_RESULT.get_url()}")
     sys.exit()
 else:
-    print(json.dumps(search.data(), indent=4))
+    print(json.dumps(SEARCH_RESULT.data(), indent=4))

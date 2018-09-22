@@ -1,21 +1,26 @@
-# -*- coding: utf-8 -*-
-import paths, json, io, os, filetools
-import diskstation as ds
-from config import configuration_manager as cfg
-from printout import print_class as pr
+#!/usr/bin/env python3.6
 
-pr = pr(os.path.basename(__file__))
+'''TV Database handler'''
+
+import json
+import os
+import filetools
+import config
+import str_o
+
+PRINT = str_o.PrintClass(os.path.basename(__file__))
 
 try:
     to_unicode = unicode
 except NameError:
     to_unicode = str
 
+
 class database:
     def __init__(self):
-        self._config = cfg()
+        self._config = config.ConfigurationManager()
         self.script_path = os.path.dirname(os.path.realpath(__file__))
-        self._db_file  = self._config.get_setting("path", "tvdb")
+        self._db_file = self._config.get_setting("path", "tvdb")
         self._loaded_db = None
         self._load_db()
         self._show_list = []
@@ -30,28 +35,29 @@ class database:
     def _load_db(self):
         if filetools.is_file_empty(self._db_file):
             self._loaded_db = {}
-            pr.warning("creating empty database")
+            PRINT.warning("creating empty database")
         else:
             try:
                 with open(self._db_file, 'r') as db:
                     self._loaded_db = json.load(db)
-                    pr.info("loaded database file: [ {} ]".format(self._db_file))
+                    PRINT.info("loaded database file: [ {} ]".format(
+                        self._db_file))
             except:
-                pr.error("Could not open file: {0}".format(self._db_file))
+                PRINT.error("Could not open file: {0}".format(self._db_file))
                 self._loaded_db = None
 
     # Save to database JSON file
     def save(self):
         with open(self._db_file, 'w', encoding='utf8') as outfile:
             str_ = json.dumps(self._loaded_db,
-                indent=4, sort_keys=True,
-                separators=(',', ': '), ensure_ascii=False)
+                              indent=4, sort_keys=True,
+                              separators=(',', ': '), ensure_ascii=False)
             outfile.write(to_unicode(str_))
-        pr.success("saved database to {}!".format(self._db_file))
+        PRINT.success("saved database to {}!".format(self._db_file))
         if self.backup_to_ds():
-            pr.success("backed up database!")
+            PRINT.success("backed up database!")
         else:
-            pr.warning("could not backup database!")
+            PRINT.warning("could not backup database!")
 
     # Add show to database
     def add(self, show):
@@ -64,7 +70,7 @@ class database:
         if self.load_success():
             show_d = self._loaded_db[show_s]
             show_d['seasons'].append(season_d)
-            pr.info(f"added {season_d['folder']} to {show_s}")
+            PRINT.info(f"added {season_d['folder']} to {show_s}")
 
     def add_ep(self, show, season, episode_object):
         if self.load_success():
@@ -72,7 +78,8 @@ class database:
             season_ix = 0
             for season_obj in show_obj['seasons']:
                 if season_obj['folder'] == season:
-                    show_obj['seasons'][season_ix]['episodes'].append(episode_object)
+                    show_obj['seasons'][season_ix]['episodes'].append(
+                        episode_object)
                     break
                 season_ix += 1
             self._loaded_db[show] = show_obj
@@ -82,21 +89,24 @@ class database:
         return True if self._loaded_db is not None else False
 
     # Update data for show
-    def update(self, show_folder, data, key = None):
+    def update(self, show_folder, data, key=None):
         if not self.exists(show_folder):
-            pr.warning("update: {} is not in database!".format(show_folder))
+            PRINT.warning("update: {} is not in database!".format(show_folder))
         else:
             try:
                 if key:
                     self._loaded_db[show_folder][key] = data
                     if key is 'omdb':
                         data = "omdb-search"
-                    pr.info("updated {} : {} = {}".format(show_folder, key, data))
+                    PRINT.info("updated {} : {} = {}".format(
+                        show_folder, key, data))
                 else:
                     self._loaded_db[show_folder] = data
-                    pr.info("updated {} with new data!".format(show_folder, data))
+                    PRINT.info("updated {} with new data: {}".format(
+                        show_folder, data))
             except:
-                pr.warning("update: Could not update {}!".format(show_folder))
+                PRINT.warning(
+                    "update: Could not update {}!".format(show_folder))
 
     # Get count of movies
     def count(self):
@@ -117,7 +127,7 @@ class database:
             else:
                 if key in self._loaded_db[show_s]:
                     return self._loaded_db[show_s][key]
-        pr.warning(f"[data] could not retrieve data for show")
+        PRINT.warning(f"[data] could not retrieve data for show")
         return None
 
     # Determine if show has an episode
@@ -129,7 +139,7 @@ class database:
                     if episode['file'] == episode_filename:
                         return True
         else:
-            pr.error(f"has_ep: not in db: [{show_s}]")
+            PRINT.error(f"has_ep: not in db: [{show_s}]")
         return False
 
     # Determine if show has season
@@ -141,7 +151,7 @@ class database:
                 if se.lower() == season_s.lower():
                     return True
         else:
-            pr.error(f"has_season: not in db: [{show_s}]")
+            PRINT.error(f"has_season: not in db: [{show_s}]")
         return False
 
     # Check if tv show exists in loaded database

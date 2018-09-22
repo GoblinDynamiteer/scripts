@@ -9,11 +9,11 @@ import re
 import argparse
 import filetools
 from datetime import datetime
-from printout import print_class as pr
-from config import configuration_manager as cfg
 import db_mov as movie_database
 import db_tv as tv_database
 import tvshow
+import config
+import str_o
 
 
 DB_MOV = movie_database.database()
@@ -22,8 +22,8 @@ DB_TV = tv_database.database()
 assert DB_MOV.load_success(), "Movie database could not be loaded!"
 assert DB_TV.load_success(), "TV database could not be loaded!"
 
-PRINT = pr(os.path.basename(__file__))
-CONFIG = cfg()
+PRINT = str_o.PrintClass(os.path.basename(__file__))
+CONFIG = config.ConfigurationManager()
 PARSER = argparse.ArgumentParser(description='WBTools')
 PARSER.add_argument('func', type=str, help='WB command: new, get')
 PARSER.add_argument('-t', '--type', dest='type', default=None,
@@ -197,7 +197,7 @@ def list_new_files(args):
 
 def download_files(args):
     if not args.dl:
-        PRINT.info("wbget: Did not supply any dl!", category="error")
+        PRINT.error("wbget: Did not supply any dl!")
         exit()
     dl_list = args.dl.split(',')
     number_span_regex = re.compile("^\\d{1,3}-\\d{1,3}$")

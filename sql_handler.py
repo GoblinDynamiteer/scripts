@@ -1,16 +1,18 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-import paths, os
-import MySQLdb
-from printout import print_class as pr
+#!/usr/bin/python3.6
 
-pr = pr(os.path.basename(__file__))
+import os
+import MySQLdb
+import str_o
+
+PRINT = str_o.PrintClass(os.path.basename(__file__))
+
 
 class sql_connection:
     def __init__(self, remote_address, login, password, port, database_name):
         self.connected = False
         self.cursor = None
-        self.sql_db_conn = MySQLdb.connect(host=remote_address, user=login, passwd=password, port=port, db=database_name)
+        self.sql_db_conn = MySQLdb.connect(
+            host=remote_address, user=login, passwd=password, port=port, db=database_name)
         if self.sql_db_conn:
             self.connected = True
             self.cursor = self.sql_db_conn.cursor()
@@ -20,15 +22,15 @@ class sql_connection:
         data = (value, match_data)
         if self.__run_query(query, data):
             self.__commit()
-            pr.info(f"updated: {match_data} : {column} = {value}")
+            PRINT.info(f"updated: {match_data} : {column} = {value}")
             return True
         else:
-            pr.warning(f"failed update: {match_data} : {column} = {value}")
+            PRINT.warning(f"failed update: {match_data} : {column} = {value}")
             return False
 
-    def insert(self, table, columns = [], data=[]):
+    def insert(self, table, columns=[], data=[]):
         if len(columns) != len(data):
-            pr.warning("columns and data doesnt match!")
+            PRINT.warning("columns and data doesnt match!")
             return
         query = f"INSERT INTO {table} ("
         for column in columns:
@@ -40,12 +42,12 @@ class sql_connection:
         result = self.__run_query(query, tuple(data))
         if result:
             self.__commit()
-            pr.info(f"inserted {data} into table {table}")
+            PRINT.info(f"inserted {data} into table {table}")
             return True
         else:
             return False
 
-    def select(self, table, columns = [], column_to_match = None, match_data = None):
+    def select(self, table, columns=[], column_to_match=None, match_data=None):
         column_string = ""
         if not columns:
             column_string = "*"
@@ -59,13 +61,13 @@ class sql_connection:
         result_list = []
         if result:
             self.__commit()
-            pr.info(f"selected: {columns}")
+            PRINT.info(f"selected: {columns}")
             for column_string in self.cursor:
                 print(f"result: {str(column_string)}")
                 result_list.append(str(column_string))
             return result
         else:
-            pr.warning(f"failed select query")
+            PRINT.warning(f"failed select query")
             return False
 
     def __run_query(self, query, data):

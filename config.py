@@ -1,17 +1,22 @@
-# Handle settings in settings.ini
-import paths
+#!/usr/bin/env python3.6
+
+'''String output'''
+
 import configparser
 import os
-from printout import print_class as pr
+import str_o
 
-PRINT = pr(os.path.basename(__file__))
+PRINT = str_o.PrintClass(os.path.basename(__file__))
 
 
-class configuration_manager:
-    def __init__(self):
+class ConfigurationManager:
+    def __init__(self, settings_file=None):
+        if not settings_file:
+            path_of_config_script = os.path.dirname(os.path.abspath(__file__))
+            self.filename = os.path.join(path_of_config_script, "settings.ini")
+        else:
+            self.filename = settings_file
         self.config = None
-        self.filename = paths.get_path_to_file_same_dir(__file__,
-                                                        "settings.ini")
         self.load_success = False
         self._load_settings()
 

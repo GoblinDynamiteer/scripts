@@ -2,19 +2,17 @@
 
 ''' File tools '''
 
-import paths
 import platform
 import os
 import re
-import movie as movie_tools
 from datetime import datetime
-import diskstation as ds
 from shutil import copy2
-from config import configuration_manager as cfg
-from printout import print_class as pr
+import movie as movie_tools
+import config
+import str_o
 
-PRINT = pr(os.path.basename(__file__))
-CONFIG = cfg()
+PRINT = str_o.PrintClass(os.path.basename(__file__))
+CONFIG = config.ConfigurationManager()
 
 
 def get_creation_date(path_to_file_or_folder, convert=False):
