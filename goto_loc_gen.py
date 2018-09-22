@@ -1,11 +1,13 @@
 #!/usr/bin/python3.6
 
+''' Generates a goto_locs.json file to be used by navigational script goto.py '''
+
 import os
-import sys
 import json
 
 
 def save(data, json_file):
+    ''' Saves generated goto-locations to a json-file, file is used in goto.py script '''
     with open(json_file, 'w', encoding='utf8') as jf:
         json_string = json.dumps(data,
                                  indent=4, sort_keys=True,
@@ -21,6 +23,7 @@ LOCS = {"dl":    {"destinations": [os.path.join(HOME, "downloads"),
                                    os.path.join(HOME, "Downloads"),
                                    os.path.join(os.sep, "volume2", "DATA", "Temp", "Downloads")]},
         "code":  {"destinations": [os.path.join(HOME, "code")]},
+        "script":  {"destinations": [os.path.join(HOME, "scripts")]},
         "film":  {"destinations": [os.path.join(HOME, "smb", "film"),
                                    os.path.join(os.sep, "volume2", "FILM")],
                   "alternatives": ["movies", "mov"]},
