@@ -74,27 +74,37 @@ def rename_operation(file_path, operations):
     os.rename(file_path, new_file_name)
 
 
-PARSER = argparse.ArgumentParser()
-PARSER.add_argument("--dir", help="directory or file to process", type=str)
-ARGS = PARSER.parse_args()
-FILES = []
+def rename_string(string_to_rename):
+    ''' Run rename on a string, when script is used as lib '''
+    for operation in OPERATIONS:
+        string_to_rename = operation(string_to_rename)
+    return string_to_rename
+
+
 OPERATIONS = [op_spaces_to_char,
               op_tolower,
               op_trim_extras,
               op_replace_special_chars,
               op_remove_special_chars,
               op_add_leading_zeroes]
-try:
-    if os.path.isdir(ARGS.dir):
-        FILES = os.listdir(ARGS.dir)
-    elif os.path.isfile(ARGS.dir):
-        FILES.append(ARGS.dir)
-except TypeError:
-    print("could not process passed directory or file!")
-    sys.exit()
 
-if FILES:
-    for f in FILES:
-        rename_operation(f, OPERATIONS)
-else:
-    print("no files to process")
+
+if __name__ == "__main__":
+    PARSER = argparse.ArgumentParser()
+    PARSER.add_argument("--dir", help="directory or file to process", type=str)
+    ARGS = PARSER.parse_args()
+    FILES = []
+    try:
+        if os.path.isdir(ARGS.dir):
+            FILES = os.listdir(ARGS.dir)
+        elif os.path.isfile(ARGS.dir):
+            FILES.append(ARGS.dir)
+    except TypeError:
+        print("could not process passed directory or file!")
+        sys.exit()
+
+    if FILES:
+        for f in FILES:
+            rename_operation(f, OPERATIONS)
+    else:
+        print("no files to process")
