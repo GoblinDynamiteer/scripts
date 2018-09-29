@@ -2,6 +2,7 @@
 
 ''' Personal script for interacting with NAS '''
 
+import argparse
 import os
 import sys
 import platform
@@ -106,3 +107,10 @@ def print_ifmounted(ds_share) -> None:
                 PRINT.info(f"{share} is mounted at {get_mount_path(share)}")
             else:
                 PRINT.info(f"{share} is not mounted!")
+
+
+if __name__ == "__main__":
+    PARSER = argparse.ArgumentParser()
+    PARSER.add_argument("share", help="DS share to mount", type=str)
+    ARGS = PARSER.parse_args()
+    mount(ARGS.share)
