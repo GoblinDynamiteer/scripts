@@ -5,11 +5,11 @@
 
 import argparse
 import os
-import str_i
-import str_o
 import re
 import shutil
 import subprocess
+import str_i
+import str_o
 import movie
 import filetools
 import tvshow
