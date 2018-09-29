@@ -13,15 +13,18 @@ CONFIG = config.ConfigurationManager()
 NAS_IP = "192.168.0.101"
 
 
-def get_mount_points():
+def get_ds_shares() -> list:
+    " Get a list of available DS shares "
     return ['TV', 'FILM', 'MISC', 'BACKUP', 'DATA', 'DOCEDU', 'AUDIO', 'Rest']
 
 
-def get_mount_dest():
+def get_mount_dest() -> str:
+    " Get local mount destination path "
     return CONFIG.get_setting("path", "dsmount")
 
 
-def get_home():
+def get_home() -> str:
+    " Get path to home directory "
     return CONFIG.get_setting("path", "home")
 
 
@@ -36,12 +39,12 @@ def _print_error_invalid_share(string):
 
 
 def mount(ds_share):
+    " Mount a DS share on a linux system "
     if platform.system() != 'Linux':
         PRINT.error("mount: Not on a Linux-system, quitting.")
         quit()
-
     mount_dest = get_mount_dest()
-    ds_shares = get_mount_points()
+    ds_shares = get_ds_shares()
     if ds_share == "all" or ds_share.upper() in ds_shares:
         for share in ds_shares:
             if share == ds_share.upper() or ds_share == "all":
@@ -60,10 +63,11 @@ def mount(ds_share):
         _print_error_invalid_share(ds_share)
 
 
-def ismounted(ds_share):
+def ismounted(ds_share) -> bool:
+    " Check if share is mounted"
     if ds_share.lower() == 'rest':
-        return
-    ds_shares = get_mount_points()
+        return False
+    ds_shares = get_ds_shares()
     mount_dest = get_mount_dest()
     if ds_share.upper() in ds_shares:
         local_dest = os.path.join(mount_dest, ds_share.lower())
@@ -73,12 +77,14 @@ def ismounted(ds_share):
         return False
     else:
         _print_error_invalid_share(ds_share)
+        return False
 
 
 def get_mount_path(ds_share):
+    " Gets mount full mount path on DS "
     if ds_share.lower() == 'rest':
-        return
-    ds_shares = get_mount_points()
+        return None
+    ds_shares = get_ds_shares()
     mount_dest = get_mount_dest()
     if ds_share.upper() in ds_shares:
         local_dest = os.path.join(mount_dest, ds_share.lower())
@@ -88,8 +94,9 @@ def get_mount_path(ds_share):
         return None
 
 
-def print_ifmounted(ds_share):
-    ds_shares = get_mount_points()
+def print_ifmounted(ds_share) -> None:
+    " Prints out information about share mount status "
+    ds_shares = get_ds_shares()
     for share in ds_shares:
         if share == 'Rest':
             continue
