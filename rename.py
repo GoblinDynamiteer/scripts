@@ -90,10 +90,10 @@ def rename_string(string_to_rename):
 
 OPERATIONS = [op_spaces_to_char,
               op_tolower,
-              op_trim_extras,
               op_replace_special_chars,
               op_remove_special_chars,
               op_add_leading_zeroes,
+              op_trim_extras,
               op_unidecode]
 
 
