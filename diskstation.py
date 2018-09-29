@@ -3,6 +3,7 @@
 ''' Personal script for interacting with NAS '''
 
 import os
+import sys
 import platform
 import subprocess
 import config
@@ -42,7 +43,7 @@ def mount(ds_share):
     " Mount a DS share on a linux system "
     if platform.system() != 'Linux':
         PRINT.error("mount: Not on a Linux-system, quitting.")
-        quit()
+        sys.exit(1)
     mount_dest = get_mount_dest()
     ds_shares = get_ds_shares()
     if ds_share == "all" or ds_share.upper() in ds_shares:
