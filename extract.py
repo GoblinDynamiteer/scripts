@@ -159,52 +159,55 @@ def move_subs(full_source_path, folder):
                 shutil.move(file_to_move, dest_path)
 
 
-for item in ITEMS:
-    PRINT.info(f"processing {ITEM_COUNT} of {len(ITEMS)}")
-    dir_name = movie.remove_extras_from_folder(item)
-    full_path = os.path.join(CWD, item)
-    guessed_type = filetools.guess_folder_type(dir_name)
-    if guessed_type == 'movie':
-        PRINT.info("guessed movie!")
-        if filetools.is_existing_file(full_path) and \
-            (item.endswith(".mkv") or item.endswith(".mp4") or
-             item.endswith(".avi")):
-            PRINT.info("is video file (not rared)")
-            move_mov(item)
-        elif filetools.is_existing_folder(full_path):
-            file_path = filetools.get_vid_file(full_path, full_path=True)
-            if file_path:
-                file_name = filetools.get_vid_file(full_path, full_path=False)
-                size_bytes = os.path.getsize(file_path)
-                size_mbytes = size_bytes / 1024.0 / 1024.0
-                if size_mbytes > 200:
-                    os.system(f"mv \"{file_path}\" \"{CWD}\"")
-                    PRINT.info("moving to cwd...")
-                    move_mov(file_name, folder_name=item)
-            else:
-                extract_mov(str(item))
-    elif guessed_type == 'episode':
-        PRINT.info("guessed tv episode!")
-        if filetools.is_existing_file(full_path) and \
-            (item.endswith(".mkv") or item.endswith(".mp4") or
-             item.endswith(".avi")):
-            PRINT.info("is video file (not rared)")
-            move_ep(item)
-        elif filetools.is_existing_folder(full_path):
-            file_path = filetools.get_vid_file(full_path, full_path=True)
-            if file_path:
-                file_name = filetools.get_vid_file(full_path, full_path=False)
-                size_bytes = os.path.getsize(file_path)
-                size_mbytes = size_bytes / 1024.0 / 1024.0
-                if size_mbytes > 200:
-                    os.system(f"mv \"{file_path}\" \"{CWD}\"")
-                    PRINT.info("moving to cwd...")
-                    move_ep(file_name)
-            else:
-                extract_ep(str(item))
-    elif guessed_type == 'season':
-        PRINT.info("guessed tv season!")
-        extract_season(str(item))
-    else:
-        PRINT.error(f"Could not determine type of [{item}]")
-    ITEM_COUNT += 1
+if __name__ == "__main__":
+    for item in ITEMS:
+        PRINT.info(f"processing {ITEM_COUNT} of {len(ITEMS)}")
+        dir_name = movie.remove_extras_from_folder(item)
+        full_path = os.path.join(CWD, item)
+        guessed_type = filetools.guess_folder_type(dir_name)
+        if guessed_type == 'movie':
+            PRINT.info("guessed movie!")
+            if filetools.is_existing_file(full_path) and \
+                (item.endswith(".mkv") or item.endswith(".mp4") or
+                 item.endswith(".avi")):
+                PRINT.info("is video file (not rared)")
+                move_mov(item)
+            elif filetools.is_existing_folder(full_path):
+                file_path = filetools.get_vid_file(full_path, full_path=True)
+                if file_path:
+                    file_name = filetools.get_vid_file(
+                        full_path, full_path=False)
+                    size_bytes = os.path.getsize(file_path)
+                    size_mbytes = size_bytes / 1024.0 / 1024.0
+                    if size_mbytes > 200:
+                        os.system(f"mv \"{file_path}\" \"{CWD}\"")
+                        PRINT.info("moving to cwd...")
+                        move_mov(file_name, folder_name=item)
+                else:
+                    extract_mov(str(item))
+        elif guessed_type == 'episode':
+            PRINT.info("guessed tv episode!")
+            if filetools.is_existing_file(full_path) and \
+                (item.endswith(".mkv") or item.endswith(".mp4") or
+                 item.endswith(".avi")):
+                PRINT.info("is video file (not rared)")
+                move_ep(item)
+            elif filetools.is_existing_folder(full_path):
+                file_path = filetools.get_vid_file(full_path, full_path=True)
+                if file_path:
+                    file_name = filetools.get_vid_file(
+                        full_path, full_path=False)
+                    size_bytes = os.path.getsize(file_path)
+                    size_mbytes = size_bytes / 1024.0 / 1024.0
+                    if size_mbytes > 200:
+                        os.system(f"mv \"{file_path}\" \"{CWD}\"")
+                        PRINT.info("moving to cwd...")
+                        move_ep(file_name)
+                else:
+                    extract_ep(str(item))
+        elif guessed_type == 'season':
+            PRINT.info("guessed tv season!")
+            extract_season(str(item))
+        else:
+            PRINT.error(f"Could not determine type of [{item}]")
+        ITEM_COUNT += 1
