@@ -5,6 +5,28 @@
 import platform
 
 
+COLORS = {"black": 0,
+          "red": 196,
+          "dred": 88,
+          "lblue": 74,
+          "blue": 33,
+          "dblue": 21,
+          "purple": 171,
+          "orange": 214,
+          "teal": 123,
+          "green": 70,
+          "dgreen": 28,
+          "lgreen": 46,
+          "pink": 218,
+          "lyellow": 229,
+          "dyellow": 220,
+          "brown": 130,
+          "lgrey": 250,
+          "grey": 244,
+          "dgrey": 239,
+          "white": 256}
+
+
 class PrintClass:
     def __init__(self, script_name):
         self.script_file_name = script_name
@@ -33,6 +55,15 @@ class PrintClass:
             self.__print_no_line(string)
         if end_line:
             print("")
+
+    def color_str(self, string, foreground, background=None, bold=False):
+        "Returns colorized string"
+        colstring = "\033[38;5;" + str(COLORS[foreground]) + "m"
+        if background:
+            colstring += "\033[48;5;" + str(COLORS[background]) + "m"
+        if bold:
+            colstring += "\033[1m"
+        return colstring + string + "\033[0m"
 
     def warning(self, string, end_line=True):
         self.__print_script_name()
