@@ -5,6 +5,7 @@
 import datetime
 import argparse
 import os
+import sys
 import filetools as ftool
 import tvshow as tvtool
 import db_tv
@@ -13,10 +14,15 @@ import str_o
 PRINT = str_o.PrintClass(os.path.basename(__file__))
 DB_TV = db_tv.database()
 if not DB_TV.load_success():
-    quit()
+    sys.exit()
 
 ROOT = tvtool.root_path()
-SUB_DIRS = os.listdir(ROOT).sort()
+if not ROOT:
+    PRINT.error("could not determine tv root path, quitting!")
+    sys.exit()
+
+SUB_DIRS = os.listdir(ROOT)
+
 new_count = 0
 
 
