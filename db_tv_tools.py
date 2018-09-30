@@ -9,10 +9,10 @@ import filetools as ftool
 import tvshow as tvtool
 import str_o
 
-pr = str_o.PrintClass(os.path.basename(__file__))
+PRINT = str_o.PrintClass(os.path.basename(__file__))
 db = tv_database.database()
 if not db.load_success():
-    pr.error("database read error, quitting...")
+    PRINT.error("database read error, quitting...")
     quit()
 
 tv_root = tvtool.root_path()
@@ -166,7 +166,8 @@ def omdb_update():
             db.update(show_d["folder"], show_d, key=None)
     PRINT.info("done!")
     if success_count > 0:
-        PRINT.info("successfully updated omdb-data for {} items".format(success_count))
+        PRINT.info(
+            "successfully updated omdb-data for {} items".format(success_count))
     if save_db:
         db.save()
         ftool.copy_dbs_to_webserver("tv")
@@ -237,7 +238,8 @@ def tvmaze_update():
             db.update(show_d["folder"], show_d, key=None)
     PRINT.info("done!")
     if success_count > 0:
-        PRINT.info("successfully updated tvmaze-data for {} items".format(success_count))
+        PRINT.info(
+            "successfully updated tvmaze-data for {} items".format(success_count))
     if save_db:
         db.save()
         ftool.copy_dbs_to_webserver("tv")
@@ -334,17 +336,17 @@ elif args.func == "epdata":
     if args.key and args.data:
         find_ep_data(args.key, args.data)
     else:
-        pr.error("need to supply key and data for epdata")
+        PRINT.error("need to supply key and data for epdata")
 elif args.func == "omdbsearch":
     omdb_update()
 elif args.func == "tvmazesearch":
     tvmaze_update()
 elif args.func == "omdbforce":
     if not args.show_s:
-        pr.error("please supply show name with --s / -s")
+        PRINT.error("please supply show name with --s / -s")
     elif not db.exists(args.show_s):
-        pr.error("invalid show: {}".format(args.show_s))
+        PRINT.error("invalid show: {}".format(args.show_s))
     else:
         omdb_force_update(args.show_s)
 else:
-    pr.error("wrong command: {}".format(args.func))
+    PRINT.error("wrong command: {}".format(args.func))
