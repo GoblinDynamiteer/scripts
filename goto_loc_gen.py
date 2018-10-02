@@ -1,4 +1,4 @@
-#!/usr/bin/python3.6
+#!/usr/bin/python3.4
 
 ''' Generates a goto_locs.json file to be used by navigational script goto.py '''
 
@@ -18,6 +18,7 @@ def save(data, json_file):
 HOME = os.path.expanduser("~")
 SCRIPT_DIR = os.path.realpath(__file__)
 JSON_FILE_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), "goto_locs.json")
+MONSTER_OEB_HOME = os.path.join(os.sep, 'mnt', 'cs-builds', 'johan.kampe')
 
 LOCS = {"dl":    {"destinations": [os.path.join(HOME, "downloads"),
                                    os.path.join(HOME, "Downloads"),
@@ -28,6 +29,11 @@ LOCS = {"dl":    {"destinations": [os.path.join(HOME, "downloads"),
         "py":  {"destinations": [os.path.join(HOME, "script", "python")]},
         "cs":  {"destinations": [os.path.join(HOME, "cs")]},
         "cm":  {"destinations": [os.path.join(HOME, "cs", "chargemanager")]},
+        "oeb":  {"destinations": [os.path.join(MONSTER_OEB_HOME, 'oe-build')]},
+        "oeb35":  {"destinations": [os.path.join(MONSTER_OEB_HOME, 'oe-build-r3.5.x')]},
+        "oeb36":  {"destinations": [os.path.join(MONSTER_OEB_HOME, 'oe-build-r3.6.x')]},
+        "oeb37":  {"destinations": [os.path.join(MONSTER_OEB_HOME, 'oe-build-r3.7.x')]},
+        "oeb38":  {"destinations": [os.path.join(HOME, "cs", "chargemanager")]},
         "cm35":  {"destinations": [os.path.join(HOME, "cs", "chargemanager-r3.5.x")]},
         "cm36":  {"destinations": [os.path.join(HOME, "cs", "chargemanager-r3.6.x")]},
         "cm37":  {"destinations": [os.path.join(HOME, "cs", "chargemanager-r3.7.x")]},
