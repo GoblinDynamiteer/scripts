@@ -6,8 +6,13 @@ import os
 import argparse
 import sys
 import re
-from unidecode import unidecode
 
+unidecode_available = False
+try:
+    from unidecode import unidecode
+    unidecode_available = True
+except:
+    pass
 
 def op_spaces_to_char(file_path, replace_char='_'):
     '''Replace spaces in filename'''
@@ -69,6 +74,9 @@ def op_add_leading_zeroes(file_path):
 def op_unidecode(file_path):
     ''' Runs unidecode lib on string/filename '''
     file_name = str(os.path.basename(file_path))
+    if not unidecode_available:
+        print('unidecode not available, skipping operation')
+        return file_name
     return unidecode(file_name)
 
 
@@ -114,5 +122,6 @@ if __name__ == "__main__":
     if FILES:
         for f in FILES:
             rename_operation(f, OPERATIONS)
+        print("rename operations complete")
     else:
         print("no files to process")
