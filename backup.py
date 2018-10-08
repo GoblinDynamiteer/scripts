@@ -20,13 +20,6 @@ def find_drive_location():
     return None
 
 
-def find_backup_sources():
-    home = get_home()
-    src_list = []
-    possible_src = []
-    possible_src.append(os.path.join(home, '.config', 'i3'))
-
-
 def get_gdrive_home():
     homes = {'corsair': 'corsair'}
     host_name = socket.gethostname()
