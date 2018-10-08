@@ -7,12 +7,13 @@ import argparse
 import sys
 import re
 
-unidecode_available = False
+UNIDECODE_LIB_AVAILABLE = False
 try:
     from unidecode import unidecode
-    unidecode_available = True
-except:
+    UNIDECODE_LIB_AVAILABLE = True
+except ImportError:
     pass
+
 
 def op_spaces_to_char(file_path, replace_char='_'):
     '''Replace spaces in filename'''
@@ -74,7 +75,7 @@ def op_add_leading_zeroes(file_path):
 def op_unidecode(file_path):
     ''' Runs unidecode lib on string/filename '''
     file_name = str(os.path.basename(file_path))
-    if not unidecode_available:
+    if not UNIDECODE_LIB_AVAILABLE:
         print('unidecode not available, skipping operation')
         return file_name
     return unidecode(file_name)
