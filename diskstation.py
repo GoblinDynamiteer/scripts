@@ -77,6 +77,9 @@ def ismounted(ds_share) -> bool:
     mount_dest = get_mount_dest()
     if ds_share.upper() in ds_shares:
         local_dest = os.path.join(mount_dest, ds_share.lower())
+        if not os.path.exists(local_dest):
+            PRINT.info(f"creating mount destination [{local_dest}]")
+            os.makedirs(local_dest)
         subdirs = os.listdir(local_dest)
         if len(subdirs) > 1:
             return True
