@@ -27,6 +27,17 @@ COLORS = {"black": 0,
           "white": 256}
 
 
+def to_color_str(
+        string: str, foreground: str, background: str = None, bold: bool = False) -> str:
+    '''Returns "colorized" string'''
+    colstring = "\033[38;5;" + str(COLORS[foreground]) + "m"
+    if background:
+        colstring += "\033[48;5;" + str(COLORS[background]) + "m"
+    if bold:
+        colstring += "\033[1m"
+    return colstring + string + "\033[0m"
+
+
 class PrintClass:
     def __init__(self, script_name):
         self.script_file_name = script_name
@@ -55,15 +66,6 @@ class PrintClass:
             self.__print_no_line(string)
         if end_line:
             print("")
-
-    def color_str(self, string, foreground, background=None, bold=False):
-        "Returns colorized string"
-        colstring = "\033[38;5;" + str(COLORS[foreground]) + "m"
-        if background:
-            colstring += "\033[48;5;" + str(COLORS[background]) + "m"
-        if bold:
-            colstring += "\033[1m"
-        return colstring + string + "\033[0m"
 
     def warning(self, string, end_line=True):
         self.__print_script_name()
