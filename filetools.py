@@ -96,6 +96,9 @@ def _type_points(folder):
     for key in regex:
         if _is_regex_match(regex[key], folder):
             points[key] += 1
+    if not points['season'] and not points['episode']:  # Movies w/o year special case
+        if '2160p' in folder or '1080p' in folder:
+            points['movie'] += 1
     return points
 
 
