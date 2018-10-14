@@ -90,8 +90,8 @@ def _type_points(folder):
     folder = folder.replace(' ', '.')
     folder = folder.replace('.-.', '-')
     folder = movie_tools.remove_extras_from_folder(folder)
-    regex = {'season': '\.[Ss]\d{2}\.', 'episode': "\.[Ss]\d{2}[Ee]\d{2}",
-             'movie': "\.\d{4}\.\d{3,4}p\."}
+    regex = {'season': r'\.[Ss]\d{2}\.', 'episode': r"\.[Ss]\d{2}[Ee]\d{2}",
+             'movie': r"\.\d{4}\.\d{3,4}p\."}
     points = {'season': 0, 'episode': 0, 'movie': 0}
     for key in regex:
         if _is_regex_match(regex[key], folder):
