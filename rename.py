@@ -45,7 +45,7 @@ def op_remove_special_chars(file_path):
     '''Removes special characters like !#, '''
     file_name = str(os.path.basename(file_path))
     new_file_name = file_name
-    spec_chars = ["#", ",", "!", "’", "'"]
+    spec_chars = ["#", ",", "!", "’", "'", ":"]
     for sc in spec_chars:
         new_file_name = new_file_name.replace(sc, "")
     return new_file_name
