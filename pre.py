@@ -8,6 +8,7 @@ import requests
 
 PARSER = argparse.ArgumentParser(description='Pre Search')
 PARSER.add_argument('query', type=str, help='Search query')
+PARSER.add_argument('--suffix', type=str, help='add suffix', default=None)
 ARGS = PARSER.parse_args()
 
 JSON_RESPONSE = requests.get(
@@ -16,5 +17,7 @@ DATA = json.loads(JSON_RESPONSE.text)
 
 ROWS = DATA['data']['rows']
 
+suffix = ARGS.suffix if ARGS.suffix else ""
+
 for row in ROWS:
-    print(row['name'])
+    print(row['name'] + suffix)
