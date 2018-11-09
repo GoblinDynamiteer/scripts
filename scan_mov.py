@@ -16,7 +16,7 @@ if not DB_MOV.load_success():
     quit()
 
 ROOT = movie.root_path()
-SUB_FOLDERS = os.listdir(ROOT).sort()
+SUB_FOLDERS = os.listdir(ROOT)
 
 
 def new_movie(letter, movie):
