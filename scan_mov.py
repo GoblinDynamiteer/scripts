@@ -5,7 +5,7 @@
 import os
 import datetime
 import filetools as ftool
-import movie
+import movie as MOVIE
 import db_mov
 import str_o
 
@@ -15,32 +15,33 @@ DB_MOV = db_mov.database()
 if not DB_MOV.load_success():
     quit()
 
-ROOT = movie.root_path()
+ROOT = MOVIE.root_path()
 SUB_FOLDERS = os.listdir(ROOT)
 
 
-def new_movie(letter, movie):
-    fp = os.path.join(ROOT, letter, movie)
-    mov = {'letter': letter, 'folder': movie}
-    date = ftool.get_creation_date(fp, convert=True)
+def new_movie(mov_dir_letter, movie_dir_name):
+    """ Add a new movie to the database """
+    file_path = os.path.join(ROOT, mov_dir_letter, movie_dir_name)
+    mov = {'letter': mov_dir_letter, 'folder': movie_dir_name}
+    date = ftool.get_creation_date(file_path, convert=True)
     mov['date_created'] = date.strftime(
         "%d %b %Y") if date is not None else None
     mov['date_scanned'] = datetime.datetime.now().strftime("%d %b %Y %H:%M")
-    mov['nfo'] = movie.has_nfo(fp)
-    mov['imdb'] = movie.nfo_to_imdb(fp)
-    mov['omdb'] = movie.omdb_search(mov)
+    mov['nfo'] = MOVIE.has_nfo(file_path)
+    mov['imdb'] = MOVIE.nfo_to_imdb(file_path)
+    mov['omdb'] = MOVIE.omdb_search(mov)
     mov['subs'] = {
-        'sv': movie.has_subtitle(fp, "sv"),
-        'en': movie.has_subtitle(fp, "en")}
-    mov['video'] = movie.get_vid_file(fp)
+        'sv': MOVIE.has_subtitle(file_path, "sv"),
+        'en': MOVIE.has_subtitle(file_path, "en")}
+    mov['video'] = MOVIE.get_vid_file(file_path)
     mov['status'] = "ok"
-    PRINT.info(f"added [{movie}] to database!")
+    PRINT.info(f"added [{movie_dir_name}] to database!")
     DB_MOV.add(mov)
 
 
 NEW_COUNT = 0
 for letter in SUB_FOLDERS:
-    if letter in movie.vaild_letters():
+    if letter in MOVIE.vaild_letters():
         PRINT.info(f"scanning {letter}")
         movies = os.listdir(os.path.join(ROOT, letter))
         movies.sort()
