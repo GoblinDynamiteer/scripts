@@ -17,13 +17,13 @@ def pre_search(query: str) -> list:
     return [row['name'] for row in rows]
 
 
-PARSER = argparse.ArgumentParser(description='Pre Search')
-PARSER.add_argument('query', type=str, help='Search query')
-PARSER.add_argument('--suffix', type=str, help='add suffix', default=None)
-ARGS = PARSER.parse_args()
+if __name__ == "__main__":
+    PARSER = argparse.ArgumentParser(description='Pre Search')
+    PARSER.add_argument('query', type=str, help='Search query')
+    PARSER.add_argument('--suffix', type=str, help='add suffix', default=None)
+    ARGS = PARSER.parse_args()
 
+    suffix = ARGS.suffix if ARGS.suffix else ""
 
-suffix = ARGS.suffix if ARGS.suffix else ""
-
-for name in pre_search(ARGS.query):
-    print(name + suffix)
+    for name in pre_search(ARGS.query):
+        print(name + suffix)
