@@ -6,7 +6,6 @@ import argparse
 import os
 import sys
 import platform
-import subprocess
 import config
 import str_o
 from run import local_command
