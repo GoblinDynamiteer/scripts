@@ -6,13 +6,15 @@ import str_o
 CSTR = str_o.to_color_str
 
 
-def local_command(command, hide_output: bool = True, print_info: bool = True):
-    "Run a local command"
-    if print_info:
+def local_command(command, hide_output: bool = True, print_info: bool = True) -> bool:
+    "Run a local command, returns True if command was successful"
+    if print_info:  # prints what command is run
         print(f"{CSTR('local', 'blue')} : {command}")
-    if hide_output:
+    if hide_output:  # hides shell ouput from command
         ret = subprocess.run(command, shell=True,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     else:
         ret = subprocess.run(command, shell=True)
-    return ret
+    if ret.returncode:
+        print(f"{CSTR('command failed with return code: {ret.returncode}', 'red')}")
+    return ret.returncode == 0
