@@ -41,9 +41,21 @@ if __name__ == "__main__":
     PARSER = argparse.ArgumentParser(description='Pre Search')
     PARSER.add_argument('query', type=str, help='Search query')
     PARSER.add_argument('--suffix', type=str, help='add suffix', default=None)
+    PARSER.add_argument(
+        '-f', '--file', help='use file search mode', action='store_true')
     ARGS = PARSER.parse_args()
 
     suffix = ARGS.suffix if ARGS.suffix else ""
 
-    for name in pre_search(ARGS.query):
-        print(name + suffix)
+    if ARGS.file:
+        RET = pre_search_from_file(ARGS.query)
+        if not RET:
+            print("could not find release")
+        print(RET + suffix)
+    else:
+        RET = pre_search(ARGS.query)
+        if not RET:
+            print("could not find release")
+        else:
+            for name in RET:
+                print(name + suffix)
