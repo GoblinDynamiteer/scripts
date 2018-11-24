@@ -60,10 +60,9 @@ def mount(ds_share):
                 src = f"//{NAS_IP}/{share}"
                 local_dest = f"{mount_dest}{share.lower()}"
                 PRINT.info(f"mounting {share} to {local_dest}")
-                ret = local_command(
+                success = local_command(
                     f"sudo mount -t cifs {src} {local_dest} -o {opt}", print_info=False)
-                print(ret)
-                if ret:
+                if not success:
                     PRINT.warning(f"mounting of {src} failed!")
     else:
         _print_error_invalid_share(ds_share)
