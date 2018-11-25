@@ -125,26 +125,15 @@ def _sveriges_radio(url: str, dl_loc: str):
                 break
 
 
-# TODO: refactor site specific methods into one handler
-def _tv4play(url: str, dl_loc: str):
-    print(LANG_OUTPUT['dl_init'][LANGUAGE].format(CSTR('TV4Play', 'lgreen')))
-    _youtube_dl(url, dl_loc)
-
-
-def _dplay(url: str, dl_loc: str):
-    print(LANG_OUTPUT['dl_init'][LANGUAGE].format(CSTR('DPlay', 'lgreen')))
-    _youtube_dl(url, dl_loc)
-
-
-def _viafree(url: str, dl_loc: str):
-    print(LANG_OUTPUT['dl_init'][LANGUAGE].format(CSTR('Viafree', 'lgreen')))
-    _youtube_dl(url, dl_loc)
-
-
-def _unknown_site(url: str, dl_loc: str):
-    unknown_str = 'Unkown Site' if LANGUAGE == 'en' else "Okänd sida"
+def _rip_with_youtube_dl(url: str, dl_loc: str, site: str):
     print(LANG_OUTPUT['dl_init'][LANGUAGE].format(
-        CSTR(unknown_str, 'orange')))
+        CSTR(site, 'lgreen')))
+    _youtube_dl(url, dl_loc)
+
+
+def _unknown_site(url: str, dl_loc: str, site: str):
+    print(LANG_OUTPUT['dl_init'][LANGUAGE].format(
+        CSTR(site, 'orange')))
     print(LANG_OUTPUT['using'][LANGUAGE].format(
         CSTR('youtube-dl', 'lgreen')))
     _youtube_dl(url, dl_loc)
@@ -181,7 +170,9 @@ if __name__ == '__main__':
     print(CSTR('======= ripper ======='.upper(), 'red'))
     HOME = os.path.expanduser('~')
     METHODS = [('sverigesradio', _sveriges_radio),
-               ('tv4play', _tv4play), ('dplay', _dplay), ('viafree', _viafree)]
+               ('TV4Play', _rip_with_youtube_dl),
+               ('DPlay', _rip_with_youtube_dl),
+               ('Viafree', _rip_with_youtube_dl)]
 
     PARSER = argparse.ArgumentParser(description='ripper')
     PARSER.add_argument('url', type=str, help='URL')
@@ -199,9 +190,10 @@ if __name__ == '__main__':
         LANGUAGE = 'sv'
 
     MATCH = False
-    for hit, method in METHODS:
-        if hit in ARGS.url:
+    for site_hit, method in METHODS:
+        if site_hit.lower() in ARGS.url:
             MATCH = True
-            method(ARGS.url, DEFAULT_DL)
+            method(ARGS.url, DEFAULT_DL, site_hit)
     if not MATCH:
-        _unknown_site(ARGS.url, DEFAULT_DL)
+        UNKOWN_SITE_STR = 'Unkown Site' if LANGUAGE == 'en' else "Okänd sida"
+        _unknown_site(ARGS.url, DEFAULT_DL, UNKOWN_SITE_STR)
