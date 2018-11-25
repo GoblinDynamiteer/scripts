@@ -141,7 +141,7 @@ def _unknown_site(url: str, dl_loc: str, site: str):
 
 
 YDL_OPTS = {
-    'format': 'bestaudio/best',
+    'format': 'bestvideo+bestaudio',
     'write-sub': True,  # TODO: try to make sub dl work, alt use svtplay-dl
     'logger': Logger(),
     'progress_hooks': [_ytdl_hooks],
