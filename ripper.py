@@ -111,6 +111,7 @@ def _dplay(url: str, dl_loc: str):
 
 YDL_OPTS = {
     'format': 'bestaudio/best',
+    'write-sub': True,  # TODO: try to make sub dl work, alt use svtplay-dl
     'logger': Logger(),
     'progress_hooks': [_ytdl_hooks],
     'simulate': False,
