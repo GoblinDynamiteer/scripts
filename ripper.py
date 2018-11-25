@@ -125,6 +125,7 @@ def _sveriges_radio(url: str, dl_loc: str):
                 break
 
 
+# TODO: refactor site specific methods into one handler
 def _tv4play(url: str, dl_loc: str):
     print(LANG_OUTPUT['dl_init'][LANGUAGE].format(CSTR('TV4Play', 'lgreen')))
     _youtube_dl(url, dl_loc)
@@ -132,6 +133,11 @@ def _tv4play(url: str, dl_loc: str):
 
 def _dplay(url: str, dl_loc: str):
     print(LANG_OUTPUT['dl_init'][LANGUAGE].format(CSTR('DPlay', 'lgreen')))
+    _youtube_dl(url, dl_loc)
+
+
+def _viafree(url: str, dl_loc: str):
+    print(LANG_OUTPUT['dl_init'][LANGUAGE].format(CSTR('Viafree', 'lgreen')))
     _youtube_dl(url, dl_loc)
 
 
@@ -171,7 +177,7 @@ CSTR = str_o.to_color_str
 
 if __name__ == '__main__':
     METHODS = [('sverigesradio', _sveriges_radio),
-               ('tv4play', _tv4play), ('dplay', _dplay)]
+               ('tv4play', _tv4play), ('dplay', _dplay), ('viafree', _viafree)]
 
     PARSER = argparse.ArgumentParser(description='ripper')
     PARSER.add_argument('url', type=str, help='URL')
