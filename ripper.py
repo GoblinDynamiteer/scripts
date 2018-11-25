@@ -96,7 +96,8 @@ def _ytdl_hooks(event):
         print('\r' + info_str, end='')
 
 
-def _sveriges_radio(url: str, dl_loc: str):
+def _sveriges_radio(url: str, dl_loc: str, site: str):
+    del site  # Unused variable
     print(LANG_OUTPUT['dl_init'][LANGUAGE].format(
         CSTR('Sveriges Radio', 'lgreen')))
     if not LIB_AVAILABLE['BeautifulSoup']:
