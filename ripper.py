@@ -11,6 +11,7 @@ import youtube_dl
 from bs4 import BeautifulSoup as bs
 
 import rename
+import str_o
 
 
 class Logger(object):
@@ -73,8 +74,10 @@ def _ytdl_hooks(event):
     if event['status'] == 'finished':
         print('\n' + LANG_OUTPUT['dl_done'][LANGUAGE])
     if event['status'] == 'downloading':
+        percentage = CSTR(event['_percent_str'].lstrip(), 'lgreen')
+        file_path = CSTR(event['filename'], 'lblue')
         info_str = LANG_OUTPUT['dl_progress'][LANGUAGE].format(
-            event['filename'], event['_percent_str'].lstrip(), event['_eta_str'])
+            file_path, percentage, event['_eta_str'])
         print('\r' + info_str, end='')
 
 
@@ -102,10 +105,12 @@ def _sveriges_radio(url: str, dl_loc: str):
 
 
 def _tv4play(url: str, dl_loc: str):
+    print(LANG_OUTPUT['dl_init'][LANGUAGE].format(CSTR('TV4Play', 'lgreen')))
     _youtube_dl(url, dl_loc)
 
 
 def _dplay(url: str, dl_loc: str):
+    print(LANG_OUTPUT['dl_init'][LANGUAGE].format(CSTR('DPlay', 'lgreen')))
     _youtube_dl(url, dl_loc)
 
 
@@ -123,7 +128,11 @@ LANGUAGE = 'en'
 LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil.',
                            'en': 'Done downloading! Now converting.'},
                'dl_progress': {'sv': 'Laddar ner: {} ({} - {})',
-                               'en': 'Downloading: {} ({} - {})'}}
+                               'en': 'Downloading: {} ({} - {})'},
+               'dl_init': {'sv': 'Startar nedladdning från {}...',
+                           'en': 'Starting download from {}...'}}
+
+CSTR = str_o.to_color_str
 
 
 if __name__ == '__main__':
