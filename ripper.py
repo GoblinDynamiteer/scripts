@@ -163,12 +163,14 @@ LANGUAGE = 'en'
 
 LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil.',
                            'en': 'Done downloading! Now converting.'},
-               'dl_progress': {'sv': 'Laddar ner: {} ({} - {})',
-                               'en': 'Downloading: {} ({} - {})'},
+               'dl_progress': {'sv': 'Laddar ner: {} ({} - {})     ',
+                               'en': 'Downloading: {} ({} - {})    '},
                'dl_init': {'sv': 'Startar nedladdning från {}...',
                            'en': 'Starting download from {}...'},
                'using': {'sv': 'Använder {}',
                          'en': 'Using {}'},
+               'dest_info': {'sv': 'Sparar filer till: {}',
+                             'en': 'Saving files to: {}'},
                'lib_missing': {'sv': 'Saknar {}! Avbryter',
                                'en': 'Missing lib {}! Aborting'}}
 
@@ -176,16 +178,22 @@ CSTR = str_o.to_color_str
 
 
 if __name__ == '__main__':
+    print(CSTR('======= ripper ======='.upper(), 'red'))
+    HOME = os.path.expanduser('~')
     METHODS = [('sverigesradio', _sveriges_radio),
                ('tv4play', _tv4play), ('dplay', _dplay), ('viafree', _viafree)]
 
     PARSER = argparse.ArgumentParser(description='ripper')
     PARSER.add_argument('url', type=str, help='URL')
     PARSER.add_argument('--lang', type=str, default='en')
+    PARSER.add_argument('--dir', type=str,
+                        default=os.path.join(HOME, 'Downloads'))
     ARGS = PARSER.parse_args()
 
-    HOME = os.path.expanduser('~')
-    DEFAULT_DL = os.path.join(HOME, 'Downloads')
+    DEFAULT_DL = ARGS.dir
+
+    print(LANG_OUTPUT['dest_info'][LANGUAGE].format(
+        CSTR(DEFAULT_DL, 'lgreen')))
 
     if ARGS.lang == 'sv':
         LANGUAGE = 'sv'
@@ -193,7 +201,7 @@ if __name__ == '__main__':
     MATCH = False
     for hit, method in METHODS:
         if hit in ARGS.url:
-            match = True
+            MATCH = True
             method(ARGS.url, DEFAULT_DL)
     if not MATCH:
         _unknown_site(ARGS.url, DEFAULT_DL)
