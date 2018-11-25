@@ -71,7 +71,7 @@ def _youtube_dl_generate_filename(info: dict) -> str:
     file_name = ""
     if series and season_number and episode_number:
         file_name = f'{series}.s{season_number:02d}e{episode_number:02d}'
-        if title:
+        if USE_TITLE_IN_FILENAME and title:
             file_name = f'{file_name}.{title}'
 
     if not file_name:
@@ -165,10 +165,11 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil.',
                                'en': 'Missing lib {}! Aborting'}}
 
 CSTR = str_o.to_color_str
+USE_TITLE_IN_FILENAME = True
 
 
 if __name__ == '__main__':
-    print(CSTR('======= ripper ======='.upper(), 'red'))
+    print(CSTR('======= ripper ======='.upper(), 'purple'))
     HOME = os.path.expanduser('~')
     METHODS = [('sverigesradio', _sveriges_radio),
                ('TV4Play', _rip_with_youtube_dl),
@@ -180,9 +181,11 @@ if __name__ == '__main__':
     PARSER.add_argument('--lang', type=str, default='en')
     PARSER.add_argument('--dir', type=str,
                         default=os.path.join(HOME, 'Downloads'))
+    PARSER.add_argument('--title-in-filename', action='store_true', dest='use_title')
     ARGS = PARSER.parse_args()
 
     DEFAULT_DL = ARGS.dir
+    USE_TITLE_IN_FILENAME = ARGS.use_title
 
     if ARGS.lang == 'sv':
         LANGUAGE = 'sv'
