@@ -4,11 +4,21 @@
 
 import argparse
 import os
+import sys
 import subprocess
 from urllib.request import urlopen
 
-import youtube_dl
-from bs4 import BeautifulSoup as bs
+LIB_AVAILABLE = {'youtube_dl': True, 'BeautifulSoup': True}
+
+try:
+    import youtube_dl
+except ImportError:
+    LIB_AVAILABLE['youtube_dl'] = False
+
+try:
+    from bs4 import BeautifulSoup as bs
+except ImportError:
+    LIB_AVAILABLE['BeautifulSoup'] = False
 
 import rename
 import str_o
@@ -34,6 +44,11 @@ def _make_soup(url: str):
 
 
 def _youtube_dl(url: str, dl_loc: str):
+    if not LIB_AVAILABLE['youtube_dl']:
+        lib = CSTR('youtube_dl', 'red')
+        print(LANG_OUTPUT['lib_missing'][LANGUAGE].format(lib))
+        sys.exit()
+
     with youtube_dl.YoutubeDL(YDL_OPTS) as ydl:
         info = ydl.extract_info(url, download=False)
         file_name = _youtube_dl_generate_filename(info)
@@ -82,7 +97,13 @@ def _ytdl_hooks(event):
 
 
 def _sveriges_radio(url: str, dl_loc: str):
-    print(f'trying to download sr episodes at {url}')
+    print(LANG_OUTPUT['dl_init'][LANGUAGE].format(
+        CSTR('Sveriges Radio', 'lgreen')))
+    if not LIB_AVAILABLE['BeautifulSoup']:
+        lib = CSTR('BeautifulSoup', 'red')
+        print(LANG_OUTPUT['lib_missing'][LANGUAGE].format(lib))
+        sys.exit()
+
     soup = _make_soup(url)
     links = [(a.get('href'), a.text)
              for a in soup.find_all('a', href=True, text=True)]
@@ -130,7 +151,9 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil.',
                'dl_progress': {'sv': 'Laddar ner: {} ({} - {})',
                                'en': 'Downloading: {} ({} - {})'},
                'dl_init': {'sv': 'Startar nedladdning från {}...',
-                           'en': 'Starting download from {}...'}}
+                           'en': 'Starting download from {}...'},
+               'lib_missing': {'sv': 'Saknar {}! Avbryter',
+                               'en': 'Missing lib {}! Aborting'}}
 
 CSTR = str_o.to_color_str
 
