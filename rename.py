@@ -33,7 +33,7 @@ def op_trim_extras(file_path):
     file_name = str(os.path.basename(file_path))
     new_file_name = file_name
     # replace _-_ or " - " with -
-    for rep in ["_-_", " - ", "_--_"]:
+    for rep in ["_-_", " - ", "_--_", ".-."]:
         new_file_name = new_file_name.replace(rep, "-")
     # replace excess underscores
     while "__" in new_file_name:
