@@ -108,6 +108,7 @@ def _dplay(url: str, dl_loc: str):
 
 
 YDL_OPTS = {
+    'format': 'bestaudio/best',
     'logger': Logger(),
     'progress_hooks': [_ytdl_hooks],
     'simulate': False,
