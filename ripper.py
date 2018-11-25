@@ -59,10 +59,12 @@ def _youtube_dl_generate_filename(info: dict) -> str:
             file_name = f'{file_name}.{title}'
 
     if not file_name:
-        for possible_filename in [title, ident]:
+        for possible_filename in [title, ident, 'UnknownFile']:
             if possible_filename:
                 file_name = possible_filename
                 break
+
+    file_name += f'.{ext}'
 
     return rename.rename_string(file_name, space_replace_char='.')
 
