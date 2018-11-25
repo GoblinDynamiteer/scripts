@@ -90,9 +90,12 @@ def rename_operation(file_path, operations):
     os.rename(file_path, new_file_name)
 
 
-def rename_string(string_to_rename):
+def rename_string(string_to_rename, space_replace_char: str = '_'):
     ''' Run rename on a string, when script is used as lib '''
     for operation in OPERATIONS:
+        if operation is op_spaces_to_char:
+            string_to_rename = operation(string_to_rename, space_replace_char)
+            continue
         string_to_rename = operation(string_to_rename)
     return string_to_rename
 
