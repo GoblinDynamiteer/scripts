@@ -135,6 +135,15 @@ def _dplay(url: str, dl_loc: str):
     _youtube_dl(url, dl_loc)
 
 
+def _unknown_site(url: str, dl_loc: str):
+    unknown_str = 'Unkown Site' if LANGUAGE == 'en' else "Okänd sida"
+    print(LANG_OUTPUT['dl_init'][LANGUAGE].format(
+        CSTR(unknown_str, 'orange')))
+    print(LANG_OUTPUT['using'][LANGUAGE].format(
+        CSTR('youtube-dl', 'lgreen')))
+    _youtube_dl(url, dl_loc)
+
+
 YDL_OPTS = {
     'format': 'bestaudio/best',
     'write-sub': True,  # TODO: try to make sub dl work, alt use svtplay-dl
@@ -152,6 +161,8 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil.',
                                'en': 'Downloading: {} ({} - {})'},
                'dl_init': {'sv': 'Startar nedladdning från {}...',
                            'en': 'Starting download from {}...'},
+               'using': {'sv': 'Använder {}',
+                         'en': 'Using {}'},
                'lib_missing': {'sv': 'Saknar {}! Avbryter',
                                'en': 'Missing lib {}! Aborting'}}
 
@@ -173,6 +184,10 @@ if __name__ == '__main__':
     if ARGS.lang == 'sv':
         LANGUAGE = 'sv'
 
+    MATCH = False
     for hit, method in METHODS:
         if hit in ARGS.url:
+            match = True
             method(ARGS.url, DEFAULT_DL)
+    if not MATCH:
+        _unknown_site(ARGS.url, DEFAULT_DL)
