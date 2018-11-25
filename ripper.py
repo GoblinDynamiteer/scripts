@@ -184,11 +184,11 @@ if __name__ == '__main__':
 
     DEFAULT_DL = ARGS.dir
 
-    print(LANG_OUTPUT['dest_info'][LANGUAGE].format(
-        CSTR(DEFAULT_DL, 'lgreen')))
-
     if ARGS.lang == 'sv':
         LANGUAGE = 'sv'
+
+    print(LANG_OUTPUT['dest_info'][LANGUAGE].format(
+        CSTR(DEFAULT_DL, 'lgreen')))
 
     MATCH = False
     for site_hit, method in METHODS:
