@@ -4,9 +4,12 @@
 
 import argparse
 import os
-import sys
 import subprocess
+import sys
 from urllib.request import urlopen
+
+import rename
+import str_o
 
 LIB_AVAILABLE = {'youtube_dl': True, 'BeautifulSoup': True}
 
@@ -19,9 +22,6 @@ try:
     from bs4 import BeautifulSoup as bs
 except ImportError:
     LIB_AVAILABLE['BeautifulSoup'] = False
-
-import rename
-import str_o
 
 
 class Logger(object):
