@@ -49,12 +49,18 @@ def _youtube_dl(url: str, dl_loc: str):
         print(LANG_OUTPUT['lib_missing'][LANGUAGE].format(lib))
         sys.exit()
 
-    with youtube_dl.YoutubeDL(YDL_OPTS) as ydl:
-        info = ydl.extract_info(url, download=False)
-        file_name = _youtube_dl_generate_filename(info)
-        full_dl_path = os.path.join(dl_loc, file_name)
-        ydl.params["outtmpl"] = full_dl_path
-        ydl.download([url])
+    for dl_format in FORMATS:
+        YDL_OPTS['format'] = dl_format
+        try:
+            with youtube_dl.YoutubeDL(YDL_OPTS) as ydl:
+                info = ydl.extract_info(url, download=False)
+                file_name = _youtube_dl_generate_filename(info)
+                full_dl_path = os.path.join(dl_loc, file_name)
+                ydl.params["outtmpl"] = full_dl_path
+                ydl.download([url])
+                return
+        except:
+            print(f"could not dl with format: {dl_format}")
 
 
 def _youtube_dl_generate_filename(info: dict) -> str:
@@ -141,7 +147,6 @@ def _unknown_site(url: str, dl_loc: str, site: str):
 
 
 YDL_OPTS = {
-    'format': 'bestvideo+bestaudio',
     'write-sub': True,  # TODO: try to make sub dl work, alt use svtplay-dl
     'logger': Logger(),
     'progress_hooks': [_ytdl_hooks],
@@ -150,6 +155,9 @@ YDL_OPTS = {
 }
 
 LANGUAGE = 'en'
+
+# TODO: list formats from video instead
+FORMATS = ['best', 'mp4', 'flv', 'hls-6543', 'worstvideo']
 
 LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil.',
                            'en': 'Done downloading! Now converting.'},
