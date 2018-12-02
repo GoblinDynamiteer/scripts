@@ -157,8 +157,10 @@ YDL_OPTS = {
 
 LANGUAGE = 'en'
 
+
 # TODO: list formats from video instead
-FORMATS = ['best', 'mp4', 'flv', 'hls-6543', 'worstvideo']
+FORMATS = ['bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio',
+           'best', 'mp4', 'flv', 'hls-6543', 'worstvideo']
 
 LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil.',
                            'en': 'Done downloading! Now converting.'},
