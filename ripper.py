@@ -194,7 +194,8 @@ if __name__ == '__main__':
     PARSER.add_argument('--lang', type=str, default='en')
     PARSER.add_argument('--dir', type=str,
                         default=os.path.join(HOME, 'Downloads'))
-    PARSER.add_argument('--title-in-filename', action='store_true', dest='use_title')
+    PARSER.add_argument('--title-in-filename',
+                        action='store_true', dest='use_title')
     ARGS = PARSER.parse_args()
 
     DEFAULT_DL = ARGS.dir
