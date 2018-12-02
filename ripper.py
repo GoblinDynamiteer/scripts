@@ -49,7 +49,7 @@ def _youtube_dl(url: str, dl_loc: str):
         print(LANG_OUTPUT['lib_missing'][LANGUAGE].format(lib))
         sys.exit()
 
-    for dl_format in FORMATS:
+    for index, dl_format in enumerate(FORMATS):
         YDL_OPTS['format'] = dl_format
         try:
             with youtube_dl.YoutubeDL(YDL_OPTS) as ydl:
@@ -59,8 +59,9 @@ def _youtube_dl(url: str, dl_loc: str):
                 ydl.params["outtmpl"] = full_dl_path
                 ydl.download([url])
                 return
-        except:
-            print(f"could not dl with format: {dl_format}")
+        except youtube_dl.utils.DownloadError:
+            print(LANG_OUTPUT['format_dl_failed'][LANGUAGE].format(
+                CSTR(dl_format, 'orange'), CSTR(FORMATS[index+1], 'orange')))
 
 
 def _youtube_dl_generate_filename(info: dict) -> str:
@@ -170,7 +171,9 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil.',
                'dest_info': {'sv': 'Sparar filer till: {}',
                              'en': 'Saving files to: {}'},
                'lib_missing': {'sv': 'Saknar {}! Avbryter',
-                               'en': 'Missing lib {}! Aborting'}}
+                               'en': 'Missing lib {}! Aborting'},
+               'format_dl_failed': {'sv': 'Kunde inte ladda ner formatet: {}. Provar {}',
+                                    'en': 'Could not download format: {}. Trying {}'}}
 
 CSTR = str_o.to_color_str
 USE_TITLE_IN_FILENAME = True
