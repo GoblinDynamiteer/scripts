@@ -187,6 +187,7 @@ if __name__ == '__main__':
     METHODS = [('sverigesradio', _sveriges_radio),
                ('TV4Play', _rip_with_youtube_dl),
                ('DPlay', _rip_with_youtube_dl),
+               ('SVTPlay', _rip_with_youtube_dl),
                ('Viafree', _rip_with_youtube_dl)]
 
     PARSER = argparse.ArgumentParser(description='ripper')
