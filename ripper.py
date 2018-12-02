@@ -162,8 +162,8 @@ LANGUAGE = 'en'
 FORMATS = ['bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio',
            'best', 'mp4', 'flv', 'hls-6543', 'worstvideo']
 
-LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil.',
-                           'en': 'Done downloading! Now converting.'},
+LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil eller laddar ner ljudspår.',
+                           'en': 'Done downloading! Now converting or downloading audio.'},
                'dl_progress': {'sv': 'Laddar ner: {} ({} - {})     ',
                                'en': 'Downloading: {} ({} - {})    '},
                'dl_init': {'sv': 'Startar nedladdning från {}...',
