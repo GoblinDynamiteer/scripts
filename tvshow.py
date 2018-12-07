@@ -10,9 +10,9 @@ import config
 import filetools as ftool
 import db_tv
 import str_i
-import str_o
+import printing
 
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 INPUT = str_i
 CONFIG = config.ConfigurationManager()
 DB_TV = db_tv.database()

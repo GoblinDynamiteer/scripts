@@ -9,7 +9,7 @@ import sys
 from urllib.request import urlopen
 
 import rename
-import str_o
+import printing
 
 LIB_AVAILABLE = {'youtube_dl': True, 'BeautifulSoup': True}
 

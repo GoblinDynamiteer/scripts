@@ -9,9 +9,9 @@ from datetime import datetime
 from shutil import copy2
 import movie as movie_tools
 import config
-import str_o
+import printing
 
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 CONFIG = config.ConfigurationManager()
 
 

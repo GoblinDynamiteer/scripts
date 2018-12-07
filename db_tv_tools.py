@@ -7,9 +7,9 @@ import argparse
 import db_tv as tv_database
 import filetools as ftool
 import tvshow as tvtool
-import str_o
+import printing
 
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 db = tv_database.database()
 if not db.load_success():
     PRINT.error("database read error, quitting...")

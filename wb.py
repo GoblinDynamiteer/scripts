@@ -13,7 +13,7 @@ import db_mov as movie_database
 import db_tv as tv_database
 import tvshow
 import config
-import str_o
+import printing
 
 
 DB_MOV = movie_database.database()
@@ -22,7 +22,7 @@ DB_TV = tv_database.database()
 assert DB_MOV.load_success(), "Movie database could not be loaded!"
 assert DB_TV.load_success(), "TV database could not be loaded!"
 
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 CONFIG = config.ConfigurationManager()
 PARSER = argparse.ArgumentParser(description='WBTools')
 PARSER.add_argument('func', type=str, help='WB command: new, get')

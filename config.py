@@ -4,9 +4,9 @@
 
 import configparser
 import os
-import str_o
+import printing
 
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 
 
 class ConfigurationManager:

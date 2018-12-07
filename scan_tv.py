@@ -9,9 +9,9 @@ import sys
 import filetools as ftool
 import tvshow as tvtool
 import db_tv
-import str_o
+import printing
 
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 DB_TV = db_tv.database()
 if not DB_TV.load_success():
     sys.exit()

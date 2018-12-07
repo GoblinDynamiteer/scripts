@@ -4,7 +4,7 @@
 
 import unittest
 import filetools
-import str_o
+import printing
 
 
 class TestFileTools(unittest.TestCase):
@@ -29,7 +29,7 @@ class TestFileTools(unittest.TestCase):
 class TestStrOut(unittest.TestCase):
 
     def to_color_str(self):
-        self.assertEqual(str_o.to_color_str("ToColor", "red"),
+        self.assertEqual(printing.to_color_str("ToColor", "red"),
                          "\033[38;5;196mToColor\033[0m")
 
 

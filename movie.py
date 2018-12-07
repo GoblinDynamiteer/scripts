@@ -5,9 +5,9 @@ import re
 import omdb
 import filetools as ftool
 import config
-import str_o
+import printing
 
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 CONFIG = config.ConfigurationManager()
 
 VALID_LETTERS = {'#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',

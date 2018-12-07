@@ -7,9 +7,9 @@ import datetime
 import filetools as ftool
 import movie as MOVIE
 import db_mov
-import str_o
+import printing
 
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 
 DB_MOV = db_mov.database()
 if not DB_MOV.load_success():

@@ -7,7 +7,7 @@ import os
 import shlex
 import subprocess
 import re
-import str_o
+import printing
 import filetools as ftool
 import tvshow as tvtool
 import movie as mtool
@@ -15,7 +15,7 @@ import db_mov as movie_database
 #import subscene
 
 DB_MOV = movie_database.database()
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 
 PARSER = argparse.ArgumentParser(description='subTools')
 PARSER.add_argument('command', type=str, help='commands: ripall, renameall')

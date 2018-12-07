@@ -7,10 +7,10 @@ import os
 import sys
 import platform
 import config
-import str_o
+import printing
 from run import local_command
 
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 CONFIG = config.ConfigurationManager()
 NAS_IP = "192.168.0.101"
 

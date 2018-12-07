@@ -7,12 +7,12 @@ import argparse
 import db_mov as movie_database
 import filetools as ftool
 import movie as mtool
-import str_o
+import printing
 
-pr = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 db = movie_database.database()
 if not db.load_success():
-    pr.error("database read error, quitting...")
+    PRINT.error("database read error, quitting...")
     quit()
 
 mov_root = mtool.root_path()
@@ -131,4 +131,4 @@ if args.func == "maintain":
 elif args.func == "checkdeleted":
     scan_for_deleted_movies()
 else:
-    pr.error("wrong command: {}".format(args.func))
+    PRINT.error("wrong command: {}".format(args.func))

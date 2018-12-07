@@ -6,9 +6,9 @@ import json
 import os
 import filetools
 import config
-import str_o
+import printing
 
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 
 try:
     to_unicode = unicode
@@ -43,7 +43,7 @@ class database:
                     PRINT.info("loaded database file: [ {} ]".format(
                         self._db_file))
             except:
-                pr.error("Could not open file: {0}".format(self._db_file))
+                PRINT.error("Could not open file: {0}".format(self._db_file))
                 self._loaded_db = None
 
     # Save to database JSON file

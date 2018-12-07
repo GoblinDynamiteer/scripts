@@ -4,9 +4,9 @@
 
 import sys
 import os
-import str_o
+import printing
 
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 
 
 def yes_no(question, default="yes", script_name=None):
@@ -21,7 +21,7 @@ def yes_no(question, default="yes", script_name=None):
         PRINT.error("wrong default")
         quit()
     if script_name:
-        print_class = str_o.PrintClass(script_name)
+        print_class = printing.PrintClass(script_name)
     else:
         print_class = PRINT
     while True:
@@ -37,7 +37,7 @@ def yes_no(question, default="yes", script_name=None):
 
 def get_string(display_text, script_name=None, allow_empty=False):
     if script_name:
-        print_class = str_o.PrintClass(script_name)
+        print_class = printing.PrintClass(script_name)
     else:
         print_class = PRINT
     while True:

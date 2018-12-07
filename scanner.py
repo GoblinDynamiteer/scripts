@@ -5,12 +5,12 @@
 import argparse
 import os
 import sys
-import str_o
+import printing
 import run
 
 HOME = os.path.expanduser("~")
 DEFAULT_SAVE_PATH = os.path.join(HOME, "temp")
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 
 # hp-scan --size = a4 - -resolution = 300 - -mode = color - -file = /home/johan/Temp/nathalie-anstallningsavtal-chopchop-sida2.png - -compression = raw
 

@@ -1,9 +1,9 @@
 '''Run commands on local system'''
 
 import subprocess
-import str_o
+import printing
 
-CSTR = str_o.to_color_str
+CSTR = printing.to_color_str
 
 
 def local_command(command, hide_output: bool = True, print_info: bool = True) -> bool:
