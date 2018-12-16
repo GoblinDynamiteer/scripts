@@ -7,6 +7,8 @@ import argparse
 import sys
 import re
 
+from printing import to_color_str
+
 UNIDECODE_LIB_AVAILABLE = False
 try:
     from unidecode import unidecode
@@ -87,7 +89,13 @@ def rename_operation(file_path, operations):
     new_file_name = file_name
     for operation in operations:
         new_file_name = operation(new_file_name)
-    os.rename(file_path, new_file_name)
+    old = to_color_str(file_name, 'orange')
+    new = to_color_str(new_file_name, 'green')
+    if new_file_name == file_name:
+        print(f'kept filename: {to_color_str(file_name, "green")}')
+    else:
+        print(f'renamed {old} --> {new}')
+        os.rename(file_path, new_file_name)
 
 
 def rename_string(string_to_rename, space_replace_char: str = '_'):
