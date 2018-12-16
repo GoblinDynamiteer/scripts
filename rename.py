@@ -105,9 +105,10 @@ OPERATIONS = [op_spaces_to_char,
               op_replace_special_chars,
               op_remove_special_chars,
               op_add_leading_zeroes,
-              op_trim_extras,
-              op_unidecode]
+              op_trim_extras]
 
+if UNIDECODE_LIB_AVAILABLE:
+    OPERATIONS.append(op_unidecode)
 
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
