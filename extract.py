@@ -9,13 +9,13 @@ import re
 import shutil
 import subprocess
 import str_i
-import str_o
+import printing
 import movie
 import filetools
 import tvshow
 import config
 
-PRINT = str_o.PrintClass(os.path.basename(__file__))
+PRINT = printing.PrintClass(os.path.basename(__file__))
 INPUT = str_i
 CONFIG = config.ConfigurationManager()
 SCRIPT = os.path.basename(__file__)
