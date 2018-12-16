@@ -17,7 +17,7 @@ NAS_IP = "192.168.0.101"
 
 def get_ds_shares() -> list:
     " Get a list of available DS shares "
-    return ['TV', 'FILM', 'MISC', 'BACKUP', 'DATA', 'DOCEDU', 'AUDIO', 'Rest']
+    return ['APPS', 'TV', 'FILM', 'MISC', 'BACKUP', 'DATA', 'DOCEDU', 'AUDIO', 'Rest']
 
 
 def get_mount_dest() -> str:
