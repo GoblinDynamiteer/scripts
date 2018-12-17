@@ -178,7 +178,7 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil eller laddar
                'format_dl_failed': {'sv': 'Kunde inte ladda ner formatet: {}. Provar {}',
                                     'en': 'Could not download format: {}. Trying {}'}}
 
-CSTR = str_o.to_color_str
+CSTR = printing.to_color_str
 USE_TITLE_IN_FILENAME = True
 
 
