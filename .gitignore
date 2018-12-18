@@ -3,3 +3,5 @@ goto_locs.json
 settings.ini
 mariadb_read.py
 mariadb_test.py
+.vscode/
+__pycache__/
