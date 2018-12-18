@@ -9,6 +9,7 @@ import sys
 from urllib.request import urlopen
 
 import rename
+import run
 import printing
 
 LIB_AVAILABLE = {'youtube_dl': True, 'BeautifulSoup': True}
@@ -22,6 +23,12 @@ try:
     from bs4 import BeautifulSoup as bs
 except ImportError:
     LIB_AVAILABLE['BeautifulSoup'] = False
+
+
+if run.program_exists('svtplay-dl'):
+    LIB_AVAILABLE['svtplay_dl'] = True
+else:
+    LIB_AVAILABLE['svtplay_dl'] = False
 
 
 class Logger(object):
@@ -43,7 +50,7 @@ def _make_soup(url: str):
     return soup
 
 
-def _youtube_dl(url: str, dl_loc: str):
+def _youtube_dl(url: str, dl_loc: str) -> str:
     if not LIB_AVAILABLE['youtube_dl']:
         lib = CSTR('youtube_dl', 'red')
         print(LANG_OUTPUT['lib_missing'][LANGUAGE].format(lib))
@@ -58,10 +65,11 @@ def _youtube_dl(url: str, dl_loc: str):
                 full_dl_path = os.path.join(dl_loc, file_name)
                 ydl.params["outtmpl"] = full_dl_path
                 ydl.download([url])
-                return
+                return full_dl_path
         except youtube_dl.utils.DownloadError:
             print(LANG_OUTPUT['format_dl_failed'][LANGUAGE].format(
                 CSTR(dl_format, 'orange'), CSTR(FORMATS[index+1], 'orange')))
+    return None
 
 
 def _youtube_dl_generate_filename(info: dict) -> str:
@@ -136,7 +144,9 @@ def _sveriges_radio(url: str, dl_loc: str, site: str):
 def _rip_with_youtube_dl(url: str, dl_loc: str, site: str):
     print(LANG_OUTPUT['dl_init'][LANGUAGE].format(
         CSTR(site, 'lgreen')))
-    _youtube_dl(url, dl_loc)
+    downloaded_file = _youtube_dl(url, dl_loc)
+    if LIB_AVAILABLE['svtplay_dl']:
+        _subtitle_dl(url, downloaded_file)
 
 
 def _unknown_site(url: str, dl_loc: str, site: str):
@@ -147,8 +157,18 @@ def _unknown_site(url: str, dl_loc: str, site: str):
     _youtube_dl(url, dl_loc)
 
 
+def _subtitle_dl(url: str, output_file: str):
+    srt_file_path = None
+    if output_file.endswith('.mp4'):
+        srt_file_path = f"{output_file[0:-4]}"
+    command = f'svtplay-dl -S --force-subtitle -o {srt_file_path} {url}'
+    if run.local_command(command, hide_output=True, print_info=False):
+        print(LANG_OUTPUT['dl_sub'][LANGUAGE].format(
+            CSTR(f'{srt_file_path}.srt', 'lblue')))
+
+
+
 YDL_OPTS = {
-    'write-sub': True,  # TODO: try to make sub dl work, alt use svtplay-dl
     'logger': Logger(),
     'progress_hooks': [_ytdl_hooks],
     'simulate': False,
@@ -171,6 +191,8 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil eller laddar
                            'en': 'Starting download from {}...'},
                'using': {'sv': 'Använder {}',
                          'en': 'Using {}'},
+               'dl_sub': {'sv': 'Laddade ner undertext: {}',
+                          'en': 'Downloaded subtitle: {}'},
                'dest_info': {'sv': 'Sparar filer till: {}',
                              'en': 'Saving files to: {}'},
                'lib_missing': {'sv': 'Saknar {}! Avbryter',
