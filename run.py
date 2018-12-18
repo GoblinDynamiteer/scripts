@@ -17,7 +17,7 @@ def local_command(command, hide_output: bool = True, print_info: bool = True) ->
     else:
         ret = subprocess.run(command, shell=True)
     if ret.returncode:
-        print(f"{CSTR('command failed with return code: {ret.returncode}', 'red')}")
+        print(f"{CSTR(f'command failed with return code: {ret.returncode}', 'red')}")
     return ret.returncode == 0
 
 
