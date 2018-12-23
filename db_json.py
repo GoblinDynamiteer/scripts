@@ -49,7 +49,7 @@ class JSONDatabase(object):
     def update(self, primary_key, data, value):
         if primary_key not in self.json:
             print(
-                f'can\'t update {CSTR(f"{primary_key}, not in db", "orange")}')
+                f'can\'t update {CSTR(f"{primary_key}", "orange")} not in db')
             return False
         if data not in self.valid_keys:
             print(f'{CSTR(data, "red")} is not a valid key!')
