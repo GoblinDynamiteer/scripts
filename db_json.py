@@ -30,6 +30,17 @@ class JSONDatabase(object):
         except json.decoder.JSONDecodeError:
             self.json = {}
 
+    def _save_database_file(self):
+        try:
+            with open(self.db_file_path, 'w') as database_file:
+                json.dump(self.json, database_file)
+        except:
+            print('could not save database')
+
+    def save(self):
+        ''' Save database file '''
+        self._save_database_file()
+
     def set_valid_keys(self, key_list):
         ''' Sets allowed keys '''
         self.valid_keys = key_list
