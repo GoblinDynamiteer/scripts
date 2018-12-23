@@ -17,14 +17,14 @@ class MovieDatabase(db_json.JSONDatabase):
     def __init__(self):
         db_json.JSONDatabase.__init__(self, MOVIE_DATABASE_PATH)
         self.set_valid_keys(['folder', 'title', 'year', 'imdb'])
-        self.insert({'folder': 'kalle_f', 'title': 'kalle_t', 'year': 1823})
-        if not self.insert({'title': 'kalle_t', 'year': 1823}):
-            print('fail')
-        if not self.insert({'folder': 'kalle_t', 'year': 1823, 'plot': 'fassss'}):
-            print('fail2')
-        self.insert({'folder': 'skalle_f', 'title': 'skalle_t',
-                     'year': 1553, 'imdb': 'tt123'})
-        print(self.json)
 
 
 MVDB = MovieDatabase()
+MVDB.insert(
+    {'folder': 'Junior.1994.1080p.BluRay.x264-CiNEFiLE', 'imdb': 'tt0110216'})
+MVDB.insert(
+    {'folder': 'Kill.Bill.Vol.1.2003.RERiP.iNTERNAL.1080p.BluRay.x264-LiBRARiANS', 'year': 2003})
+MVDB.update('Kill.Bill.Vol.1.2003.RERiP.iNTERNAL.1080p.BluRay.x264-LiBRARiANS',
+            'imdb', 'tt0266697')
+MVDB.update('Kick-Ass.2010.720p.BluRay.X264-AMIABLE', 'year', 2010)
+MVDB.save()
