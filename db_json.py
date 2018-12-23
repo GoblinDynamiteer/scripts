@@ -46,6 +46,17 @@ class JSONDatabase(object):
         self.valid_keys = key_list
         self.primary_key = key_list[0]
 
+    def update(self, primary_key, data, value):
+        if primary_key not in self.json:
+            print(
+                f'can\'t update {CSTR(f"{primary_key}, not in db", "orange")}')
+            return False
+        if data not in self.valid_keys:
+            print(f'{CSTR(data, "red")} is not a valid key!')
+            return False
+        self.json[primary_key][data] = value
+        return True
+
     def insert(self, data: dict):
         ''' Insert data '''
         keys = list(data.keys())
