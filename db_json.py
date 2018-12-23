@@ -57,6 +57,14 @@ class JSONDatabase(object):
         self.json[primary_key][data] = value
         return True
 
+    def get(self, primary_key, data):
+        ''' Retrieve data '''
+        try:
+            return self.json[primary_key][data]
+        except KeyError:
+            print(f'could not retrieve data for {CSTR(primary_key, "red")}')
+            return None
+
     def insert(self, data: dict):
         ''' Insert data '''
         keys = list(data.keys())
