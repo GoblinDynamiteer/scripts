@@ -70,6 +70,9 @@ class JSONDatabase(object):
                 f'invalid key(s) for database: {CSTR(f"{invalid_keys}", "red")}')
             return False
         primary = data[self.primary_key]
+        if primary in self.json:
+            print(f'{CSTR(primary, "red")} already in database, use update instead!')
+            return False
         data.pop(self.primary_key)
         self.json[primary] = data
         return True
