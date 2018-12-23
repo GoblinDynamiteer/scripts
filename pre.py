@@ -11,9 +11,12 @@ def pre_search(query: str) -> list:
     """ runs a pre search, returns list matched names """
     json_response = requests.get(
         f"https://predb.ovh/api/v1/?q={query}&count=50")
-    data = json.loads(json_response.text)
-    rows = data['data']['rows']
-
+    try:
+        data = json.loads(json_response.text)
+        rows = data['data']['rows']
+    except json.decoder.JSONDecodeError:
+        print("got json decoder error!")
+        return False
     return [row['name'] for row in rows]
 
 
