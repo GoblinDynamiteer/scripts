@@ -27,7 +27,7 @@ def vaild_letters():
 
 
 def root_path():
-    path = CONFIG.get_setting("path", "movieroot")
+    path = CONFIG.get("path_film")
     if not valid_movie_path(path):
         PRINT.warning("Could not find movies root location!")
         quit()

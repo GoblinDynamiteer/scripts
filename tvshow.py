@@ -21,7 +21,7 @@ assert DB_TV.load_success(), "TV database could not be loaded!"
 
 
 def root_path():
-    path = CONFIG.get_setting("path", "tvroot")
+    path = CONFIG.get("path_tv")
     return path
 
 

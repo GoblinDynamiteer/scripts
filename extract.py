@@ -142,7 +142,7 @@ def extract_season(folder):
 
 
 def move_subs(full_source_path, folder):
-    misc_root = CONFIG.get_setting("path", "misc")
+    misc_root = CONFIG.get("path_misc")
     dest_path = os.path.join(misc_root, "Subtitles", folder)
     found_subs = False
     if not os.path.exists(dest_path):
