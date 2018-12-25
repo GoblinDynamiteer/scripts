@@ -74,7 +74,7 @@ def ismounted(ds_share) -> bool:
             PRINT.info(f"creating mount destination [{local_dest}]")
             os.makedirs(local_dest)
         subdirs = os.listdir(local_dest)
-        if len(subdirs) > 1:
+        if subdirs:
             return True
         return False
     else:
