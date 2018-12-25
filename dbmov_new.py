@@ -2,9 +2,13 @@
 
 '''Movie Database handler'''
 
+import json
+import os
+from datetime import datetime
+
 import config
-import printing
 import db_json
+import printing
 
 CFG = config.ConfigurationManager()
 MOVIE_DATABASE_PATH = CFG.get('path_movdb_new')
@@ -34,3 +38,19 @@ class MovieDatabase(db_json.JSONDatabase):
             if count == num:
                 return last_added_dict
         return last_added_dict
+
+    def _to_text(self, movie_folder, movie_data):
+        scanned_hr = datetime.fromtimestamp(
+            movie_data['scanned']).strftime('%Y-%m-%d')
+        return f'[{scanned_hr}] [{movie_data["year"]}] [{movie_data["title"]}] [{movie_folder}]\n'
+
+    def export_last_added(self, target=os.path.join(CFG.get('path_film'), 'latest.txt')):
+        ''' Exports a list of the last added movies '''
+        last_added = self.last_added(num=100)
+        last_added_text = [self._to_text(m, last_added[m]) for m in last_added]
+        try:
+            with open(target, 'w') as last_added_file:
+                last_added_file.writelines(last_added_text)
+            print(f'wrote to {CSTR(target, "green")}')
+        except:
+            print(CSTR('could not save latest.txt', 'red'))
