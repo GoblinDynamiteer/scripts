@@ -3,10 +3,13 @@
 '''String output'''
 
 import configparser
-import os
-import printing
+
+import util
 
 DEFAULT_SETTINGS_FILE = 'settings.ini'
+
+SETTING_VARS = [('$HOME', util.home_dir())]
+
 
 class ConfigurationManager:
     def __init__(self, settings_file=None):
@@ -17,4 +20,9 @@ class ConfigurationManager:
         self.config.read(settings)
 
     def get(self, key):
-        return self.config['default'][key]
+        '''Get a config setting'''
+        setting = self.config['default'][key]
+        for var, rep in SETTING_VARS:
+            if var in setting:
+                return setting.replace(var, rep)
+        return setting
