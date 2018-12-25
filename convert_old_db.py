@@ -17,8 +17,12 @@ ALL_MOVIES = OLD_DB.list_movies()
 def scanned_to_timestamp(scanned_str: str)->int:
     try:
         return int(datetime.strptime(scanned_str, '%d %b %Y').timestamp())
-    except:
-        return 0
+    except ValueError:
+        pass
+    try:
+        return int(datetime.strptime(scanned_str, '%d %b %Y %H:%M').timestamp())
+    except ValueError:
+        pass
 
 
 def year_to_int(year_str: str)->int:
