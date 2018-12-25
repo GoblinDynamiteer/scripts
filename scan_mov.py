@@ -57,4 +57,3 @@ for letter in SUB_FOLDERS:
 PRINT.info(f"done scanning. found ({NEW_COUNT}) new movies.")
 if NEW_COUNT > 0:
     DB_MOV.save()
-    ftool.copy_dbs_to_webserver("movie")

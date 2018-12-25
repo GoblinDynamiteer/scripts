@@ -120,4 +120,3 @@ PRINT.info(f"found {new_show_count} new shows.")
 PRINT.info(f"found {new_episode_count} new episodes.")
 if new_show_count > 0 or new_episode_count > 0:
     DB_TV.save()
-    ftool.copy_dbs_to_webserver("tv")

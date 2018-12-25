@@ -72,20 +72,6 @@ def backup_file(src_full_path, dest_dir_full_path):
         return False
 
 
-def copy_dbs_to_webserver(tv_or_db):
-    htdoc_loc = CONFIG.get_setting("path", "webserver")
-    db = None
-    if tv_or_db == "tv":
-        db = CONFIG.get_setting("path", "tvdb")
-    if tv_or_db == "movie":
-        db = CONFIG.get_setting("path", "movdb")
-    if db:
-        copy2(db, htdoc_loc)
-        PRINT.info("copied  to webserver htdocs: {}".format(db))
-    else:
-        PRINT.warning("could not copy to htdocs!")
-
-
 def _type_points(folder):
     folder = folder.replace(' ', '.')
     folder = folder.replace('.-.', '-')
