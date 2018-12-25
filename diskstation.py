@@ -12,7 +12,7 @@ from run import local_command
 
 PRINT = printing.PrintClass(os.path.basename(__file__))
 CONFIG = config.ConfigurationManager()
-NAS_IP = "192.168.0.101"
+NAS_IP = CONFIG.get('ds_ip')
 
 
 def get_ds_shares() -> list:
@@ -22,18 +22,13 @@ def get_ds_shares() -> list:
 
 def get_mount_dest() -> str:
     " Get local mount destination path "
-    return CONFIG.get_setting("path", "dsmount")
-
-
-def get_home() -> str:
-    " Get path to home directory "
-    return CONFIG.get_setting("path", "home")
+    return CONFIG.get("ds_mount_path")
 
 
 def _get_credentials_file(share):
     if share == 'Rest':
-        return get_home() + ".smbcredentials_drb"
-    return get_home() + ".smbcredentials"
+        return CONFIG.get('smb_credentials_drb')
+    return CONFIG.get('smb_credentials_reg')
 
 
 def _print_error_invalid_share(string):
