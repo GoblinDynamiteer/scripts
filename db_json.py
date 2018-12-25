@@ -18,6 +18,7 @@ class JSONDatabase(object):
         self._load_database_file()
         self.valid_keys = []
         self.primary_key = None
+        self.key_types = {}
 
     def _load_database_file(self):
         try:
@@ -45,8 +46,21 @@ class JSONDatabase(object):
         ''' Sets allowed keys '''
         self.valid_keys = key_list
         self.primary_key = key_list[0]
+        for key in key_list:
+            self.key_types[key] = None
+
+    def set_key_type(self, key, data_type):
+        ''' Constrict key data type '''
+        if key not in self.valid_keys:
+            print(f'{CSTR(key, "red")} is not a valid key!')
+            return False
+        if data_type not in [int, str, float, list, dict]:
+            print(f'{CSTR(str(data_type), "red")} is not a valid data type!')
+            return False
+        self.key_types[key] = data_type
 
     def update(self, primary_key, data, value):
+        ''' Updates data for an entry '''
         if primary_key not in self.json:
             print(
                 f'can\'t update {CSTR(f"{primary_key}", "orange")} not in db')
