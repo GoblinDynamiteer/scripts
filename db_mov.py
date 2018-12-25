@@ -4,140 +4,54 @@
 
 import json
 import os
-import filetools
+from datetime import datetime
+
 import config
+import db_json
 import printing
 
-PRINT = printing.PrintClass(os.path.basename(__file__))
-CONFIG = config.ConfigurationManager()
-
-try:
-    to_unicode = unicode
-except NameError:
-    to_unicode = str
+CFG = config.ConfigurationManager()
+MOVIE_DATABASE_PATH = CFG.get('path_movdb_new')
+CSTR = printing.to_color_str
 
 
-class database:
+def _to_text(movie_folder, movie_data):
+    scanned_hr = datetime.fromtimestamp(
+        movie_data['scanned']).strftime('%Y-%m-%d')
+    return f'[{scanned_hr}] [{movie_data["year"]}] [{movie_data["title"]}] [{movie_folder}]\n'
+
+
+class MovieDatabase(db_json.JSONDatabase):
+    ''' Movie Database '''
+
     def __init__(self):
-        self._config = config.ConfigurationManager()
-        self.script_path = os.path.dirname(os.path.realpath(__file__))
-        self._db_file = CONFIG.get("path_movdb")
-        self._loaded_db = None
-        self._load_db()
-        self._mov_list = []
-        self._key_list = []
-        if self._loaded_db is not None and self._loaded_db:
-            for mov in self._loaded_db.keys():
-                self._mov_list.append(mov)
-            for key in self._loaded_db[self._mov_list[0]].keys():
-                self._key_list.append(key)
+        db_json.JSONDatabase.__init__(self, MOVIE_DATABASE_PATH)
+        self.set_valid_keys(['folder', 'title', 'year', 'imdb', 'scanned'])
+        self.set_key_type('folder', str)
+        self.set_key_type('title', str)
+        self.set_key_type('year', int)
+        self.set_key_type('imdb', str)
+        self.set_key_type('scanned', int)  # unix timestamp
 
-    # Load JSON database to variable
-    def _load_db(self):
-        if filetools.is_file_empty(self._db_file):
-            self._loaded_db = {}
-            PRINT.warning("creating empty database")
-        else:
-            try:
-                with open(self._db_file, 'r') as db:
-                    self._loaded_db = json.load(db)
-                    PRINT.info("loaded database file: [ {} ]".format(
-                        self._db_file))
-            except:
-                PRINT.error("Could not open file: {0}".format(self._db_file))
-                self._loaded_db = None
+    def last_added(self, num=10):
+        ''' Get the most recently added movies '''
+        sorted_dict = self.sorted('scanned', reversed_sort=True)
+        count = 0
+        last_added_dict = {}
+        for folder, data in sorted_dict.items():
+            last_added_dict[folder] = data
+            count += 1
+            if count == num:
+                return last_added_dict
+        return last_added_dict
 
-    # Save to database JSON file
-    def save(self):
-        with open(self._db_file, 'w', encoding='utf8') as outfile:
-            str_ = json.dumps(self._loaded_db,
-                              indent=4, sort_keys=True,
-                              separators=(',', ': '), ensure_ascii=False)
-            outfile.write(to_unicode(str_))
-        PRINT.info("saved database to {}!".format(self._db_file))
-        if self.backup_to_ds():
-            PRINT.info("backed up database!")
-        else:
-            PRINT.warning("could not backup database!")
-
-    # Add movie to database
-    def add(self, movie):
-        if self.load_success():
-            key = movie['folder']
-            if key is not None:
-                self._loaded_db[key] = movie
-
-    # Check if database loaded correctly
-    def load_success(self):
-        return True if self._loaded_db is not None else False
-
-    # Update data for movie
-    def update(self, movie_folder, key, data):
-        if not self.exists(movie_folder):
-            PRINT.warning(
-                "update: {} is not in database!".format(movie_folder))
-        else:
-            try:
-                self._loaded_db[movie_folder][key] = data
-                if key is 'omdb':
-                    data = "omdb-search"
-                PRINT.info("Updated {} : {} = {}".format(
-                    movie_folder, key, data))
-            except:
-                PRINT.warning(
-                    "update: Could not update {}!".format(movie_folder))
-
-    # Get count of movies
-    def count(self):
-        return len(self._loaded_db)
-
-    # Get a list of all movie titles as strings
-    def list_movies(self):
-        return self._mov_list
-
-    # Get movie data
-    def movie_data(self, movie, key=None):
-        if isinstance(movie, list):
-            movie = movie[0]
+    def export_last_added(self, target=os.path.join(CFG.get('path_film'), 'latest.txt')):
+        ''' Exports the latest added movies to text file '''
+        last_added = self.last_added(num=100)
+        last_added_text = [_to_text(m, last_added[m]) for m in last_added]
         try:
-            if key is None:
-                return self._loaded_db[movie]
-            else:
-                return self._loaded_db[movie][key]
+            with open(target, 'w') as last_added_file:
+                last_added_file.writelines(last_added_text)
+            print(f'wrote to {CSTR(target, "green")}')
         except:
-            return None
-
-    # Check if movie exists in loaded database
-    def exists(self, movie_name):
-        return True if movie_name in self._loaded_db else False
-
-    # Backup database file
-    def backup_to_ds(self):
-        bpath = CONFIG.get("path_backup")
-        dest = os.path.join(bpath, "Database", "Movie")
-        return filetools.backup_file(self._db_file, dest)
-
-    # Get omdb data for movie
-    def omdb_data(self, movie, key=None):
-        omdb = self.movie_data(movie, key="omdb")
-        try:
-            if key is None:
-                return omdb
-            else:
-                return omdb[key]
-        except:
-            return None
-
-    # Get a list of all key values as strings
-    def list_keys(self):
-        return self._key_list
-
-    # Search for movie titles, get hits as a list of strings
-    def search(self, search_string, first_hit=False):
-        res = []
-        for movie_name in self._mov_list:
-            if movie_name.lower().find(search_string.lower()) is not -1:
-                res.append(movie_name)
-                if first_hit is True:
-                    break
-        return res
+            print(CSTR('could not save latest.txt', 'red'))
