@@ -71,6 +71,19 @@ class JSONDatabase(object):
         self.json[primary_key][data] = value
         return True
 
+    def sorted(self, sort_by_key, reversed_sort=False):
+        print("here")
+        unsorted_list = []
+        for primary_key in self.json:
+            unsorted_list.append(
+                (primary_key, self.json[primary_key][sort_by_key]))
+        sorted_list = sorted(
+            unsorted_list, key=lambda tuple_item: tuple_item[1], reverse=reversed_sort)
+        sorted_dict = {}
+        for item in sorted_list:
+            sorted_dict[item[0]] = self.json[item[0]]
+        return sorted_dict
+
     def get(self, primary_key, data):
         ''' Retrieve data '''
         try:
