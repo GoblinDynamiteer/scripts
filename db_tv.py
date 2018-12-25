@@ -9,6 +9,7 @@ import config
 import printing
 
 PRINT = printing.PrintClass(os.path.basename(__file__))
+CONFIG = config.ConfigurationManager()
 
 try:
     to_unicode = unicode
@@ -18,9 +19,8 @@ except NameError:
 
 class database:
     def __init__(self):
-        self._config = config.ConfigurationManager()
         self.script_path = os.path.dirname(os.path.realpath(__file__))
-        self._db_file = self._config.get_setting("path", "tvdb")
+        self._db_file = CONFIG.get("path_tvdb")
         self._loaded_db = None
         self._load_db()
         self._show_list = []
@@ -170,7 +170,7 @@ class database:
 
     # Backup database file
     def backup_to_ds(self):
-        bpath = self._config.get_setting("path", "backup")
+        bpath = CONFIG.get("path_backup")
         dest = os.path.join(bpath, "Database", "TV")
         return filetools.backup_file(self._db_file, dest)
 
