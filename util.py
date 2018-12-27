@@ -59,3 +59,8 @@ def is_valid_year(string, min_value=1800, max_value=2050):
 def now_timestamp() -> int:
     ''' Current time as a UNIX timestamp '''
     return int(DateTime.now().timestamp())
+
+
+def video_extensions() -> list:
+    ''' Get a list of used video file extensions '''
+    return ['.mkv', '.avi', '.mp4']
