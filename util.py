@@ -4,6 +4,7 @@
 
 import os
 import re
+import ntpath
 from datetime import datetime as DateTime
 
 
@@ -18,6 +19,12 @@ def dirname_of_file(file_path):
         return os.path.dirname(full_path)
     except:
         return None
+
+
+def filename_of_path(file_path):
+    ''' Gets just the filename of a full part'''
+    _, tail = ntpath.split(file_path)
+    return tail or None
 
 
 def parse_imdbid(string):
