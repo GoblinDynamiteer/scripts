@@ -1,59 +1,48 @@
 #!/usr/bin/env python3.6
 
-'''Scan for new movies'''
+'''Scan for media'''
 
-import os
-import datetime
-import filetools as ftool
-import movie as MOVIE
-import db_mov
-import printing
+from config import ConfigurationManager
+from db_mov import MovieDatabase
+from omdb import movie_search
+import util_movie
+import util
 
-PRINT = printing.PrintClass(os.path.basename(__file__))
-
-DB_MOV = db_mov.database()
-if not DB_MOV.load_success():
-    quit()
-
-ROOT = MOVIE.root_path()
-SUB_FOLDERS = os.listdir(ROOT)
+from printing import to_color_str as CSTR
 
 
-def new_movie(mov_dir_letter, movie_dir_name):
-    """ Add a new movie to the database """
-    file_path = os.path.join(ROOT, mov_dir_letter, movie_dir_name)
-    mov = {'letter': mov_dir_letter, 'folder': movie_dir_name}
-    date = ftool.get_creation_date(file_path, convert=True)
-    mov['date_created'] = date.strftime(
-        "%d %b %Y") if date is not None else None
-    mov['date_scanned'] = datetime.datetime.now().strftime("%d %b %Y %H:%M")
-    mov['nfo'] = MOVIE.has_nfo(file_path)
-    mov['imdb'] = MOVIE.nfo_to_imdb(file_path)
-    mov['omdb'] = MOVIE.omdb_search(mov)
-    mov['subs'] = {
-        'sv': MOVIE.has_subtitle(file_path, "sv"),
-        'en': MOVIE.has_subtitle(file_path, "en")}
-    mov['video'] = MOVIE.get_vid_file(file_path)
-    mov['status'] = "ok"
-    PRINT.info(f"added [{movie_dir_name}] to database!")
-    DB_MOV.add(mov)
+DB_MOV = MovieDatabase()
+CFG = ConfigurationManager()
 
+if __name__ == '__main__':
 
-NEW_COUNT = 0
-for letter in SUB_FOLDERS:
-    if letter in MOVIE.vaild_letters():
-        PRINT.info(f"scanning {letter}")
-        movies = os.listdir(os.path.join(ROOT, letter))
-        movies.sort()
-        for movie in movies:
-            if movie.startswith("@"):
-                continue  # NAS special dir
-            if not DB_MOV.exists(movie):
-                new_movie(letter, movie)
-                NEW_COUNT += 1
+    MOVIES_NOT_IN_DB = [
+        movie for movie in util_movie.list_all() if not DB_MOV.exists(movie)]
+
+    NEW = len(MOVIES_NOT_IN_DB)
+    for new_movie in MOVIES_NOT_IN_DB:
+        data = {'folder': new_movie, 'scanned': util.now_timestamp()}
+        guessed_title = util_movie.determine_title(new_movie)
+        guessed_year = util_movie.parse_year(new_movie)
+        json_data = {}
+        if guessed_title:
+            json_data = movie_search(guessed_title, year=guessed_year)
+        if 'Year' in json_data:
+            year = json_data['Year']
+            if util.is_valid_year(year, min_value=1920, max_value=2019):
+                data['year'] = int(year)
+        if 'imdbID' in json_data:
+            imdb_id = json_data['imdbID']
+            imdb_id = util.parse_imdbid(imdb_id)
+            if imdb_id:
+                data['imdb'] = imdb_id
+        if 'Title' in json_data:
+            data['title'] = json_data['Title']
+        DB_MOV.insert(data)
+        print(f'added new movie: {CSTR(new_movie, "green")}')
+
+    if NEW:
+        DB_MOV.save()
+        DB_MOV.export_last_added()
     else:
-        continue
-
-PRINT.info(f"done scanning. found ({NEW_COUNT}) new movies.")
-if NEW_COUNT > 0:
-    DB_MOV.save()
+        print('found no new movies')
