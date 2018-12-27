@@ -27,6 +27,8 @@ def _omdb_search(url):
 
 
 def movie_search(query_string, year=None):
+    ''' Searches the OMDb database for a movie, returns
+        the json response as a dict'''
     url_args = {'apikey': API_KEY, 'type': 'movie'}
     if util.is_imdbid(query_string):
         url_args['i'] = util.parse_imdbid(query_string)
