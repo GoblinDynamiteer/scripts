@@ -3,62 +3,34 @@
 ''' TVMaze '''
 
 import json
-import re
 import urllib.parse
 import urllib.request
 
+import util
 
-class tvmaze_search:
-    def __init__(self, query, season=None, episode=None):
-        self.site = "http://api.tvmaze.com"
-        self.url_args = {}
-        self.json_data = ""
-        if self._is_imdb(query):
-            self.url_args['imdb'] = query
-            self.site += "/lookup/shows"
-        elif self._is_possible_maze_id(query):
-            self.site += f"/shows/{query}"
-        else:
-            self.url_args['q'] = query
-            self.site += "/singlesearch/shows"
-        self.search_string_url = self.site + "?" + \
-            urllib.parse.urlencode(self.url_args)
-        self._search()
-        if self.json_data:
-            self.tvmaze_url = self.json_data["_links"]["self"]["href"]
-            if season and not episode:
-                self.search_string_url = self.tvmaze_url + f"/seasons"
-                self._search()
-                for json_season in self.json_data:
-                    if int(json_season['number']) == int(season):
-                        self.json_data = json_season
-                        break
-            if episode and season:
-                self.url_args = {}
-                self.url_args['season'] = season
-                self.url_args['number'] = episode
-                self.search_string_url = self.tvmaze_url + \
-                    "/episodebynumber?" + urllib.parse.urlencode(self.url_args)
-                self._search()
+URL = "http://api.tvmaze.com"
 
-    def _search(self):
-        try:
-            response = urllib.request.urlopen(
-                self.search_string_url, timeout=4).read().decode("utf-8")
-            self.json_data = json.loads(response)
-        except:
-            self.json_data = None
 
-    def get_url(self):
-        return self.search_string_url
+def _tvmaze_search(url):
+    json_response = {}
+    try:
+        response = urllib.request.urlopen(
+            url, timeout=4).read().decode("utf-8")
+        json_response = json.loads(response)
+    except:
+        pass
+    return json_response
 
-    def _is_imdb(self, string):
-        re_imdb = re.compile("^tt\d{1,}")
-        return True if re_imdb.search(string) else False
 
-    def _is_possible_maze_id(self, string):
-        re_imdb = re.compile("^\d{1,}")
-        return True if re_imdb.search(string) else False
-
-    def data(self):
-        return self.json_data
+def show_search(query_string):
+    ''' Search a TV Show, query can be show name or IMDb-id'''
+    url_args = {}
+    url = ""
+    if util.is_imdbid(query_string):
+        url_args['imdb'] = util.parse_imdbid(query_string)
+        url = f'{URL}/lookup/shows?'
+    else:
+        url_args['q'] = query_string
+        url = f'{URL}/singlesearch/shows?'
+    url = f'{url}{urllib.parse.urlencode(url_args)}'
+    return _tvmaze_search(url)
