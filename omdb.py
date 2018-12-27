@@ -37,5 +37,4 @@ def movie_search(query_string, year=None):
     if util.is_valid_year(year):
         url_args['y'] = year
     url = f'{URL}?{urllib.parse.urlencode(url_args)}'
-    print(url)
     return _omdb_search(url)
