@@ -3,10 +3,15 @@
 '''JSON Database handler'''
 
 import json
+import os
+import shutil
 
 import printing
+import util
+from config import ConfigurationManager
 
 CSTR = printing.to_color_str
+CFG = ConfigurationManager()
 
 
 class JSONDatabase(object):
@@ -38,8 +43,22 @@ class JSONDatabase(object):
         except:
             print('could not save database')
 
+    def _backup(self):
+        ''' Backup json file '''
+        timestamp = util.now_timestamp()
+        backup_path = CFG.get('path_backup')
+        db_filename = util.filename_of_path(self.db_file_path)
+        destination = os.path.join(
+            backup_path, 'databases', f'{db_filename}_{timestamp}')
+        try:
+            shutil.copy(self.db_file_path, destination)
+        except PermissionError:
+            shutil.copyfile(self.db_file_path, destination)
+        print(f'backed up to {CSTR(destination, "green")}')
+
     def save(self):
         ''' Save database file '''
+        self._backup()
         self._save_database_file()
 
     def set_valid_keys(self, key_list):
