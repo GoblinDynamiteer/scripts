@@ -1,17 +1,21 @@
 #!/usr/bin/env python3.6
 
-'''String output'''
+'''Settings file value getter'''
 
 import configparser
+import os
 
 import util
 
-DEFAULT_SETTINGS_FILE = 'settings.ini'
+DIR_OF_CONFIG_SCRIPT = util.dirname_of_file(__file__)
+DEFAULT_SETTINGS_FILE = os.path.join(DIR_OF_CONFIG_SCRIPT, 'settings.ini')
 
 SETTING_VARS = [('$HOME', util.home_dir())]
 
 
 class ConfigurationManager:
+    ''' Reads settings.ini (or other passed ini) '''
+
     def __init__(self, settings_file=None):
         settings = DEFAULT_SETTINGS_FILE
         if settings_file:
