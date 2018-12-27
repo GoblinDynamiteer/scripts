@@ -10,7 +10,7 @@ import db_json
 import printing
 
 CFG = config.ConfigurationManager()
-MOVIE_DATABASE_PATH = CFG.get('path_movdb_new')
+MOVIE_DATABASE_PATH = CFG.get('path_movdb')
 CSTR = printing.to_color_str
 
 
