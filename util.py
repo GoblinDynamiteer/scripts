@@ -4,6 +4,7 @@
 
 import os
 import re
+from datetime import datetime as DateTime
 
 
 def home_dir():
@@ -46,3 +47,8 @@ def is_valid_year(string, min_value=1800, max_value=2050):
     if min_value < year < max_value:
         return True
     return False
+
+
+def now_timestamp() -> int:
+    ''' Current time as a UNIX timestamp '''
+    return int(DateTime.now().timestamp())
