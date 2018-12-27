@@ -111,6 +111,10 @@ class JSONDatabase(object):
             print(f'could not retrieve data for {CSTR(primary_key, "red")}')
             return None
 
+    def exists(self, primary_key):
+        ''' Check if key exists in database '''
+        return primary_key in self.json
+
     def insert(self, data: dict):
         ''' Insert data '''
         keys = list(data.keys())
