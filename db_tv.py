@@ -1,190 +1,73 @@
 #!/usr/bin/env python3.6
 
-'''TV Database handler'''
+'''TV Episode/Show Database handler'''
 
-import json
 import os
-import filetools
+from datetime import datetime
+
 import config
+import db_json
 import printing
 
-PRINT = printing.PrintClass(os.path.basename(__file__))
-CONFIG = config.ConfigurationManager()
-
-try:
-    to_unicode = unicode
-except NameError:
-    to_unicode = str
+CFG = config.ConfigurationManager()
+EPISODE_DATABASE_PATH = CFG.get('path_epdb')
+SHOW_DATABASE_PATH = CFG.get('path_showdb')
+CSTR = printing.to_color_str
 
 
-class database:
+def _to_text(movie_folder, movie_data):
+    scanned_hr = datetime.fromtimestamp(
+        movie_data['scanned']).strftime('%Y-%m-%d')
+    return f'[{scanned_hr}] [{movie_data["year"]}] [{movie_data["title"]}] [{movie_folder}]\n'
+
+
+class ShowDatabase(db_json.JSONDatabase):
+    ''' TV/Show Database '''
+
     def __init__(self):
-        self.script_path = os.path.dirname(os.path.realpath(__file__))
-        self._db_file = CONFIG.get("path_tvdb")
-        self._loaded_db = None
-        self._load_db()
-        self._show_list = []
-        self._key_list = []
-        if self._loaded_db is not None and self._loaded_db:
-            for show in self._loaded_db.keys():
-                self._show_list.append(show)
-            for key in self._loaded_db[self._show_list[0]].keys():
-                self._key_list.append(key)
+        db_json.JSONDatabase.__init__(self, SHOW_DATABASE_PATH)
+        self.set_valid_keys(['folder', 'title', 'year', 'imdb', 'tvmaze'])
+        self.set_key_type('folder', str)
+        self.set_key_type('title', str)
+        self.set_key_type('year', int)
+        self.set_key_type('imdb', str)
+        self.set_key_type('tvmaze', int)
 
-    # Load JSON database to variable
-    def _load_db(self):
-        if filetools.is_file_empty(self._db_file):
-            self._loaded_db = {}
-            PRINT.warning("creating empty database")
-        else:
-            try:
-                with open(self._db_file, 'r') as db:
-                    self._loaded_db = json.load(db)
-                    PRINT.info("loaded database file: [ {} ]".format(
-                        self._db_file))
-            except:
-                PRINT.error("Could not open file: {0}".format(self._db_file))
-                self._loaded_db = None
 
-    # Save to database JSON file
-    def save(self):
-        with open(self._db_file, 'w', encoding='utf8') as outfile:
-            str_ = json.dumps(self._loaded_db,
-                              indent=4, sort_keys=True,
-                              separators=(',', ': '), ensure_ascii=False)
-            outfile.write(to_unicode(str_))
-        PRINT.success("saved database to {}!".format(self._db_file))
-        if self.backup_to_ds():
-            PRINT.success("backed up database!")
-        else:
-            PRINT.warning("could not backup database!")
+class EpisodeDatabase(db_json.JSONDatabase):
+    ''' TV/Episode Database '''
 
-    # Add show to database
-    def add(self, show):
-        if self.load_success():
-            key = show['folder']
-            if key is not None:
-                self._loaded_db[key] = show
+    def __init__(self):
+        db_json.JSONDatabase.__init__(self, EPISODE_DATABASE_PATH)
+        self.set_valid_keys(['filename', 'season_number', 'released', 'tvshow',
+                             'episode_number', 'tvmaze', 'scanned'])
+        self.set_key_type('filename', str)
+        self.set_key_type('tvshow', str)
+        self.set_key_type('season_number', int)
+        self.set_key_type('episode_number', int)
+        self.set_key_type('released', int)  # unix timestamp
+        self.set_key_type('tvmaze', int)
+        self.set_key_type('scanned', int)  # unix timestamp
 
-    def add_season(self, show_s, season_d):
-        if self.load_success():
-            show_d = self._loaded_db[show_s]
-            show_d['seasons'].append(season_d)
-            PRINT.info(f"added {season_d['folder']} to {show_s}")
+    def last_added(self, num=10):
+        ''' Get the most recently added episodes '''
+        sorted_dict = self.sorted('scanned', reversed_sort=True)
+        count = 0
+        last_added_dict = {}
+        for folder, data in sorted_dict.items():
+            last_added_dict[folder] = data
+            count += 1
+            if count == num:
+                return last_added_dict
+        return last_added_dict
 
-    def add_ep(self, show, season, episode_object):
-        if self.load_success():
-            show_obj = self._loaded_db[show]
-            season_ix = 0
-            for season_obj in show_obj['seasons']:
-                if season_obj['folder'] == season:
-                    show_obj['seasons'][season_ix]['episodes'].append(
-                        episode_object)
-                    break
-                season_ix += 1
-            self._loaded_db[show] = show_obj
-
-    # Check if database loaded correctly
-    def load_success(self):
-        return True if self._loaded_db is not None else False
-
-    # Update data for show
-    def update(self, show_folder, data, key=None):
-        if not self.exists(show_folder):
-            PRINT.warning("update: {} is not in database!".format(show_folder))
-        else:
-            try:
-                if key:
-                    self._loaded_db[show_folder][key] = data
-                    if key is 'omdb':
-                        data = "omdb-search"
-                    PRINT.info("updated {} : {} = {}".format(
-                        show_folder, key, data))
-                else:
-                    self._loaded_db[show_folder] = data
-                    PRINT.info("updated {} with new data: {}".format(
-                        show_folder, data))
-            except:
-                PRINT.warning(
-                    "update: Could not update {}!".format(show_folder))
-
-    # Get count of movies
-    def count(self):
-        return len(self._loaded_db)
-
-    # Get a list of all show titles as strings
-    def list_shows(self):
-        return self._show_list
-
-    # Get show data
-    def data(self, show_s, key=None):
-        if isinstance(show_s, dict) and "folder" in show_s:
-            show_s = show_s["folder"]
-        if self.exists(show_s):
-            show_s = self._show_s_to_formatted_key(show_s)
-            if key is None:
-                return self._loaded_db[show_s]
-            else:
-                if key in self._loaded_db[show_s]:
-                    return self._loaded_db[show_s][key]
-        PRINT.warning(f"[data] could not retrieve data for show")
-        return None
-
-    # Determine if show has an episode
-    def has_ep(self, show_s, episode_filename):
-        if self.exists(show_s):
-            show_s = self._show_s_to_formatted_key(show_s)
-            for season in self._loaded_db[show_s]['seasons']:
-                for episode in season['episodes']:
-                    if episode['file'] == episode_filename:
-                        return True
-        else:
-            PRINT.error(f"has_ep: not in db: [{show_s}]")
-        return False
-
-    # Determine if show has season
-    def has_season(self, show_s, season_s):
-        if self.exists(show_s):
-            show_s = self._show_s_to_formatted_key(show_s)
-            for season in self._loaded_db[show_s]['seasons']:
-                se = str(season['folder'])
-                if se.lower() == season_s.lower():
-                    return True
-        else:
-            PRINT.error(f"has_season: not in db: [{show_s}]")
-        return False
-
-    # Check if tv show exists in loaded database
-    def exists(self, show_name):
-        for show_s in self._show_list:
-            if show_name.lower() == show_s.lower():
-                return True
-        return False
-
-    # For file name casing mismatch
-    def _show_s_to_formatted_key(self, show_s):
-        for key in self._show_list:
-            if key.lower() == show_s.lower():
-                return key
-        return False
-
-    # Backup database file
-    def backup_to_ds(self):
-        bpath = CONFIG.get("path_backup")
-        dest = os.path.join(bpath, "Database", "TV")
-        return filetools.backup_file(self._db_file, dest)
-
-    # Get omdb data for show
-    def omdb_data(self, show, key=None):
-        omdb = self.movie_data(show, key="omdb")
+    def export_last_added(self, target=os.path.join(CFG.get('path_tv'), 'latest.txt')):
+        ''' Exports the latest added episodes to text file '''
+        last_added = self.last_added(num=100)
+        last_added_text = [_to_text(m, last_added[m]) for m in last_added]
         try:
-            if key is None:
-                return omdb
-            else:
-                return omdb[key]
+            with open(target, 'w') as last_added_file:
+                last_added_file.writelines(last_added_text)
+            print(f'wrote to {CSTR(target, "green")}')
         except:
-            return None
-
-    # Get a list of all key values as strings
-    def list_keys(self):
-        return self._key_list
+            print(CSTR('could not save latest.txt', 'red'))
