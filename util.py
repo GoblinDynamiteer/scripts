@@ -32,3 +32,17 @@ def is_imdbid(string):
     if parse_imdbid(string):
         return True
     return False
+
+
+def is_valid_year(string, min_value=1800, max_value=2050):
+    ''' Determines if a string / int value is a valid year '''
+    year = 0
+    try:
+        year = int(string)
+    except ValueError:
+        return False
+    except TypeError:
+        return False
+    if min_value < year < max_value:
+        return True
+    return False
