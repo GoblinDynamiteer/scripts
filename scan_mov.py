@@ -2,6 +2,8 @@
 
 '''Scan for media'''
 
+import argparse
+
 from config import ConfigurationManager
 from db_mov import MovieDatabase
 from omdb import movie_search
@@ -14,13 +16,13 @@ from printing import to_color_str as CSTR
 DB_MOV = MovieDatabase()
 CFG = ConfigurationManager()
 
-if __name__ == '__main__':
 
-    MOVIES_NOT_IN_DB = [
+def _scan_movies():
+    movies_not_in_db = [
         movie for movie in util_movie.list_all() if not DB_MOV.exists(movie)]
 
-    NEW = len(MOVIES_NOT_IN_DB)
-    for new_movie in MOVIES_NOT_IN_DB:
+    new = len(movies_not_in_db)
+    for new_movie in movies_not_in_db:
         data = {'folder': new_movie, 'scanned': util.now_timestamp()}
         guessed_title = util_movie.determine_title(new_movie)
         guessed_year = util_movie.parse_year(new_movie)
@@ -41,8 +43,21 @@ if __name__ == '__main__':
         DB_MOV.insert(data)
         print(f'added new movie: {CSTR(new_movie, "green")}')
 
-    if NEW:
+    if new:
         DB_MOV.save()
         DB_MOV.export_last_added()
     else:
         print('found no new movies')
+
+
+if __name__ == '__main__':
+    ARG_PARSER = argparse.ArgumentParser(description='Media Scanner')
+    ARG_PARSER.add_argument('type', type=str)
+    ARGS = ARG_PARSER.parse_args()
+
+    if ARGS.type in ['movies', 'm', 'film', 'f', 'mov', 'movie']:
+        _scan_movies()
+    elif ARGS.type in ['tv', 'eps', 't', 'shows', 'episodes']:
+        print('tv scanner not implemented')
+    else:
+        print('wrong scan target')
