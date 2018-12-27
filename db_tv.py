@@ -15,10 +15,11 @@ SHOW_DATABASE_PATH = CFG.get('path_showdb')
 CSTR = printing.to_color_str
 
 
-def _to_text(movie_folder, movie_data):
+def _to_text(episode_filename, episode_data):
     scanned_hr = datetime.fromtimestamp(
-        movie_data['scanned']).strftime('%Y-%m-%d')
-    return f'[{scanned_hr}] [{movie_data["year"]}] [{movie_data["title"]}] [{movie_folder}]\n'
+        episode_data['scanned']).strftime('%Y-%m-%d')
+    season_episode = f'S{episode_data["season_number"]:02d}E{episode_data["episode_number"]:02d}'
+    return f'[{scanned_hr}] [{episode_data["tvshow"]}] [{season_episode}] [{episode_filename}]\n'
 
 
 class ShowDatabase(db_json.JSONDatabase):
@@ -64,7 +65,7 @@ class EpisodeDatabase(db_json.JSONDatabase):
     def export_last_added(self, target=os.path.join(CFG.get('path_tv'), 'latest.txt')):
         ''' Exports the latest added episodes to text file '''
         last_added = self.last_added(num=100)
-        last_added_text = [_to_text(m, last_added[m]) for m in last_added]
+        last_added_text = [_to_text(e, last_added[e]) for e in last_added]
         try:
             with open(target, 'w') as last_added_file:
                 last_added_file.writelines(last_added_text)
