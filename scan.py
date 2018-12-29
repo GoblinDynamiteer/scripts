@@ -59,7 +59,8 @@ def _scan_movies():
 
 def _scan_episodes():
     shows_not_in_db = [
-        show for show in util_tv.list_all_shows() if show not in DB_SHOW]
+        show for show in util_tv.list_all_shows()
+        if show not in DB_SHOW and not is_ds_special_dir(show)]
 
     new = False
     if shows_not_in_db:
@@ -67,7 +68,7 @@ def _scan_episodes():
         for new_show in shows_not_in_db:
             if is_ds_special_dir(new_show):
                 continue
-            print(f'added new movie: {CSTR(new_show, "green")}')
+            print(f'added new show: {CSTR(new_show, "green")}')
             # TODO: add new shows before scanning eps...
 
     if new:
