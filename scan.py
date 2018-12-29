@@ -14,6 +14,7 @@ from db_mov import MovieDatabase
 from db_tv import EpisodeDatabase, ShowDatabase
 from omdb import movie_search
 from printing import to_color_str as CSTR
+from diskstation import is_ds_special_dir
 
 DB_MOV = MovieDatabase()
 DB_EP = EpisodeDatabase()
@@ -27,6 +28,8 @@ def _scan_movies():
 
     new = len(movies_not_in_db)
     for new_movie in movies_not_in_db:
+        if is_ds_special_dir(new_movie):
+            continue
         data = {'folder': new_movie, 'scanned': util.now_timestamp()}
         guessed_title = util_movie.determine_title(new_movie)
         guessed_year = util_movie.parse_year(new_movie)
@@ -62,6 +65,8 @@ def _scan_episodes():
     if shows_not_in_db:
         new = True
         for new_show in shows_not_in_db:
+            if is_ds_special_dir(new_show):
+                continue
             print(f'added new movie: {CSTR(new_show, "green")}')
             # TODO: add new shows before scanning eps...
 
@@ -72,7 +77,7 @@ def _scan_episodes():
 
     new = False
     for path, episode in util_tv.list_all_episodes():  # uses yield
-        if episode in DB_EP:
+        if episode in DB_EP or is_ds_special_dir(episode):
             continue
         new = True
         data = {'filename': episode, 'scanned': util.now_timestamp()}
