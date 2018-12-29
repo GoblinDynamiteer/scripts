@@ -91,7 +91,6 @@ class JSONDatabase(object):
         return True
 
     def sorted(self, sort_by_key, reversed_sort=False):
-        print("here")
         unsorted_list = []
         for primary_key in self.json:
             unsorted_list.append(
