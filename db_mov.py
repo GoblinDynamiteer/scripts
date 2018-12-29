@@ -17,7 +17,12 @@ CSTR = printing.to_color_str
 def _to_text(movie_folder, movie_data):
     scanned_hr = datetime.fromtimestamp(
         movie_data['scanned']).strftime('%Y-%m-%d')
-    return f'[{scanned_hr}] [{movie_data["year"]}] [{movie_data["title"]}] [{movie_folder}]\n'
+    year = title = 'N/A'
+    if 'year' in movie_data:
+        year = movie_data['year']
+    if 'title' in movie_data:
+        title = movie_data['title']
+    return f'[{scanned_hr}] [{year}] [{title}] [{movie_folder}]\n'
 
 
 class MovieDatabase(db_json.JSONDatabase):
