@@ -64,3 +64,15 @@ def now_timestamp() -> int:
 def video_extensions() -> list:
     ''' Get a list of used video file extensions '''
     return ['.mkv', '.avi', '.mp4']
+
+
+def date_str_to_timestamp(string, date_format=None) -> int:
+    ' Tries to convert a time/date string to UNIX timestamp '
+    formats = [date_format, r'%Y-%m-%dT%H:%M:%S', r'%Y-%m-%dT%H:%M:%S+00:00']
+    for form in formats:
+        try:
+            date_time = DateTime.strptime(string, form)
+            return int(date_time.timestamp())
+        except:
+            pass
+    return 0  # could not parse time string
