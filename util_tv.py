@@ -3,6 +3,7 @@
 ''' Various tv show/episode helper/utility functions '''
 
 import os
+import re
 
 from config import ConfigurationManager
 import util
@@ -27,3 +28,14 @@ def list_all_episodes():
         for file_name in os.listdir(season_path):
             if any(file_name.endswith(ext) for ext in util.video_extensions()):
                 yield (season_path, file_name) # return full path and filename
+
+
+def parse_season_episode(episode_filename: str):
+    match = re.search(r'[Ss]\d{1,2}[Ee]\d{1,2}', episode_filename)
+    if match:
+        se_string = match.group().lower()
+        se_list = se_string.replace('s', '').split('e')
+        season = int(se_list[0])
+        episode = int(se_list[1])
+        return (season, episode)
+    return None
