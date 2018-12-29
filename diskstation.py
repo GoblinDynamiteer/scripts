@@ -15,6 +15,10 @@ CONFIG = config.ConfigurationManager()
 NAS_IP = CONFIG.get('ds_ip')
 
 
+def is_ds_special_dir(dir_str):
+    return dir_str.startswith('@')
+
+
 def get_ds_shares() -> list:
     " Get a list of available DS shares "
     return ['APPS', 'TV', 'FILM', 'MISC', 'BACKUP', 'DATA', 'DOCEDU', 'AUDIO', 'Rest']
