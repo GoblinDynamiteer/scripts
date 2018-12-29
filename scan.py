@@ -3,17 +3,21 @@
 '''Scan for media'''
 
 import argparse
+import os
 
+import tvmaze
+import util
+import util_movie
+import util_tv
 from config import ConfigurationManager
 from db_mov import MovieDatabase
+from db_tv import EpisodeDatabase, ShowDatabase
 from omdb import movie_search
-import util_movie
-import util
-
 from printing import to_color_str as CSTR
 
-
 DB_MOV = MovieDatabase()
+DB_EP = EpisodeDatabase()
+DB_SHOW = ShowDatabase()
 CFG = ConfigurationManager()
 
 
@@ -50,6 +54,58 @@ def _scan_movies():
         print('found no new movies')
 
 
+def _scan_episodes():
+    shows_not_in_db = [
+        show for show in util_tv.list_all_shows() if show not in DB_SHOW]
+
+    new = False
+    if shows_not_in_db:
+        new = True
+        for new_show in shows_not_in_db:
+            print(f'added new movie: {CSTR(new_show, "green")}')
+            # TODO: add new shows before scanning eps...
+
+    if new:
+        DB_SHOW.save()
+    else:
+        print('found no new shows')
+
+    new = False
+    for path, episode in util_tv.list_all_episodes():  # uses yield
+        if episode in DB_EP:
+            continue
+        new = True
+        data = {'filename': episode, 'scanned': util.now_timestamp()}
+        season_number, episode_number = util_tv.parse_season_episode(episode)
+        data['season_number'] = season_number
+        data['episode_number'] = episode_number
+        # TODO: use better way to get show
+        show_path, _ = os.path.split(path)
+        show = os.path.basename(show_path)
+        tvmaze_data = None
+        if show in DB_SHOW:
+            data['tvshow'] = show
+            show_id = DB_SHOW.get(show, 'tvmaze')
+            tvmaze_data = tvmaze.episode_search(
+                show, season_number, episode_number, show_maze_id=show_id)
+        if tvmaze_data:
+            if 'id' in tvmaze_data:
+                data['tvmaze'] = tvmaze_data['id']
+            if 'airstamp' in tvmaze_data:
+                aired_date_str = tvmaze_data['airstamp']
+                aired_timestamp = util.date_str_to_timestamp(aired_date_str)
+                if aired_timestamp:  # not 0
+                    data['released'] = aired_timestamp
+        DB_EP.insert(data)
+        print(f'added new episode: {CSTR(episode, "green")}')
+
+    if new:
+        DB_EP.save()
+        DB_EP.export_last_added()
+    else:
+        print('found no new episodes')
+
+
 if __name__ == '__main__':
     ARG_PARSER = argparse.ArgumentParser(description='Media Scanner')
     ARG_PARSER.add_argument('type', type=str)
@@ -58,6 +114,6 @@ if __name__ == '__main__':
     if ARGS.type in ['movies', 'm', 'film', 'f', 'mov', 'movie']:
         _scan_movies()
     elif ARGS.type in ['tv', 'eps', 't', 'shows', 'episodes']:
-        print('tv scanner not implemented')
+        _scan_episodes()
     else:
         print('wrong scan target')
