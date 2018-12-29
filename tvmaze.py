@@ -34,3 +34,14 @@ def show_search(query_string):
         url = f'{URL}/singlesearch/shows?'
     url = f'{url}{urllib.parse.urlencode(url_args)}'
     return _tvmaze_search(url)
+
+
+def episode_search(show_name: str, season: int, episode: int, show_maze_id: int = None) -> dict:
+    ''' Retrieve episode data '''
+    url_args = {'season': season, 'number': episode}
+    if not show_maze_id:
+        show_maze_id = 1
+        # TODO: determine maze id from show_name
+        pass
+    url = f'{URL}/shows/{show_maze_id}/episodebynumber?{urllib.parse.urlencode(url_args)}'
+    return _tvmaze_search(url)
