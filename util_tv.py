@@ -17,7 +17,7 @@ def list_all_shows() -> list:
             if os.path.isdir(os.path.join(SHOW_DIR, show))]
 
 
-def list_all_episodes() -> list:
+def list_all_episodes():
     '''Returns a list of all current tv show files'''
     show_paths = [os.path.join(SHOW_DIR, sp) for sp in list_all_shows()]
     season_paths = [os.path.join(show, season)
@@ -26,4 +26,4 @@ def list_all_episodes() -> list:
     for season_path in season_paths:
         for file_name in os.listdir(season_path):
             if any(file_name.endswith(ext) for ext in util.video_extensions()):
-                yield file_name
+                yield (season_path, file_name) # return full path and filename
