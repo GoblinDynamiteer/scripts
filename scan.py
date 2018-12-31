@@ -57,7 +57,7 @@ def _scan_movies():
         print('found no new movies')
 
 
-def _scan_episodes():
+def _scan_new_shows():
     shows_not_in_db = [
         show for show in util_tv.list_all_shows()
         if show not in DB_SHOW and not is_ds_special_dir(show)]
@@ -68,14 +68,30 @@ def _scan_episodes():
         for new_show in shows_not_in_db:
             if is_ds_special_dir(new_show):
                 continue
+            maze_data = tvmaze.show_search(new_show)
+            data = {'folder': new_show}
+            if maze_data:
+                if 'id' in maze_data:
+                    data['tvmaze'] = maze_data['id']
+                if 'name' in maze_data:
+                    data['title'] = maze_data['name']
+                if 'premiered' in maze_data:
+                    year_str = maze_data['premiered'][0:4]
+                    if util.is_valid_year(year_str):
+                        data['year'] = int(year_str)
+                if 'externals' in maze_data:
+                    ext = maze_data['externals']
+                    if 'imdb' in ext:
+                        data['imdb'] = ext['imdb']
+            DB_SHOW.insert(data)
             print(f'added new show: {CSTR(new_show, "green")}')
-            # TODO: add new shows before scanning eps...
-
     if new:
         DB_SHOW.save()
     else:
         print('found no new shows')
 
+
+def _scan_episodes():
     new = False
     for path, episode in util_tv.list_all_episodes():  # uses yield
         if episode in DB_EP or is_ds_special_dir(episode):
@@ -120,6 +136,7 @@ if __name__ == '__main__':
     if ARGS.type in ['movies', 'm', 'film', 'f', 'mov', 'movie']:
         _scan_movies()
     elif ARGS.type in ['tv', 'eps', 't', 'shows', 'episodes']:
+        _scan_new_shows()
         _scan_episodes()
     else:
         print('wrong scan target')
