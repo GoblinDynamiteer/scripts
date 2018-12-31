@@ -26,10 +26,11 @@ def _scan_movies():
     movies_not_in_db = [
         movie for movie in util_movie.list_all() if not DB_MOV.exists(movie)]
 
-    new = len(movies_not_in_db)
+    new = False
     for new_movie in movies_not_in_db:
         if is_ds_special_dir(new_movie):
             continue
+        new = True
         data = {'folder': new_movie, 'scanned': util.now_timestamp()}
         guessed_title = util_movie.determine_title(new_movie)
         guessed_year = util_movie.parse_year(new_movie)
