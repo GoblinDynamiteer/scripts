@@ -159,7 +159,7 @@ def _unknown_site(url: str, dl_loc: str, site: str):
 
 def _subtitle_dl(url: str, output_file: str):
     srt_file_path = None
-    if output_file.endswith('.mp4'):
+    if output_file.endswith('.mp4') or output_file.endswith('.flv'):
         srt_file_path = f"{output_file[0:-4]}"
     command = f'svtplay-dl -S --force-subtitle -o {srt_file_path} {url}'
     if run.local_command(command, hide_output=True, print_info=False):
