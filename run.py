@@ -22,6 +22,15 @@ def local_command(command, hide_output: bool = True, print_info: bool = True) ->
     return ret.returncode == 0
 
 
+def local_command_get_output(command):
+    "Run a local command, returns the output"
+    ret = subprocess.run(command, shell=True, encoding='utf-8',
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if ret.returncode == 0:
+        return ret.stdout if ret.stdout else ret.stderr
+    return False
+
+
 def _executable(file_path):
     return os.path.isfile(file_path) and os.access(file_path, os.X_OK)
 
