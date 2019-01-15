@@ -30,9 +30,9 @@ COLORS = {"black": 0,
 def to_color_str(
         string: str, foreground: str, background: str = None, bold: bool = False) -> str:
     '''Returns "colorized" string'''
-    colstring = "\033[38;5;" + str(COLORS[foreground]) + "m"
+    colstring = "\033[38;5;" + str(COLORS.get(foreground, '46')) + "m"
     if background:
-        colstring += "\033[48;5;" + str(COLORS[background]) + "m"
+        colstring += "\033[48;5;" + str(COLORS.get(foreground, '0')) + "m"
     if bold:
         colstring += "\033[1m"
     return colstring + string + "\033[0m"
