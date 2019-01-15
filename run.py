@@ -1,8 +1,9 @@
 '''Run commands on local system'''
 
-import subprocess
-import printing
 import os
+import subprocess
+
+import printing
 
 CSTR = printing.to_color_str
 
