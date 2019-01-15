@@ -79,6 +79,7 @@ def date_str_to_timestamp(string, date_format=None) -> int:
 
 
 def bytes_to_human_readable(num, suffix='B'):
+    num = int(num)
     "Gets a human readable string of a byte file size value"
     for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
         if abs(num) < 1024.0:
