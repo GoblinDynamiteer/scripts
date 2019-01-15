@@ -31,6 +31,12 @@ def local_command_get_output(command):
     return False
 
 
+def remote_command_get_output(command, host):
+    "Run a command on a remote host, returns the output"
+    command = f"ssh {host} '{command}'"
+    return local_command_get_output(command)
+
+
 def _executable(file_path):
     return os.path.isfile(file_path) and os.access(file_path, os.X_OK)
 

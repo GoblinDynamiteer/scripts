@@ -76,3 +76,12 @@ def date_str_to_timestamp(string, date_format=None) -> int:
         except:
             pass
     return 0  # could not parse time string
+
+
+def bytes_to_human_readable(num, suffix='B'):
+    "Gets a human readable string of a byte file size value"
+    for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
+        if abs(num) < 1024.0:
+            return f"{num:3.1f}{unit}{suffix}"
+        num /= 1024.0
+    return f"{num:.1f}Yi{suffix}"
