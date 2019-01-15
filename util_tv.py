@@ -39,3 +39,10 @@ def parse_season_episode(episode_filename: str):
         episode = int(se_list[1])
         return (season, episode)
     return None
+
+
+def is_episode(string: str):
+    "Try to determine if a string is an episode name"
+    if parse_season_episode(string):
+        return True
+    return False
