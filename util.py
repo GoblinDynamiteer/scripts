@@ -9,7 +9,7 @@ from datetime import datetime as DateTime
 
 
 def home_dir():
-    ''' Full path to home directory '''
+    "Full path to home directory"
     return os.path.expanduser("~")
 
 
@@ -22,13 +22,13 @@ def dirname_of_file(file_path):
 
 
 def filename_of_path(file_path):
-    ''' Gets just the filename of a full part'''
+    "Gets just the filename of a full part"
     _, tail = ntpath.split(file_path)
     return tail or None
 
 
 def parse_imdbid(string):
-    ''' Parse the IMDB-id from a string, if possible '''
+    "Parse the IMDB-id from a string, if possible"
     match = re.search(r'tt\d{1,}', string)
     if match:
         return match.group()
@@ -36,14 +36,14 @@ def parse_imdbid(string):
 
 
 def is_imdbid(string):
-    ''' Return true if string contains an IMDB-id '''
+    "Return true if string contains an IMDB-id"
     if parse_imdbid(string):
         return True
     return False
 
 
 def is_valid_year(string, min_value=1800, max_value=2050):
-    ''' Determines if a string / int value is a valid year '''
+    "Determines if a string / int value is a valid year"
     year = 0
     try:
         year = int(string)
@@ -57,17 +57,17 @@ def is_valid_year(string, min_value=1800, max_value=2050):
 
 
 def now_timestamp() -> int:
-    ''' Current time as a UNIX timestamp '''
+    "Current time as a UNIX timestamp"
     return int(DateTime.now().timestamp())
 
 
 def video_extensions() -> list:
-    ''' Get a list of used video file extensions '''
+    "Get a list of used video file extensions"
     return ['.mkv', '.avi', '.mp4']
 
 
 def date_str_to_timestamp(string, date_format=None) -> int:
-    ' Tries to convert a time/date string to UNIX timestamp '
+    "Tries to convert a time/date string to UNIX timestamp"
     formats = [date_format, r'%Y-%m-%dT%H:%M:%S', r'%Y-%m-%dT%H:%M:%S+00:00']
     for form in formats:
         try:
@@ -79,8 +79,8 @@ def date_str_to_timestamp(string, date_format=None) -> int:
 
 
 def bytes_to_human_readable(num, suffix='B'):
-    num = int(num)
     "Gets a human readable string of a byte file size value"
+    num = int(num)
     for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
         if abs(num) < 1024.0:
             return f"{num:3.1f}{unit}{suffix}"
