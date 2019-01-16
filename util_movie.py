@@ -4,6 +4,7 @@
 
 import re
 import os
+import util_tv
 
 from config import ConfigurationManager
 
@@ -64,3 +65,13 @@ def remove_extras_from_folder(folder):
               "jpn", "hybrid", "uncut"]
     rep_string = "\\.({})".format("|".join(extras))
     return re.sub(rep_string, '', folder, flags=re.IGNORECASE)
+
+
+def is_movie(string: str):
+    "Try to determine if a string is movie name"
+    if util_tv.is_episode(string):
+        return False
+    has_year = parse_year(string) != None
+    parsed_title = determine_title(string) != None
+    can_determine_title = parsed_title and parsed_title != string
+    return has_year or can_determine_title
