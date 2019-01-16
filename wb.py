@@ -3,11 +3,13 @@
 '''Script to interact with torrent-server'''
 
 import argparse
+import os
 
+import config
 import util
-from util_tv import is_episode
 from printing import to_color_str as CSTR
-from run import remote_command_get_output
+from run import remote_command_get_output, local_command
+from util_tv import is_episode
 
 
 def _parse_ls(line: str):
@@ -35,6 +37,7 @@ def _get_items():
 
 
 def wb_list_items(items):
+    "Lists items on server"
     for item in items:
         item_type = 'D' if item['type'] == 'dir' else 'F'
         media_type = 'Ukwn'  # unknown, TODO: determine seasonpack, movie
@@ -47,9 +50,47 @@ def wb_list_items(items):
             f'[{CSTR(item["name"], "lgreen")}]')
 
 
+def _parse_get_indexes(items: list, indexes: str) -> list:
+    if indexes.startswith('-'):  # download last x items
+        return items[int(indexes):]
+    indexes_to_dl = []
+    try:
+        for ix_split in indexes.split(','):
+            if '-' in ix_split:
+                ranges = ix_split.split('-')
+                ran = [r for r in range(int(ranges[0]), int(ranges[1]) + 1)]
+                indexes_to_dl.extend(ran)
+            else:
+                indexes_to_dl.append(int(ix_split))
+        return [item for item in items if item['index'] in indexes_to_dl]
+    except:
+        print(f'{CSTR("could not parse indexes, aborting!", "red")}')
+        return []
+
+
+def _download(item: dict, dest: str):
+    file_name = item["name"].replace(' ', r'\ ')
+    print(f'downloading: {CSTR(file_name, "orange")}')
+    command = f'scp -r wb:"~/files/{file_name}" {dest}'
+    local_command(command, hide_output=False)
+
+
+def wb_download_items(items: list, indexes: str, dest_dir: str):
+    "Downloads the items passed, based on indexes, to dest_dir"
+    if not os.path.exists(dest_dir):
+        print(f'{CSTR("destination does not exist, aborting!", "red")}')
+        return
+    items_to_dl = _parse_get_indexes(items, indexes)
+    [_download(item, dest_dir) for item in items_to_dl]
+
+
 if __name__ == "__main__":
+    CFG = config.ConfigurationManager()
     PARSER = argparse.ArgumentParser(description='ripper')
     PARSER.add_argument('command', type=str, help='list/download')
+    PARSER.add_argument('--dest', type=str, default=CFG.get('path_download'))
+    PARSER.add_argument('--get', type=str, default='-1',
+                        help='items to download. indexes')
     ARGS = PARSER.parse_args()
 
     DOWNLOAD_ITEMS = _get_items()
@@ -57,6 +98,6 @@ if __name__ == "__main__":
     if ARGS.command == 'list':
         wb_list_items(DOWNLOAD_ITEMS)
     elif ARGS.command == 'download':
-        print(CSTR('Not yet implemented', 'red'))
+        wb_download_items(DOWNLOAD_ITEMS, ARGS.get, ARGS.dest)
     else:
         print(CSTR('wrong command!', 'orange'))
