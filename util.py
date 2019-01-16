@@ -86,3 +86,18 @@ def bytes_to_human_readable(num, suffix='B'):
             return f"{num:3.1f}{unit}{suffix}"
         num /= 1024.0
     return f"{num:.1f}Yi{suffix}"
+
+
+def is_dir(string):
+    "Returns true if string is an existing directory"
+    return os.path.isdir(string) and os.path.exists(string)
+
+
+def is_file(string):
+    "Returns true if string is an existing file"
+    return os.path.isfile(string) and os.path.exists(string)
+
+
+def is_vid_file(string):
+    "Returns true if string is an existing vid file"
+    return is_file(string) and any(ext in string for ext in video_extensions())
