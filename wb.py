@@ -7,8 +7,10 @@ import os
 
 import config
 import util
+from db_mov import MovieDatabase
+from db_tv import EpisodeDatabase
 from printing import to_color_str as CSTR
-from run import remote_command_get_output, local_command
+from run import local_command, remote_command_get_output
 from util_tv import is_episode
 
 
@@ -29,10 +31,17 @@ def _get_items():
         r'ls -trl --time-style="+%Y-%m-%d %H:%M" ~/files', "wb").split('\n')
     items = [_parse_ls(line) for line in file_list]
     index = 1
+
+    db_mov = MovieDatabase()
+    db_ep = EpisodeDatabase()
+
     for item in items:
         if item:
             item['index'] = index
             index += 1
+            item['downloaded'] = False
+            if item['name'] in db_mov or item['name'] in db_ep:
+                item['downloaded'] = True
     return [item for item in items if item]
 
 
@@ -44,10 +53,13 @@ def wb_list_items(items):
         index = f'#{item["index"]:02d}'
         if is_episode(item["name"]):
             media_type = 'Epsd'
+        item_str_color = 'orange'
+        if item['downloaded']:
+            item_str_color = 'lgreen'
         print(
             f'[{CSTR(index, "orange")}] {item["date"]} '
             f'{item["size"]:>10} ({item_type}/{media_type}) '
-            f'[{CSTR(item["name"], "lgreen")}]')
+            f'[{CSTR(item["name"], item_str_color)}]')
 
 
 def _parse_get_indexes(items: list, indexes: str) -> list:
@@ -93,6 +105,7 @@ if __name__ == "__main__":
                         help='items to download. indexes')
     ARGS = PARSER.parse_args()
 
+    print('listing items...')
     DOWNLOAD_ITEMS = _get_items()
 
     if ARGS.command == 'list':
