@@ -1,9 +1,11 @@
 '''Run commands on local system'''
 
 import os
+import shlex
 import subprocess
 
 import printing
+import util
 
 CSTR = printing.to_color_str
 
@@ -55,4 +57,36 @@ def command_exists(command):
         exe_file = os.path.join(path, command)
         if _executable(exe_file):
             return True
+    return False
+
+
+def extract(compressed_file: 'full path', destination, create_dirs=True, overwrite=True):
+    "Extract files with fancy color output"
+    if not util.is_dir(destination):
+        if create_dirs:
+            os.makedirs(destination)
+            print(f'extract: created dir {CSTR(destination, "lblue")}')
+        else:
+            print(
+                f'extract: destination {CSTR(destination, "orange")} does not exist!')
+            return False
+    # just support rar for now
+    file_name = util.filename_of_path(compressed_file)
+    print(f'extracting  {CSTR(file_name, "lblue")}')
+    print(f'destination {CSTR(destination, "lblue")}')
+    overwrite_arg = '-o+' if overwrite else ''
+    command = shlex.split(
+        f'unrar e {overwrite_arg} {compressed_file} {destination}')
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=1)
+    while process.poll() is None:
+        byte_line = process.stdout.readline()
+        line = byte_line.decode()
+        if '%' in line:
+            percentage_done = util.parse_percent(line)
+            print(f'\r{file_name}  {CSTR(percentage_done, "lgreen")}', end='')
+    print()
+    if process.returncode == 0:
+        print(CSTR('done!', 'lgreen'))
+        return True
+    print(CSTR('extract failed!', 'red'))
     return False
