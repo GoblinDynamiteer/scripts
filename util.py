@@ -35,6 +35,14 @@ def parse_imdbid(string):
     return None
 
 
+def parse_percent(string):
+    "Parse a percent value from a string, if possible"
+    match = re.search(r'\d{1,3}.%', string)
+    if match:
+        return match.group()
+    return None
+
+
 def is_imdbid(string):
     "Return true if string contains an IMDB-id"
     if parse_imdbid(string):
