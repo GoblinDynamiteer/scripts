@@ -37,9 +37,10 @@ def parse_imdbid(string):
 
 def parse_percent(string):
     "Parse a percent value from a string, if possible"
-    match = re.search(r'\d{1,3}.%', string)
-    if match:
-        return match.group()
+    for regex in [r'\d{1,3}%', r'\d{1,3}.%']:
+        match = re.search(regex, string)
+        if match:
+            return match.group()
     return None
 
 
