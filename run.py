@@ -62,6 +62,10 @@ def command_exists(command):
 
 def extract(compressed_file: 'full path', destination, create_dirs=True, overwrite=True):
     "Extract files with fancy color output"
+    if not util.is_file(compressed_file):
+        print(
+            f'compressed_file {CSTR(compressed_file, "orange")} does not exist!')
+        return False
     if not util.is_dir(destination):
         if create_dirs:
             os.makedirs(destination)
