@@ -5,6 +5,8 @@
 import re
 import os
 import util_tv
+import util
+import db_mov
 
 from config import ConfigurationManager
 
@@ -77,3 +79,16 @@ def is_movie(string: str):
     parsed_title = determine_title(string) != None
     can_determine_title = parsed_title and parsed_title != string
     return has_year or can_determine_title
+
+
+def exists(movie_dir_name: str):
+    path = os.path.join(MOVIE_DIR, determine_letter(
+        movie_dir_name), movie_dir_name)
+    return util.is_dir(path)
+
+
+def find_deleted_movies():
+    db = db_mov.MovieDatabase()
+    for m in db.all():
+        if not exists(m):
+            yield m
