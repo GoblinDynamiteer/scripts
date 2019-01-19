@@ -114,6 +114,9 @@ class JSONDatabase(object):
         ''' Check if key exists in database '''
         return primary_key in self.json
 
+    def all(self):
+        return self.json.keys()
+
     def __contains__(self, primary_key):
         return self.exists(primary_key)
 
