@@ -33,6 +33,8 @@ def determine_letter(movie_dir_name):
         if folder.startswith(prefix):
             letter = movie_dir_name[len(prefix):len(prefix) + 1].upper()
             break
+    if str.isdigit(letter):
+        return '#'
     if letter in ['V', 'W']:
         return 'VW'
     return letter
