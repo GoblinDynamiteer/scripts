@@ -231,11 +231,12 @@ if __name__ == '__main__':
     print(LANG_OUTPUT['dest_info'][LANGUAGE].format(
         CSTR(DEFAULT_DL, 'lgreen')))
 
-    MATCH = False
-    for site_hit, method in METHODS:
-        if site_hit.lower() in ARGS.url:
-            MATCH = True
-            method(ARGS.url, DEFAULT_DL, site_hit)
-    if not MATCH:
-        UNKOWN_SITE_STR = 'Unkown Site' if LANGUAGE == 'en' else "Okänd sida"
-        _unknown_site(ARGS.url, DEFAULT_DL, UNKOWN_SITE_STR)
+    for url in ARGS.url.split(','):
+        MATCH = False
+        for site_hit, method in METHODS:
+            if site_hit.lower() in url:
+                MATCH = True
+                method(url, DEFAULT_DL, site_hit)
+        if not MATCH:
+            UNKOWN_SITE_STR = 'Unkown Site' if LANGUAGE == 'en' else "Okänd sida"
+            _unknown_site(url, DEFAULT_DL, UNKOWN_SITE_STR)
