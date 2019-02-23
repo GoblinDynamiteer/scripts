@@ -57,7 +57,7 @@ def wb_list_items(items):
         if item['downloaded']:
             item_str_color = 'lgreen'
         print(
-            f'[{CSTR(index, "orange")}] {item["date"]} '
+            f'[{CSTR(index, item_str_color)}] {item["date"]} '
             f'{item["size"]:>10} ({item_type}/{media_type}) '
             f'[{CSTR(item["name"], item_str_color)}]')
 
