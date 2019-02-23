@@ -2,9 +2,10 @@
 
 ''' Various helper/utility functions '''
 
+import ntpath
 import os
 import re
-import ntpath
+import shutil
 from datetime import datetime as DateTime
 
 
@@ -110,3 +111,11 @@ def is_file(string):
 def is_vid_file(string):
     "Returns true if string is an existing vid file"
     return is_file(string) and any(ext in string for ext in video_extensions())
+
+
+def terminal_width():
+    "Returns the current terminal column width"
+    try:
+        return shutil.get_terminal_size()[0]
+    except:
+        return 0
