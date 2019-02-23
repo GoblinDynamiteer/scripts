@@ -40,8 +40,17 @@ def _get_items():
             item['index'] = index
             index += 1
             item['downloaded'] = False
-            if item['name'].replace('.mkv', '') in db_mov or item['name'] in db_ep:
+            if item['name'].replace('.mkv', '') in db_mov:
                 item['downloaded'] = True
+            if not item['downloaded']:
+                tv_item_names = [
+                    item['name'],
+                    item['name'].lower(),
+                    f"{item['name']}.mkv",
+                    f"{item['name']}.mkv".lower()
+                ]
+                if any(x in db_ep for x in tv_item_names):
+                    item['downloaded'] = True
     return [item for item in items if item]
 
 
