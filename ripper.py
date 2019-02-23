@@ -217,7 +217,7 @@ if __name__ == '__main__':
     PARSER.add_argument('url', type=str, help='URL')
     PARSER.add_argument('--lang', type=str, default='en')
     PARSER.add_argument('--dir', type=str,
-                        default=os.path.join(HOME, 'Downloads'))
+                        default=os.getcwd())
     PARSER.add_argument('--title-in-filename',
                         action='store_true', dest='use_title')
     ARGS = PARSER.parse_args()
