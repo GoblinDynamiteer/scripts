@@ -47,6 +47,7 @@ def _get_items():
 
 def wb_list_items(items):
     "Lists items on server"
+    len_without_itemname = 45
     for item in items:
         item_type = 'D' if item['type'] == 'dir' else 'F'
         media_type = 'Ukwn'  # unknown, TODO: determine seasonpack, movie
@@ -56,10 +57,18 @@ def wb_list_items(items):
         item_str_color = 'orange'
         if item['downloaded']:
             item_str_color = 'lgreen'
+        item_name = CSTR(item["name"], item_str_color)
+        # Right trim filename strings if to prevent multiple lines in terminal window
+        if len_without_itemname + len(item["name"]) + 1 > util.terminal_width():
+            diff = abs(util.terminal_width() -
+                       len_without_itemname - len(item["name"]) - 1)
+            trimmed_item_name = util.shorten_string(
+                item["name"], len(item["name"]) - diff)
+            item_name = CSTR(trimmed_item_name, item_str_color)
         print(
             f'[{CSTR(index, item_str_color)}] {item["date"]} '
             f'{item["size"]:>10} ({item_type}/{media_type}) '
-            f'[{CSTR(item["name"], item_str_color)}]')
+            f'[{item_name}]')
 
 
 def _parse_get_indexes(items: list, indexes: str) -> list:
