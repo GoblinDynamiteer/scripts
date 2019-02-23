@@ -7,6 +7,12 @@ import os
 import re
 import shutil
 from datetime import datetime as DateTime
+from enum import Enum
+
+
+class Settings(Enum):
+    "Various settings for the utils in this file"
+    AUTO_TERMINAL = 0
 
 
 def home_dir():
@@ -119,3 +125,14 @@ def terminal_width():
         return shutil.get_terminal_size()[0]
     except:
         return 0
+
+
+def shorten_string(string, size, suffix='...'):
+    "Shortens a string and adds ... suffix"
+    if isinstance(size, Settings):
+        if size == Settings.AUTO_TERMINAL:
+            size = terminal_width()
+    trim_length = size - len(suffix)
+    if trim_length < len(string):
+        return string[:trim_length] + suffix
+    return string[:trim_length]
