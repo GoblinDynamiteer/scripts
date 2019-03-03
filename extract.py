@@ -34,6 +34,20 @@ def _movie_dest(source_dir):
     return OPJ(CFG.get('path_film'), letter, source_dir)
 
 
+def _episode_dest(source_dir):
+    show = util_tv.determine_show_from_episode_name(source_dir)
+    if not show:
+        return None
+    path = OPJ(CFG.get('path_tv'), show)
+    if not os.path.exists(path):
+        print(path)
+        return None
+    season = util_tv.parse_season(source_dir)
+    if not season:
+        return None
+    return OPJ(path, f'{season:02d}')
+
+
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser(description='extractor')
     PARSER.add_argument('source', type=str, help='item to process')
@@ -53,5 +67,7 @@ if __name__ == '__main__':
             print(f'{CSTR("episode dir ops unimplemented", "orange")}')
         else:
             print(f'{CSTR("episode file ops unimplemented", "orange")}')
+            print(
+                f'but guessing it should be moved to...\n{_episode_dest(ARGS.source)}')
     else:
         print(f'{CSTR("unkown type!", "orange")}')
