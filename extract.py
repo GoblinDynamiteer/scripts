@@ -47,8 +47,8 @@ if __name__ == '__main__':
                 shutil.rmtree(ARGS.source)
                 print(f'removed {CSTR(ARGS.source, "orange")}')
         else:
-            print({CSTR("move movie file unimplemented", "orange")})
+            print(f'{CSTR("move movie file unimplemented", "orange")}')
     elif util_tv.is_episode(ARGS.source):
-        print({CSTR("episode ops unimplemented", "orange")})
+        print(f'{CSTR("episode ops unimplemented", "orange")}')
     else:
-        print({CSTR("unkown type!", "orange")})
+        print(f'{CSTR("unkown type!", "orange")}')
