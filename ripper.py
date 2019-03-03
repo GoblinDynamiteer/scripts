@@ -67,8 +67,8 @@ def _youtube_dl(url: str, dl_loc: str) -> str:
                 ydl.download([url])
                 return full_dl_path
         except youtube_dl.utils.DownloadError:
-            print(LANG_OUTPUT['format_dl_failed'][LANGUAGE].format(
-                CSTR(dl_format, 'orange'), CSTR(FORMATS[index+1], 'orange')))
+            pass
+    print(LANG_OUTPUT['dl_failed'][LANGUAGE].format(CSTR(url, 'orange')))
     return None
 
 
@@ -167,7 +167,6 @@ def _subtitle_dl(url: str, output_file: str):
             CSTR(f'{srt_file_path}.srt', 'lblue')))
 
 
-
 YDL_OPTS = {
     'logger': Logger(),
     'progress_hooks': [_ytdl_hooks],
@@ -197,8 +196,8 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil eller laddar
                              'en': 'Saving files to: {}'},
                'lib_missing': {'sv': 'Saknar {}! Avbryter',
                                'en': 'Missing lib {}! Aborting'},
-               'format_dl_failed': {'sv': 'Kunde inte ladda ner formatet: {}. Provar {}',
-                                    'en': 'Could not download format: {}. Trying {}'}}
+               'dl_failed': {'sv': 'Kunde inte ladda ner {}',
+                             'en': 'Could not download {}'}}
 
 CSTR = printing.to_color_str
 USE_TITLE_IN_FILENAME = True
