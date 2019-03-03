@@ -49,6 +49,9 @@ if __name__ == '__main__':
         else:
             print(f'{CSTR("move movie file unimplemented", "orange")}')
     elif util_tv.is_episode(ARGS.source):
-        print(f'{CSTR("episode ops unimplemented", "orange")}')
+        if util.is_dir(ARGS.source):
+            print(f'{CSTR("episode dir ops unimplemented", "orange")}')
+        else:
+            print(f'{CSTR("episode file ops unimplemented", "orange")}')
     else:
         print(f'{CSTR("unkown type!", "orange")}')
