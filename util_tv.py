@@ -48,9 +48,8 @@ def parse_season(episode_filename: str):
 
 def is_episode(string: str):
     "Try to determine if a string is an episode name"
-    if parse_season_episode(string):
-        return True
-    return False
+    season, episode = parse_season_episode(string)
+    return season and episode
 
 
 def guess_show_name_from_episode_name(episode_filename: str):
