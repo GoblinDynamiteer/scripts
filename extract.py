@@ -3,6 +3,7 @@
 'Extract/move releases'
 
 import argparse
+import glob
 import os
 import shutil
 
@@ -48,24 +49,32 @@ def _episode_dest(source_dir):
     return OPJ(path, f'S{season:02d}')
 
 
-if __name__ == '__main__':
-    PARSER = argparse.ArgumentParser(description='extractor')
-    PARSER.add_argument('source', type=str, help='item to process')
-    ARGS = PARSER.parse_args()
-
-    if util_movie.is_movie(ARGS.source):
-        if util.is_dir(ARGS.source):
-            REMOVE_DIR = run.extract(_find_rar(ARGS.source), _movie_dest(
-                ARGS.source), create_dirs=True)
-            if REMOVE_DIR:
-                shutil.rmtree(ARGS.source)
-                print(f'removed {CSTR(ARGS.source, "orange")}')
+def _handle_item(source_item):
+    if util_movie.is_movie(source_item):
+        if util.is_dir(source_item):
+            remove_dir = run.extract(_find_rar(source_item), _movie_dest(
+                source_item), create_dirs=True)
+            if remove_dir:
+                shutil.rmtree(source_item)
+                print(f'removed {CSTR(source_item, "orange")}')
         else:
             print(f'{CSTR("move movie file unimplemented", "orange")}')
-    elif util_tv.is_episode(ARGS.source):
-        if util.is_dir(ARGS.source):
+    elif util_tv.is_episode(source_item):
+        if util.is_dir(source_item):
             print(f'{CSTR("episode dir ops unimplemented", "orange")}')
         else:
-            run.move_file(ARGS.source, _episode_dest(ARGS.source))
+            run.move_file(source_item, _episode_dest(source_item))
     else:
         print(f'{CSTR("unkown type!", "orange")}')
+
+
+if __name__ == '__main__':
+    PARSER = argparse.ArgumentParser(description='extractor')
+    PARSER.add_argument('source', type=str, help='item(s) to process')
+    ARGS, _ = PARSER.parse_known_args()
+
+    if '*' in ARGS.source:
+        items = glob.glob(ARGS.source)
+        [_handle_item(i) for i in items]
+    else:
+        _handle_item(ARGS.source)
