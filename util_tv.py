@@ -38,7 +38,12 @@ def parse_season_episode(episode_filename: str):
         season = int(se_list[0])
         episode = int(se_list[1])
         return (season, episode)
-    return None
+    return (None, None)
+
+
+def parse_season(episode_filename: str):
+    season, _ = parse_season_episode(episode_filename)
+    return season
 
 
 def is_episode(string: str):
