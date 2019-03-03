@@ -46,3 +46,27 @@ def is_episode(string: str):
     if parse_season_episode(string):
         return True
     return False
+
+
+def guess_show_name_from_episode_name(episode_filename: str):
+    "Try to determine the Show name from episode name"
+    match = re.search(r'[Ss]\d{1,2}[Ee]\d{1,2}', episode_filename)
+    if match:
+        se_string = match.group()
+        show_name = episode_filename.split(se_string)[0]
+        return show_name.replace('.', ' ').strip()
+    return None
+
+
+def determine_show_from_episode_name(episode_filename: str):
+    "Match existing show from episode name"
+    guessed_show = guess_show_name_from_episode_name(episode_filename)
+    matched_shows = [s for s in list_all_shows() if
+                     guessed_show.lower() in s.lower()]
+    if len(matched_shows) > 1:
+        matched_shows = [
+            s for s in matched_shows if guessed_show.lower() == s.lower()]
+    try:
+        return matched_shows[0]
+    except IndexError:
+        return None
