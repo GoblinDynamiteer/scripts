@@ -45,7 +45,7 @@ def _episode_dest(source_dir):
     season = util_tv.parse_season(source_dir)
     if not season:
         return None
-    return OPJ(path, f'{season:02d}')
+    return OPJ(path, f'S{season:02d}')
 
 
 if __name__ == '__main__':
