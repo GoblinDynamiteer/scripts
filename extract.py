@@ -66,8 +66,6 @@ if __name__ == '__main__':
         if util.is_dir(ARGS.source):
             print(f'{CSTR("episode dir ops unimplemented", "orange")}')
         else:
-            print(f'{CSTR("episode file ops unimplemented", "orange")}')
-            print(
-                f'but guessing it should be moved to...\n{_episode_dest(ARGS.source)}')
+            run.move_file(ARGS.source, _episode_dest(ARGS.source))
     else:
         print(f'{CSTR("unkown type!", "orange")}')
