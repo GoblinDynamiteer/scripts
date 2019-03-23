@@ -34,9 +34,14 @@ def _scan_movies():
         data = {'folder': new_movie, 'scanned': util.now_timestamp()}
         guessed_title = util_movie.determine_title(new_movie)
         guessed_year = util_movie.parse_year(new_movie)
+        imdb_id_from_nfo = util_movie.get_movie_nfo_imdb_id(new_movie)
         json_data = {}
-        if guessed_title:
+        if imdb_id_from_nfo:
+            json_data = movie_search(imdb_id_from_nfo)
+        elif guessed_title:
             json_data = movie_search(guessed_title, year=guessed_year)
+        else:
+            print(CSTR(f'failed to determine title or imdb-id for {new_movie}', 'red'))
         if 'Year' in json_data:
             year = json_data['Year']
             if util.is_valid_year(year, min_value=1920, max_value=2019):
@@ -49,7 +54,11 @@ def _scan_movies():
         if 'Title' in json_data:
             data['title'] = json_data['Title']
         DB_MOV.insert(data)
-        print(f'added new movie: {CSTR(new_movie, "green")}')
+        if imdb_id_from_nfo:
+            imdb_id_str = f' -> used imdb-id [{CSTR(imdb_id_from_nfo, "lblue")}]'
+        else:
+            imdb_id_str = ""
+        print(f'added new movie: {CSTR(new_movie, "green")}{imdb_id_str}')
 
     if new:
         DB_MOV.save()
