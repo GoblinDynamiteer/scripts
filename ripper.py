@@ -229,7 +229,7 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil eller laddar
                'viafree_new_url': {'sv': 'Viafree fix -> använder URL: {}',
                                    'en': 'Viafree workaround -> using URL: {}'},
                'viafree_fail': {'sv': 'Viafree fix -> kunde inte hitta video id',
-                                   'en': 'Viafree workaround -> failed to extract video id'},
+                                'en': 'Viafree workaround -> failed to extract video id'},
                'dl_sub': {'sv': 'Laddade ner undertext: {}',
                           'en': 'Downloaded subtitle: {}'},
                'dest_info': {'sv': 'Sparar filer till: {}',
