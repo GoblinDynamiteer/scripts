@@ -101,3 +101,15 @@ def create_movie_nfo(movie_dir: str, imdb_id: str):
     file_loc = os.path.join(movie_dir, 'movie.nfo')
     with open(file_loc, 'w') as file_item:
         file_item.write(f'https://www.imdb.com/title/{imdb_id}')
+
+
+def get_movie_nfo_imdb_id(movie_dir: str):
+    "Get the imdb-id from a movie.nfo in the movie folder location"
+    if not exists(movie_dir):
+        return None
+    path = os.path.join(MOVIE_DIR, determine_letter(
+        movie_dir), movie_dir, 'movie.nfo')
+    if not util.is_file(path):
+        return None
+    with open(path, 'r') as file_item:
+        return util.parse_imdbid(file_item.readline())
