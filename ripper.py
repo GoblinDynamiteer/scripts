@@ -65,7 +65,8 @@ def _youtube_dl(url: str, dl_loc: str) -> str:
                 file_name = _youtube_dl_generate_filename(info)
                 full_dl_path = os.path.join(dl_loc, file_name)
                 ydl.params["outtmpl"] = full_dl_path
-                ydl.download([url])
+                if not SKIP_VIDEO_DOWNLOAD:
+                    ydl.download([url])
                 return full_dl_path
         except youtube_dl.utils.DownloadError:
             pass
@@ -143,8 +144,9 @@ def _sveriges_radio(url: str, dl_loc: str, site: str):
 
 
 def _rip_with_youtube_dl(url: str, dl_loc: str, site: str):
-    print(LANG_OUTPUT['dl_init'][LANGUAGE].format(
-        CSTR(site, 'lgreen')))
+    if not SKIP_VIDEO_DOWNLOAD:
+        print(LANG_OUTPUT['dl_init'][LANGUAGE].format(
+            CSTR(site, 'lgreen')))
     downloaded_file = _youtube_dl(url, dl_loc)
     if LIB_AVAILABLE['svtplay_dl']:
         _subtitle_dl(url, downloaded_file)
@@ -222,6 +224,8 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil eller laddar
                            'en': 'Starting download from {}...'},
                'using': {'sv': 'Använder {}',
                          'en': 'Using {}'},
+               'only_sub': {'sv': 'Laddar endast ner undertexter',
+                            'en': 'Only downloading subtitles'},
                'viafree_new_url': {'sv': 'Viafree fix -> använder URL: {}',
                                    'en': 'Viafree workaround -> using URL: {}'},
                'viafree_fail': {'sv': 'Viafree fix -> kunde inte hitta video id',
@@ -237,7 +241,8 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil eller laddar
 
 CSTR = printing.to_color_str
 USE_TITLE_IN_FILENAME = True
-
+SKIP_VIDEO_DOWNLOAD = False
+ORIGINAL_URL = None
 
 if __name__ == '__main__':
     print(CSTR('======= ripper ======='.upper(), 'purple'))
@@ -255,10 +260,17 @@ if __name__ == '__main__':
                         default=os.getcwd())
     PARSER.add_argument('--title-in-filename',
                         action='store_true', dest='use_title')
+    PARSER.add_argument('--sub-only',
+                        action='store_true', dest='sub_only')
     ARGS = PARSER.parse_args()
 
     DEFAULT_DL = ARGS.dir
     USE_TITLE_IN_FILENAME = ARGS.use_title
+    SKIP_VIDEO_DOWNLOAD = ARGS.sub_only
+    ORIGINAL_URL = ARGS.url
+
+    if SKIP_VIDEO_DOWNLOAD:
+        print(LANG_OUTPUT['only_sub'][LANGUAGE])
 
     if ARGS.lang == 'sv':
         LANGUAGE = 'sv'
