@@ -42,6 +42,33 @@ def parse_imdbid(string):
     return None
 
 
+def get_file_contents(file_loc: str):
+    if not is_file(file_loc):
+        return None
+    encodings = ['utf-8', 'utf-16', 'iso-8859-15']
+    for enc in encodings:
+        with open(file_loc, 'r', encoding=enc) as file_item:
+            try:
+                lines = file_item.readlines()
+                return lines
+            except UnicodeDecodeError:
+                pass
+    return None
+
+
+def parse_imdbid_from_file(file_loc: str):
+    if not is_file(file_loc):
+        return None
+    lines = get_file_contents(file_loc)
+    if not lines:
+        return None
+    for line in lines:
+        imdbid = parse_imdbid(line)
+        if imdbid:
+            return imdbid
+    return None
+
+
 def parse_percent(string):
     "Parse a percent value from a string, if possible"
     for regex in [r'\d{1,3}%', r'\d{1,3}.%']:
