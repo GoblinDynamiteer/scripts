@@ -4,13 +4,14 @@
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 from urllib.request import urlopen
 
+import printing
 import rename
 import run
-import printing
 
 LIB_AVAILABLE = {'youtube_dl': True, 'BeautifulSoup': True}
 
@@ -167,6 +168,22 @@ def _subtitle_dl(url: str, output_file: str):
             CSTR(f'{srt_file_path}.srt', 'lblue')))
 
 
+def _viafree_workaround_dl(url: str, dl_loc: str, site: str):
+    if not 'avsnitt' in url:
+        _rip_with_youtube_dl(url, dl_loc, site)
+    page_contents = urlopen(url).read()
+    match = re.search(r'\"product[Gg]uid\"\:\"\d{1,10}\"', str(page_contents))
+    if not match:
+        print(LANG_OUTPUT['viafree_fail'][LANGUAGE])
+        return
+    vid_id = match.group(0).replace(r'"productGuid":"', '')
+    vid_id = vid_id.replace(r'"', '')
+    new_url = re.sub(r'avsnitt-\d{1,2}', vid_id, url)
+    print(LANG_OUTPUT['viafree_new_url'][LANGUAGE].format(
+        CSTR(f'{new_url}', 'lblue')))
+    _rip_with_youtube_dl(new_url, dl_loc, site)
+
+
 YDL_OPTS = {
     'logger': Logger(),
     'progress_hooks': [_ytdl_hooks],
@@ -190,6 +207,10 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil eller laddar
                            'en': 'Starting download from {}...'},
                'using': {'sv': 'Använder {}',
                          'en': 'Using {}'},
+               'viafree_new_url': {'sv': 'Viafree fix -> använder URL: {}',
+                                   'en': 'Viafree workaround -> using URL: {}'},
+               'viafree_fail': {'sv': 'Viafree fix -> kunde inte hitta video id',
+                                   'en': 'Viafree workaround -> failed to extract video id'},
                'dl_sub': {'sv': 'Laddade ner undertext: {}',
                           'en': 'Downloaded subtitle: {}'},
                'dest_info': {'sv': 'Sparar filer till: {}',
@@ -210,7 +231,7 @@ if __name__ == '__main__':
                ('TV4Play', _rip_with_youtube_dl),
                ('DPlay', _rip_with_youtube_dl),
                ('SVTPlay', _rip_with_youtube_dl),
-               ('Viafree', _rip_with_youtube_dl)]
+               ('Viafree', _viafree_workaround_dl)]
 
     PARSER = argparse.ArgumentParser(description='ripper')
     PARSER.add_argument('url', type=str, help='URL')
