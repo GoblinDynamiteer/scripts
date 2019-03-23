@@ -92,3 +92,12 @@ def find_deleted_movies():
     for m in db.all():
         if not exists(m):
             yield m
+
+
+def create_movie_nfo(movie_dir: str, imdb_id: str):
+    imdb_id = util.parse_imdbid(imdb_id)
+    if not util.is_dir(movie_dir) or not imdb_id:
+        return
+    file_loc = os.path.join(movie_dir, 'movie.nfo')
+    with open(file_loc, 'w') as file_item:
+        file_item.write(f'https://www.imdb.com/title/{imdb_id}')
