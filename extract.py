@@ -30,6 +30,15 @@ def _find_rar(source_dir):
     return None
 
 
+def _find_nfo(source_dir):
+    nfo_files = [f for f in os.listdir(
+        source_dir) if f.endswith('.nfo')]
+    full_path = OPJ(os.getcwd(), ARGS.source, nfo_files[0])
+    if util.is_file(full_path):
+        return full_path
+    return None
+
+
 def _movie_dest(source_dir):
     letter = util_movie.determine_letter(source_dir)
     return OPJ(CFG.get('path_film'), letter, source_dir)
@@ -52,11 +61,15 @@ def _episode_dest(source_dir):
 def _handle_item(source_item):
     if util_movie.is_movie(source_item):
         if util.is_dir(source_item):
-            remove_dir = run.extract(_find_rar(source_item), _movie_dest(
-                source_item), create_dirs=True)
-            if remove_dir:
-                shutil.rmtree(source_item)
-                print(f'removed {CSTR(source_item, "orange")}')
+            nfo_loc = _find_nfo(source_item)
+            rar_loc = _find_rar(source_item)
+            dest = _movie_dest(source_item)
+            if not run.extract(rar_loc, dest, create_dirs=True):
+                return # extract failed
+            if nfo_loc:
+                util_movie.create_movie_nfo(dest, util.parse_imdbid_from_file(nfo_loc))
+            shutil.rmtree(source_item)
+            print(f'removed {CSTR(source_item, "orange")}')
         else:
             print(f'{CSTR("move movie file unimplemented", "orange")}')
     elif util_tv.is_episode(source_item):
