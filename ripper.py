@@ -159,13 +159,28 @@ def _unknown_site(url: str, dl_loc: str, site: str):
 
 
 def _subtitle_dl(url: str, output_file: str):
-    srt_file_path = None
-    if output_file.endswith('.mp4') or output_file.endswith('.flv'):
-        srt_file_path = f"{output_file[0:-4]}"
-    command = f'svtplay-dl -S --force-subtitle -o {srt_file_path} {url}'
+    if not output_file.endswith('.mp4') or output_file.endswith('.flv'):
+        return
+    srt_file_path = f"{output_file[0:-4]}"
+    ext_str = 'srt'
+    if 'viafree' in url.lower():
+        sub_url = _viafree_subtitle_link(ORIGINAL_URL)
+        command = f"curl {sub_url} > {srt_file_path}.vtt"
+        ext_str = 'vtt'
+    else:
+        command = f'svtplay-dl -S --force-subtitle -o {srt_file_path} {url}'
     if run.local_command(command, hide_output=True, print_info=False):
         print(LANG_OUTPUT['dl_sub'][LANGUAGE].format(
-            CSTR(f'{srt_file_path}.srt', 'lblue')))
+            CSTR(f'{srt_file_path}.{ext_str}', 'lblue')))
+
+
+def _viafree_subtitle_link(url: str):
+    page_contents = urlopen(url).read()
+    match = re.search(r'\"subtitlesWebvtt\"\:\"https.+[cdn\-subbtitles].+\_sv\.vtt', str(page_contents))
+    if not match:
+        return None
+    sub_url = match.group(0).replace(r'"subtitlesWebvtt":"', '')
+    return sub_url.replace(r'\\u002F', '/')
 
 
 def _viafree_workaround_dl(url: str, dl_loc: str, site: str):
