@@ -167,6 +167,9 @@ def _subtitle_dl(url: str, output_file: str):
     ext_str = 'srt'
     if 'viafree' in url.lower():
         sub_url = _viafree_subtitle_link(ORIGINAL_URL)
+        if not sub_url:
+            print(CSTR(f'{LANG_OUTPUT["no_sub"][LANGUAGE]}', 'orange'))
+            return
         command = f"curl {sub_url} > {srt_file_path}.vtt"
         ext_str = 'vtt'
     else:
@@ -178,7 +181,8 @@ def _subtitle_dl(url: str, output_file: str):
 
 def _viafree_subtitle_link(url: str):
     page_contents = urlopen(url).read()
-    match = re.search(r'\"subtitlesWebvtt\"\:\"https.+[cdn\-subbtitles].+\_sv\.vtt', str(page_contents))
+    match = re.search(
+        r'\"subtitlesWebvtt\"\:\"https.+[cdn\-subtitles].+\_sv\.vtt', str(page_contents))
     if not match:
         return None
     sub_url = match.group(0).replace(r'"subtitlesWebvtt":"', '')
@@ -188,6 +192,7 @@ def _viafree_subtitle_link(url: str):
 def _viafree_workaround_dl(url: str, dl_loc: str, site: str):
     if not 'avsnitt' in url:
         _rip_with_youtube_dl(url, dl_loc, site)
+        return
     page_contents = urlopen(url).read()
     match = re.search(r'\"product[Gg]uid\"\:\"\d{1,10}\"', str(page_contents))
     if not match:
@@ -198,6 +203,7 @@ def _viafree_workaround_dl(url: str, dl_loc: str, site: str):
     new_url = re.sub(r'avsnitt-\d{1,2}', vid_id, url)
     print(LANG_OUTPUT['viafree_new_url'][LANGUAGE].format(
         CSTR(f'{new_url}', 'lblue')))
+
     _rip_with_youtube_dl(new_url, dl_loc, site)
 
 
@@ -236,6 +242,8 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil eller laddar
                              'en': 'Saving files to: {}'},
                'lib_missing': {'sv': 'Saknar {}! Avbryter',
                                'en': 'Missing lib {}! Aborting'},
+               'no_sub': {'sv': 'Hittade ingen undertext!',
+                          'en': 'Could not download subtitles!'},
                'dl_failed': {'sv': 'Kunde inte ladda ner {}',
                              'en': 'Could not download {}'}}
 
@@ -267,7 +275,6 @@ if __name__ == '__main__':
     DEFAULT_DL = ARGS.dir
     USE_TITLE_IN_FILENAME = ARGS.use_title
     SKIP_VIDEO_DOWNLOAD = ARGS.sub_only
-    ORIGINAL_URL = ARGS.url
 
     if SKIP_VIDEO_DOWNLOAD:
         print(LANG_OUTPUT['only_sub'][LANGUAGE])
@@ -279,6 +286,7 @@ if __name__ == '__main__':
         CSTR(DEFAULT_DL, 'lgreen')))
 
     for url in ARGS.url.split(','):
+        ORIGINAL_URL = url
         MATCH = False
         for site_hit, method in METHODS:
             if site_hit.lower() in url:
