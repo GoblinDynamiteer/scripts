@@ -133,11 +133,15 @@ def bytes_to_human_readable(num, suffix='B'):
 
 def is_dir(string):
     "Returns true if string is an existing directory"
+    if not string:
+        return False
     return os.path.isdir(string) and os.path.exists(string)
 
 
 def is_file(string):
     "Returns true if string is an existing file"
+    if not string:
+        return False
     return os.path.isfile(string) and os.path.exists(string)
 
 
