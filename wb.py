@@ -117,7 +117,7 @@ def wb_download_items(items: list, indexes: str, dest_dir: str):
 if __name__ == "__main__":
     CFG = config.ConfigurationManager()
     PARSER = argparse.ArgumentParser(description='ripper')
-    PARSER.add_argument('command', type=str, help='list/download')
+    PARSER.add_argument('command', type=str, choices=['list', 'download'])
     PARSER.add_argument('--dest', type=str, default=CFG.get('path_download'))
     PARSER.add_argument('--get', type=str, default='-1',
                         help='items to download. indexes')
