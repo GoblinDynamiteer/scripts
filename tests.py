@@ -119,6 +119,11 @@ class TestDb(unittest.TestCase):
         for num, name in enumerate(self.db):
             self.assertTrue(name == name_list[num])
         self.assertEqual(self.db.find('age', 32), ['Andrea', 'Leah'])
+        self.assertEqual(self.db.find_duplicates(
+            'age'), {32: ['Andrea', 'Leah']})
+        self.db.insert({'name': 'Boris', 'age': 72})
+        self.assertEqual(self.db.find_duplicates(
+            'age'), {32: ['Andrea', 'Leah'], 72: ['Harold', 'Boris']})
 
     def tearDown(self):
         try:

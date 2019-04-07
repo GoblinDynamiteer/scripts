@@ -137,6 +137,18 @@ class JSONDatabase(object):
         ret_list = [pkey for pkey in self.json if self.json[pkey][key] == value]
         return ret_list
 
+    def find_duplicates(self, key):
+        'Finds keys with duplicate values, returns a dict as {value: [primary_key_val, ..]}'
+        ret_list = []
+        if not key in self.valid_keys:
+            return ret_list
+        all_values = [self.json[pkey][key] for pkey in self.json]
+        duplicates = {}
+        for value in all_values:
+            if all_values.count(value) > 1 and value not in duplicates:
+                duplicates[value] = self.find(key, value)
+        return duplicates
+
     def insert(self, data: dict):
         ''' Insert data '''
         keys = list(data.keys())
