@@ -22,6 +22,12 @@ def _tvmaze_search(url):
     return json_response
 
 
+def id_from_show_name(show_name: str):
+    'Try to determine tvmaze id from show name'
+    result = show_search(show_name)
+    return result.get('id', None)
+
+
 def show_search(query_string):
     ''' Search a TV Show, query can be show name or IMDb-id'''
     url_args = {}

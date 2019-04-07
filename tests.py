@@ -6,6 +6,7 @@ import unittest
 import util_movie
 import util_tv
 import printing
+import tvmaze
 
 
 class TestUtilMovie(unittest.TestCase):
@@ -76,6 +77,16 @@ class TestUtilTv(unittest.TestCase):
         self.assertEqual(m(-2, -1, 2), [])
         ret_list = [f'S32E{e:02d}' for e in range(200, 4, -1)]
         self.assertEqual(m(32, 200, 5), ret_list)
+
+
+class TestTvMaze(unittest.TestCase):
+
+    def test_id_from_show_name(self):
+        m = tvmaze.id_from_show_name
+        self.assertEqual(m('Game of Thrones'), 82)
+        self.assertEqual(m('westworld'), 1371)
+        self.assertEqual(m('vi på saltkråkan'), 36783)
+        self.assertEqual(m('purple tentacles evil comeback'), None)
 
 
 class TestStrOut(unittest.TestCase):
