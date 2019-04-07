@@ -15,6 +15,7 @@ from db_tv import EpisodeDatabase, ShowDatabase
 from omdb import movie_search
 from printing import to_color_str as CSTR
 from diskstation import is_ds_special_dir
+from pathlib import Path
 
 DB_MOV = MovieDatabase()
 DB_EP = EpisodeDatabase()
@@ -140,6 +141,48 @@ def _scan_episodes():
 
 def _tv_diagnostics():
     print('tv diagnostics running')
+    tv_dir = CFG.get('path_tv')
+    shows = util_tv.list_all_shows()
+    for show_dir in shows:
+        show_path = Path(tv_dir) / show_dir
+        season_dirs = os.listdir(show_path)
+        missing = {}
+        for season_dir in season_dirs:
+            if '00' in season_dir:
+                continue
+            season_path = show_path / season_dir
+            if season_path.is_dir():
+                file_list = sorted(os.listdir(season_path))
+                season_num = util_tv.parse_season(str(season_path))
+                ep_num_last = -1
+                for _file in file_list:
+                    _, ep_num = util_tv.parse_season_episode(_file)
+                    if not ep_num:
+                        continue
+                    if ep_num > ep_num_last:
+                        ep_num_last = ep_num
+                ep_list = util_tv.season_episode_str_list(
+                    season_num, 1, ep_num_last)
+                file_list_str = '|'.join(file_list)
+                for ep in ep_list:
+                    if ep.lower() not in file_list_str.lower():
+                        missing[ep] = 'gap'
+                if show_dir in DB_SHOW:
+                    show_id = DB_SHOW.get(show_dir, 'tvmaze')
+                    while True:
+                        ep_num_last += 1
+                        if tvmaze.episode_has_aired(show_dir, int(season_dir[1:]), ep_num_last, show_maze_id=show_id):
+                            missing[season_dir.upper() +
+                                    f'E{ep_num_last:02d}'] = 'aired'
+                        else:
+                            break
+        if missing:
+            print(f'missing eps for {show_dir}:')
+            for missing_ep in missing:
+                if missing[missing_ep] == 'gap':
+                    print(f'    {missing_ep} {CSTR("(gap)", "orange")}')
+                if missing[missing_ep] == 'aired':
+                    print(f'    {missing_ep} {CSTR("(aired)", "yellow")}')
 
 
 def _movie_diagnostics():
@@ -161,9 +204,14 @@ def _movie_diagnostics():
     if duplicate_imdb:
         print('found duplicate movies:')
         for imdb_id in duplicate_imdb:
-            print(imdb_id + ":")
+            dup_mov = []
             for mov in duplicate_imdb[imdb_id]:
-                print('   ' + mov)
+                if not DB_MOV.is_removed(mov) and not 'swedish' in mov.lower():
+                    dup_mov.append(mov)  # Allow swedish dubs as duplicates...
+            if len(dup_mov) > 1:
+                print(imdb_id + ":")
+                for mov in dup_mov:
+                    print('   ' + mov)
         print('-----------------------------------')
 
 
