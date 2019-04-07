@@ -46,8 +46,8 @@ def episode_search(show_name: str, season: int, episode: int, show_maze_id: int 
     ''' Retrieve episode data '''
     url_args = {'season': season, 'number': episode}
     if not show_maze_id:
-        show_maze_id = 1
-        # TODO: determine maze id from show_name
-        pass
+        show_maze_id = id_from_show_name(show_name)
+        if not show_maze_id:
+            return None
     url = f'{URL}/shows/{show_maze_id}/episodebynumber?{urllib.parse.urlencode(url_args)}'
     return _tvmaze_search(url)
