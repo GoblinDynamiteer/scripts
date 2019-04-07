@@ -60,6 +60,9 @@ def pre_search_from_file(file_name: str) -> str:
                 continue
             result = pre_search(query)
             if result:
+                for res in result:
+                    if '1080p' in res:  # prefer 1080p results
+                        return res
                 return result[0]
             trim_right -= 1
             trim_left += 1
