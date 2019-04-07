@@ -1,12 +1,15 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 
 ''' Subtitle tools '''
 
 import unittest
-import util_movie
-import util_tv
+
+import db_json
 import printing
 import tvmaze
+import util_movie
+import util_tv
+import os
 
 
 class TestUtilMovie(unittest.TestCase):
@@ -87,6 +90,40 @@ class TestTvMaze(unittest.TestCase):
         self.assertEqual(m('westworld'), 1371)
         self.assertEqual(m('vi på saltkråkan'), 36783)
         self.assertEqual(m('purple tentacles evil comeback'), None)
+
+
+class TestDb(unittest.TestCase):
+    def setUp(self):
+        self.file = "_testdb.json"
+        self.db = db_json.JSONDatabase(self.file)
+        self.db.set_valid_keys(['name', 'age', 'sex'])
+        self.db.set_key_type('name', str)
+        self.db.set_key_type('age', int)
+        self.db.set_key_type('sex', str)
+
+    def test_ok(self):
+        self.assertTrue(self.db.insert({'name': 'Harold'}))
+        self.assertFalse(self.db.insert({'name': 'Harold'}))
+        self.assertTrue(self.db.update('Harold', 'age', 72))
+        self.assertTrue(self.db.update('Harold', 'sex', 'male'))
+        self.assertFalse(self.db.update('Harold', 'age', []))
+        self.assertTrue(self.db.insert(
+            {'name': 'Andrea', 'sex': 'female', 'age': 32}))
+        self.assertFalse(self.db.insert(
+            {'name': 'Leah', 'sex': 2, 'age': 32}))
+        self.assertTrue(self.db.insert(
+            {'name': 'Leah', 'sex': 'N/A', 'age': 32}))
+        self.assertTrue('Harold' in self.db)
+        self.assertFalse('Monica' in self.db)
+        name_list = ['Harold', 'Andrea', 'Leah']
+        for num, name in enumerate(self.db):
+            self.assertTrue(name == name_list[num])
+
+    def tearDown(self):
+        try:
+            os.remove(self.file)
+        except FileNotFoundError:
+            pass
 
 
 class TestStrOut(unittest.TestCase):
