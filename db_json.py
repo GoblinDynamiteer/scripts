@@ -129,6 +129,14 @@ class JSONDatabase(object):
         for key in list(self.json.keys()):
             yield key
 
+    def find(self, key, value):
+        ' return a list of primary key values where key matches value'
+        ret_list = []
+        if not key in self.valid_keys:
+            return ret_list
+        ret_list = [pkey for pkey in self.json if self.json[pkey][key] == value]
+        return ret_list
+
     def insert(self, data: dict):
         ''' Insert data '''
         keys = list(data.keys())

@@ -118,6 +118,7 @@ class TestDb(unittest.TestCase):
         name_list = ['Harold', 'Andrea', 'Leah']
         for num, name in enumerate(self.db):
             self.assertTrue(name == name_list[num])
+        self.assertEqual(self.db.find('age', 32), ['Andrea', 'Leah'])
 
     def tearDown(self):
         try:
