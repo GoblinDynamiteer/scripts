@@ -4,6 +4,9 @@
 
 import argparse
 import json
+import sys
+from pathlib import Path
+
 import requests
 
 
@@ -69,6 +72,8 @@ if __name__ == "__main__":
     PARSER.add_argument('--suffix', type=str, help='add suffix', default=None)
     PARSER.add_argument(
         '-f', '--file', help='use file search mode', action='store_true')
+    PARSER.add_argument(
+        '-r', '--rename', help='rename file', action='store_true')
     ARGS = PARSER.parse_args()
 
     suffix = ARGS.suffix if ARGS.suffix else ""
@@ -76,8 +81,25 @@ if __name__ == "__main__":
     if ARGS.file:
         RET = pre_search_from_file(ARGS.query)
         if not RET:
-            print("could not find release")
+            if ARGS.rename:
+                print(
+                    f"could not find release, not renaming file {ARGS.query}")
+                sys.exit(1)
+            else:
+                print("could not find release")
+                sys.exit(1)
         print(RET + suffix)
+        if ARGS.rename:
+            FILE_NAME = Path(ARGS.query)
+            if not FILE_NAME.exists():
+                print(
+                    f'found release but {FILE_NAME} does not exist, will not rename...')
+                sys.exit(1)
+            NEW_FILE_NAME = RET
+            if not RET.endswith(FILE_NAME.suffix):
+                NEW_FILE_NAME = RET + FILE_NAME.suffix
+            print("renaming: " + str(FILE_NAME) + " -> " + NEW_FILE_NAME)
+            FILE_NAME.rename(NEW_FILE_NAME)
     else:
         RET = pre_search(ARGS.query)
         if not RET:
