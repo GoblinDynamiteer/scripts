@@ -125,6 +125,10 @@ class JSONDatabase(object):
     def __contains__(self, primary_key):
         return self.exists(primary_key)
 
+    def __iter__(self):
+        for key in list(self.json.keys()):
+            yield key
+
     def insert(self, data: dict):
         ''' Insert data '''
         keys = list(data.keys())
