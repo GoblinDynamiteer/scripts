@@ -98,6 +98,8 @@ class JSONDatabase(object):
     def sorted(self, sort_by_key, reversed_sort=False):
         unsorted_list = []
         for primary_key in self.json:
+            if not sort_by_key in self.json[primary_key]:
+                continue
             unsorted_list.append(
                 (primary_key, self.json[primary_key][sort_by_key]))
         sorted_list = sorted(
