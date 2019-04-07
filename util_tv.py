@@ -38,6 +38,10 @@ def parse_season_episode(episode_filename: str):
         season = int(se_list[0])
         episode = int(se_list[1])
         return (season, episode)
+    match = re.search(r'[Ss]\d{1,2}', episode_filename)
+    if match:
+        s_string = match.group().lower().replace('s', '')
+        return (int(s_string), None)
     return (None, None)
 
 
@@ -49,7 +53,13 @@ def parse_season(episode_filename: str):
 def is_episode(string: str):
     "Try to determine if a string is an episode name"
     season, episode = parse_season_episode(string)
-    return season and episode
+    return season is not None and episode is not None
+
+
+def is_season(string: str):
+    "Try to determine if a string is a season folder"
+    season, episode = parse_season_episode(string)
+    return season is not None and episode is None
 
 
 def guess_show_name_from_episode_name(episode_filename: str):
