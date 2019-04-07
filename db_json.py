@@ -73,7 +73,7 @@ class JSONDatabase(object):
         if key not in self.valid_keys:
             print(f'{CSTR(key, "red")} is not a valid key!')
             return False
-        if data_type not in [int, str, float, list, dict]:
+        if data_type not in [int, str, float, list, dict, bool]:
             print(f'{CSTR(str(data_type), "red")} is not a valid data type!')
             return False
         self.key_types[key] = data_type
