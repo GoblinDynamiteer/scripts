@@ -87,6 +87,11 @@ class JSONDatabase(object):
         if data not in self.valid_keys:
             print(f'{CSTR(data, "red")} is not a valid key!')
             return False
+        if self.key_types.get(data, None):
+            if not isinstance(value, self.key_types[data]):
+                print(
+                    f'{CSTR(data, "red")} is not of data type {str(self.key_types[data])}!')
+                return False
         self.json[primary_key][data] = value
         return True
 
@@ -132,6 +137,13 @@ class JSONDatabase(object):
             print(
                 f'invalid key(s) for database: {CSTR(f"{invalid_keys}", "red")}')
             return False
+        for key in keys:
+            if self.key_types.get(key, None):
+                if not isinstance(data[key], self.key_types[key]):
+                    print(
+                        f'{CSTR(key, "red")} is not of',
+                        f'data type {str(self.key_types[key])}!')
+                    return False
         primary = data[self.primary_key]
         if primary in self.json:
             print(f'{CSTR(primary, "red")} already in database, use update instead!')
