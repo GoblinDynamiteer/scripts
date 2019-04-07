@@ -138,6 +138,35 @@ def _scan_episodes():
         print('found no new episodes')
 
 
+def _tv_diagnostics():
+    print('tv diagnostics running')
+
+
+def _movie_diagnostics():
+    print('movie diagnostics running')
+    found_removed = False
+    mov_disk_list = util_movie.list_all()
+    for db_mov in DB_MOV:
+        if DB_MOV.is_removed(db_mov):
+            continue
+        if db_mov not in mov_disk_list:
+            found_removed = True
+            print('missing on disk: ' + db_mov)
+            DB_MOV.mark_removed(db_mov)
+    if found_removed:
+        DB_MOV.save()
+        DB_MOV.export_last_removed()
+    print('-----------------------------------')
+    duplicate_imdb = DB_MOV.find_duplicates('imdb')
+    if duplicate_imdb:
+        print('found duplicate movies:')
+        for imdb_id in duplicate_imdb:
+            print(imdb_id + ":")
+            for mov in duplicate_imdb[imdb_id]:
+                print('   ' + mov)
+        print('-----------------------------------')
+
+
 if __name__ == '__main__':
     ARG_PARSER = argparse.ArgumentParser(description='Media Scanner')
     ARG_PARSER.add_argument('type', type=str)
@@ -148,5 +177,8 @@ if __name__ == '__main__':
     elif ARGS.type in ['tv', 'eps', 't', 'shows', 'episodes']:
         _scan_new_shows()
         _scan_episodes()
+    elif ARGS.type in ['diagnostics', 'diag', 'd']:
+        _tv_diagnostics()
+        _movie_diagnostics()
     else:
         print('wrong scan target')
