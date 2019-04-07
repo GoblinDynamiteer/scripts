@@ -84,3 +84,36 @@ def determine_show_from_episode_name(episode_filename: str):
         return matched_shows[0]
     except IndexError:
         return None
+
+
+def season_num_to_str(season, upper_case=True) -> str:
+    'return the str rep of a season number, eg 3 -> S03'
+    ret_str = ''
+    if isinstance(season, int):
+        if season < 0:
+            return ret_str
+        ret_str = f's{season:02d}'
+    if isinstance(season, str):
+        if season.isnumeric():
+            ret_str = f's{int(season):02d}'
+    if upper_case:
+        return ret_str.upper()
+    return ret_str.lower()
+
+
+def episode_num_to_str(episode, upper_case=True) -> str:
+    'return the str rep of a episode number, eg 12 -> E12'
+    ret_str = season_num_to_str(episode).lower().replace('s', 'e')
+    if upper_case:
+        return ret_str.upper()
+    return ret_str.lower()
+
+
+def season_episode_str_list(season, episode_start, episode_end) -> list:
+    'returns a list of SXXEXX strings'
+    season_str, ep_start_str, ep_end_str = (season_num_to_str(season), episode_num_to_str(
+        episode_start), episode_num_to_str(episode_end))
+    if not season_str or not ep_start_str or not ep_end_str:
+        return []
+    steps = -1 if int(episode_end) < int(episode_start) else 1
+    return [f'{season_str}E{e:02d}' for e in range(episode_start, episode_end+steps, steps)]
