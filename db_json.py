@@ -134,7 +134,8 @@ class JSONDatabase(object):
         ret_list = []
         if not key in self.valid_keys:
             return ret_list
-        ret_list = [pkey for pkey in self.json if self.json[pkey][key] == value]
+        ret_list = [pkey for pkey in self.json if self.json[pkey].get(
+            key, None) == value]
         return ret_list
 
     def find_duplicates(self, key):
@@ -142,9 +143,12 @@ class JSONDatabase(object):
         ret_list = []
         if not key in self.valid_keys:
             return ret_list
-        all_values = [self.json[pkey][key] for pkey in self.json]
+        all_values = [self.json[pkey][key]
+                      for pkey in self.json if key in self.json[pkey]]
         duplicates = {}
         for value in all_values:
+            if not value:
+                continue
             if all_values.count(value) > 1 and value not in duplicates:
                 duplicates[value] = self.find(key, value)
         return duplicates
