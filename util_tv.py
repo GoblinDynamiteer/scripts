@@ -117,3 +117,15 @@ def season_episode_str_list(season, episode_start, episode_end) -> list:
         return []
     steps = -1 if int(episode_end) < int(episode_start) else 1
     return [f'{season_str}E{e:02d}' for e in range(episode_start, episode_end+steps, steps)]
+
+
+def imdb_from_nfo(show_name: str):
+    'return the imdb-id from a tvshow.nfo, or None if unavailalble'
+    if not util.is_dir(show_name):
+        show_name = os.path.join(SHOW_DIR, show_name)
+        if not util.is_dir(show_name):
+            return None
+    nfo_file = os.path.join(show_name, 'tvshow.nfo')
+    if not util.is_file(nfo_file):
+        return None
+    return util.parse_imdbid_from_file(nfo_file)
