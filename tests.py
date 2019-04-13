@@ -2,6 +2,7 @@
 
 ''' Subtitle tools '''
 
+import os
 import unittest
 
 import db_json
@@ -9,7 +10,6 @@ import printing
 import tvmaze
 import util_movie
 import util_tv
-import os
 
 
 class TestUtilMovie(unittest.TestCase):
