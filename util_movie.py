@@ -73,7 +73,7 @@ def remove_extras_from_folder(folder):
 
 def is_movie(string: str):
     "Try to determine if a string is movie name"
-    if util_tv.is_episode(string):
+    if util_tv.is_episode(string) or util_tv.is_season(string):
         return False
     has_year = parse_year(string) != None
     parsed_title = determine_title(string) != None
