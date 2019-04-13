@@ -42,6 +42,14 @@ def show_search(query_string):
     return _tvmaze_search(url)
 
 
+def episode_has_aired(show_name: str, season: int, episode: int, show_maze_id: int = None) -> bool:
+    result = episode_search(show_name, season, episode, show_maze_id)
+    if 'airdate' in result:
+        timestamp = util.date_str_to_timestamp(result['airdate'], r'%Y-%m-%d')
+        return timestamp < util.now_timestamp()
+    return False
+
+
 def episode_search(show_name: str, season: int, episode: int, show_maze_id: int = None) -> dict:
     ''' Retrieve episode data '''
     url_args = {'season': season, 'number': episode}
