@@ -77,6 +77,9 @@ def _handle_item(source_item):
             print(f'{CSTR("episode dir ops unimplemented", "orange")}')
         else:
             run.move_file(source_item, _episode_dest(source_item))
+    elif util_tv.is_season(source_item):
+        if util.is_dir(source_item):
+            print(f'{CSTR("season dir ops unimplemented", "orange")}')
     else:
         print(f'{CSTR("unkown type!", "orange")}')
 
