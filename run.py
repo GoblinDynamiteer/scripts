@@ -80,7 +80,7 @@ def extract(compressed_file: 'full path', destination, create_dirs=True, overwri
     print(f'destination {CSTR(destination, "lblue")}')
     overwrite_arg = '-o+' if overwrite else ''
     command = shlex.split(
-        f'unrar e {overwrite_arg} {compressed_file} {destination}')
+        f'unrar e {overwrite_arg} "{compressed_file}" "{destination}"')
     process = subprocess.Popen(command, stdout=subprocess.PIPE, bufsize=1)
     while process.poll() is None:
         byte_line = process.stdout.readline()
