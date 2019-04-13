@@ -61,7 +61,6 @@ def _episode_dest(source_dir):
 
 def _handle_item(source_item):
     print(source_item)
-    print('cwd', os.getcwd())
     if util_movie.is_movie(source_item):
         if util.is_dir(source_item):
             nfo_loc = _find_nfo(source_item)
@@ -88,8 +87,9 @@ def _handle_item(source_item):
         if util.is_dir(source_item):
             os.chdir(source_item)
             for item in os.listdir('.'):
-                print(item)
                 _handle_item(str(item))
+            print(
+                f'done! please manually remove {CSTR(source_item, "orange")}')
     else:
         print(f'{CSTR("unkown type!", "orange")}')
 
