@@ -82,7 +82,8 @@ def _handle_item(source_item):
             if not run.extract(rar_loc, dest, create_dirs=True):
                 return  # extract failed
         else:
-            run.move_file(source_item, _episode_dest(source_item))
+            run.move_file(source_item, _episode_dest(
+                source_item), create_dirs=True)
     elif util_tv.is_season(source_item):
         if util.is_dir(source_item):
             os.chdir(source_item)
