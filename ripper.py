@@ -207,6 +207,17 @@ def _viafree_workaround_dl(url: str, dl_loc: str, site: str):
     _rip_with_youtube_dl(new_url, dl_loc, site)
 
 
+def _handle_url(url: str):
+    match = False
+    for site_hit, method in METHODS:
+        if site_hit.lower() in url:
+            match = True
+            method(url, DEFAULT_DL, site_hit)
+    if not match:
+        _unknown_site(url, DEFAULT_DL,
+                      LANG_OUTPUT['url_unknown_site'][LANGUAGE])
+
+
 YDL_OPTS = {
     'logger': Logger(),
     'progress_hooks': [_ytdl_hooks],
@@ -245,7 +256,9 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil eller laddar
                'no_sub': {'sv': 'Hittade ingen undertext!',
                           'en': 'Could not download subtitles!'},
                'dl_failed': {'sv': 'Kunde inte ladda ner {}',
-                             'en': 'Could not download {}'}}
+                             'en': 'Could not download {}'},
+               'url_unknown_site': {'sv': 'okänd sida', 'en': 'unknown site'}}
+
 
 CSTR = printing.to_color_str
 USE_TITLE_IN_FILENAME = True
@@ -285,13 +298,6 @@ if __name__ == '__main__':
     print(LANG_OUTPUT['dest_info'][LANGUAGE].format(
         CSTR(DEFAULT_DL, 'lgreen')))
 
-    for url in ARGS.url.split(','):
-        ORIGINAL_URL = url
-        MATCH = False
-        for site_hit, method in METHODS:
-            if site_hit.lower() in url:
-                MATCH = True
-                method(url, DEFAULT_DL, site_hit)
-        if not MATCH:
-            UNKOWN_SITE_STR = 'Unkown Site' if LANGUAGE == 'en' else "Okänd sida"
-            _unknown_site(url, DEFAULT_DL, UNKOWN_SITE_STR)
+    for arg in ARGS.url.split(','):
+        ORIGINAL_URL = arg
+        _handle_url(arg)
