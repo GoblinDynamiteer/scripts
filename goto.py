@@ -1,6 +1,14 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 
-''' Personal navigation script '''
+'''
+Personal navigation script
+Use with external script, example for fish:
+
+    function goto
+        set dir (~/scripts/goto.py $argv)
+        cd $dir
+    end
+'''
 
 import os
 import sys
