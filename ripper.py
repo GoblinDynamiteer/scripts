@@ -4,16 +4,19 @@
 
 import argparse
 import os
+import queue
 import re
 import subprocess
 import sys
+import threading
+import time
 from urllib.request import urlopen
 
 import printing
 import rename
 import run
 
-LIB_AVAILABLE = {'youtube_dl': True, 'BeautifulSoup': True}
+LIB_AVAILABLE = {'youtube_dl': True, 'BeautifulSoup': True, 'pyperclip': True}
 
 try:
     import youtube_dl
@@ -24,6 +27,11 @@ try:
     from bs4 import BeautifulSoup as bs
 except ImportError:
     LIB_AVAILABLE['BeautifulSoup'] = False
+
+try:
+    import pyperclip
+except ImportError:
+    LIB_AVAILABLE['pyperclip'] = False
 
 
 if run.program_exists('svtplay-dl'):
@@ -181,6 +189,8 @@ def _subtitle_dl(url: str, output_file: str):
 
 def _viafree_subtitle_link(url: str):
     page_contents = urlopen(url).read()
+    if not page_contents:
+        return None
     match = re.search(
         r'\"subtitlesWebvtt\"\:\"https.+[cdn\-subtitles].+\_sv\.vtt', str(page_contents))
     if not match:
@@ -209,6 +219,8 @@ def _viafree_workaround_dl(url: str, dl_loc: str, site: str):
 
 def _handle_url(url: str):
     match = False
+    global ORIGINAL_URL
+    ORIGINAL_URL = url
     for site_hit, method in METHODS:
         if site_hit.lower() in url:
             match = True
@@ -216,6 +228,60 @@ def _handle_url(url: str):
     if not match:
         _unknown_site(url, DEFAULT_DL,
                       LANG_OUTPUT['url_unknown_site'][LANGUAGE])
+
+
+class ClipboardCatcher():
+    def __init__(self, interval=1):
+        self.interval = interval
+        if not LIB_AVAILABLE['pyperclip']:
+            print("no papyrclip lib, cannot start..")
+            return
+        watcher_thread = threading.Thread(target=self.watcher, args=())
+        downloader_thread = threading.Thread(target=self.downloader, args=())
+        self.current_clipboard = ''
+        valid_sites = []
+        for site, _ in METHODS:
+            valid_sites.append(site)
+        self.print_listen_message = True
+        self.queue = queue.Queue()
+        self.dl_running = False
+        watcher_thread.start()
+        downloader_thread.start()
+
+    def watcher(self):
+        current_clipboard = ''
+        valid_sites = []
+        for site, _ in METHODS:
+            valid_sites.append(site)
+        print_listen_message = True
+        while True:
+            contents = pyperclip.paste()
+            if print_listen_message:
+                if self.dl_running:
+                    print()  # download info prints on same line
+                    print(LANG_OUTPUT['listen_info_queue'][LANGUAGE])
+                else:
+                    print(LANG_OUTPUT['listen_info'][LANGUAGE])
+                print_listen_message = False
+            if current_clipboard != contents:
+                for site in valid_sites:
+                    if site.lower() in contents.lower():
+                        if self.dl_running:
+                            print()  # download info prints on same line
+                        print(LANG_OUTPUT['listen_got_url'][LANGUAGE].format(
+                            CSTR(f'{contents}', 'lblue')))
+                        self.queue.put(contents)
+                        print_listen_message = True
+                current_clipboard = contents
+            time.sleep(5)
+
+    def downloader(self):
+        while True:
+            url = self.queue.get()
+            self.dl_running = True
+            _handle_url(url)
+            self.dl_running = False
+            time.sleep(1)
 
 
 YDL_OPTS = {
@@ -257,8 +323,13 @@ LANG_OUTPUT = {'dl_done': {'sv': 'Nedladdning klar! Konverterar fil eller laddar
                           'en': 'Could not download subtitles!'},
                'dl_failed': {'sv': 'Kunde inte ladda ner {}',
                              'en': 'Could not download {}'},
-               'url_unknown_site': {'sv': 'okänd sida', 'en': 'unknown site'}}
-
+               'url_unknown_site': {'sv': 'okänd sida', 'en': 'unknown site'},
+               'missing_url_arg': {'sv': 'ingen länk angiven!', 'en': 'no url given!'},
+               'listen_got_url': {'sv': 'fick länk: {}', 'en': 'got url {}'},
+               'listen_info': {'sv': 'kopiera en länk för att starta nedladdning',
+                               'en': 'copy an url to initiate download'},
+               'listen_info_queue': {'sv': 'kopiera en länk för att köa nedladdning',
+                                     'en': 'copy an url to queue download'}}
 
 CSTR = printing.to_color_str
 USE_TITLE_IN_FILENAME = True
@@ -275,7 +346,7 @@ if __name__ == '__main__':
                ('Viafree', _viafree_workaround_dl)]
 
     PARSER = argparse.ArgumentParser(description='ripper')
-    PARSER.add_argument('url', type=str, help='URL')
+    PARSER.add_argument('--url', '-u', type=str, help='URL')
     PARSER.add_argument('--lang', type=str, default='en')
     PARSER.add_argument('--dir', type=str,
                         default=os.getcwd())
@@ -283,6 +354,8 @@ if __name__ == '__main__':
                         action='store_true', dest='use_title')
     PARSER.add_argument('--sub-only',
                         action='store_true', dest='sub_only')
+    PARSER.add_argument('--listen', '-l',
+                        action='store_true', dest='listen_mode')
     ARGS = PARSER.parse_args()
 
     DEFAULT_DL = ARGS.dir
@@ -298,6 +371,12 @@ if __name__ == '__main__':
     print(LANG_OUTPUT['dest_info'][LANGUAGE].format(
         CSTR(DEFAULT_DL, 'lgreen')))
 
-    for arg in ARGS.url.split(','):
-        ORIGINAL_URL = arg
-        _handle_url(arg)
+    if ARGS.listen_mode:
+        listener = ClipboardCatcher()
+        # _listen_mode()
+    elif not ARGS.url:
+        print(LANG_OUTPUT['missing_url_arg']
+              [LANGUAGE] + CSTR(' (argument --url [url])', 'orange'))
+    else:
+        for arg in ARGS.url.split(','):
+            _handle_url(arg)
