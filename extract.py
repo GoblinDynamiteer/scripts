@@ -6,6 +6,7 @@ import argparse
 import glob
 import os
 import shutil
+from pathlib import Path
 
 import config
 import run
@@ -24,7 +25,7 @@ def _find_rar(source_dir):
     if len(rar_file) > 1:
         print("more than 1 rar!")
         return None
-    full_path = OPJ(os.getcwd(), ARGS.source, rar_file[0])
+    full_path = OPJ(os.getcwd(), source_dir, rar_file[0])
     if util.is_file(full_path):
         return full_path
     return None
@@ -59,27 +60,36 @@ def _episode_dest(source_dir):
 
 
 def _handle_item(source_item):
+    print(source_item)
+    print('cwd', os.getcwd())
     if util_movie.is_movie(source_item):
         if util.is_dir(source_item):
             nfo_loc = _find_nfo(source_item)
             rar_loc = _find_rar(source_item)
             dest = _movie_dest(source_item)
             if not run.extract(rar_loc, dest, create_dirs=True):
-                return # extract failed
+                return  # extract failed
             if nfo_loc:
-                util_movie.create_movie_nfo(dest, util.parse_imdbid_from_file(nfo_loc))
+                util_movie.create_movie_nfo(
+                    dest, util.parse_imdbid_from_file(nfo_loc))
             shutil.rmtree(source_item)
             print(f'removed {CSTR(source_item, "orange")}')
         else:
             print(f'{CSTR("move movie file unimplemented", "orange")}')
     elif util_tv.is_episode(source_item):
         if util.is_dir(source_item):
-            print(f'{CSTR("episode dir ops unimplemented", "orange")}')
+            rar_loc = _find_rar(source_item)
+            dest = _episode_dest(source_item)
+            if not run.extract(rar_loc, dest, create_dirs=True):
+                return  # extract failed
         else:
             run.move_file(source_item, _episode_dest(source_item))
     elif util_tv.is_season(source_item):
         if util.is_dir(source_item):
-            print(f'{CSTR("season dir ops unimplemented", "orange")}')
+            os.chdir(source_item)
+            for item in os.listdir('.'):
+                print(item)
+                _handle_item(str(item))
     else:
         print(f'{CSTR("unkown type!", "orange")}')
 
