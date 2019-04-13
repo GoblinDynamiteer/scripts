@@ -4,6 +4,7 @@
 
 import argparse
 import os
+from pathlib import Path
 
 import tvmaze
 import util
@@ -12,10 +13,9 @@ import util_tv
 from config import ConfigurationManager
 from db_mov import MovieDatabase
 from db_tv import EpisodeDatabase, ShowDatabase
+from diskstation import is_ds_special_dir
 from omdb import movie_search
 from printing import to_color_str as CSTR
-from diskstation import is_ds_special_dir
-from pathlib import Path
 
 DB_MOV = MovieDatabase()
 DB_EP = EpisodeDatabase()
@@ -79,8 +79,15 @@ def _scan_new_shows():
         for new_show in shows_not_in_db:
             if is_ds_special_dir(new_show):
                 continue
-            maze_data = tvmaze.show_search(new_show)
+            nfo_imdb_id = util_tv.imdb_from_nfo(new_show)
+            if nfo_imdb_id:
+                maze_data = tvmaze.show_search(nfo_imdb_id)
+                if not maze_data:
+                    maze_data = tvmaze.show_search(new_show)
+            else:
+                maze_data = tvmaze.show_search(new_show)
             data = {'folder': new_show}
+            print(maze_data)
             if maze_data:
                 if 'id' in maze_data:
                     data['tvmaze'] = maze_data['id']
@@ -92,7 +99,7 @@ def _scan_new_shows():
                         data['year'] = int(year_str)
                 if 'externals' in maze_data:
                     ext = maze_data['externals']
-                    if 'imdb' in ext:
+                    if 'imdb' in ext and ext['imdb']:
                         data['imdb'] = ext['imdb']
             DB_SHOW.insert(data)
             print(f'added new show: {CSTR(new_show, "green")}')
