@@ -22,12 +22,17 @@ def _to_text(movie_folder, movie_data, use_removed_date=False):
     else:
         date = datetime.fromtimestamp(
             movie_data['scanned']).strftime('%Y-%m-%d')
-    year = title = 'N/A'
+    year = title = ''
     if 'year' in movie_data:
         year = movie_data['year']
     if 'title' in movie_data:
         title = movie_data['title']
-    return f'[{date}] [{year}] [{title}] [{movie_folder}]\n'
+    ret_str = f'[{date}] [{movie_folder}]'
+    if year:
+        ret_str += f' [{year}]'
+    if title:
+        ret_str += f' [{title}]'
+    return ret_str + '\n'
 
 
 class MovieDatabase(db_json.JSONDatabase):
