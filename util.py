@@ -53,6 +53,8 @@ def get_file_contents(file_loc: str):
                 return lines
             except UnicodeDecodeError:
                 pass
+            except UnicodeError:
+                pass
     return None
 
 
