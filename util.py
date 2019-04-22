@@ -36,9 +36,12 @@ def filename_of_path(file_path):
 
 def parse_imdbid(string):
     "Parse the IMDB-id from a string, if possible"
-    match = re.search(r'tt\d{1,}', string)
-    if match:
-        return match.group()
+    try:
+        match = re.search(r'tt\d{1,}', string)
+        if match:
+            return match.group()
+    except TypeError:
+        pass
     return None
 
 
