@@ -235,5 +235,9 @@ if __name__ == '__main__':
     elif ARGS.type in ['diagnostics', 'diag', 'd']:
         _tv_diagnostics()
         _movie_diagnostics()
+    elif ARGS.type in ['diagnostics-tv', 'diag-tv', 'dtv']:
+        _tv_diagnostics()
+    elif ARGS.type in ['diagnostics-movies', 'diag-mov', 'dmov']:
+        _movie_diagnostics()
     else:
         print('wrong scan target')
