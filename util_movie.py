@@ -42,11 +42,29 @@ def determine_letter(movie_dir_name):
     return letter
 
 
-def list_all() -> list:
+def list_all_movie_files():
+    for movie_dir in list_all(full_path=True):
+        for file_name in os.listdir(movie_dir):
+            if any(file_name.endswith(ext) for ext in util.video_extensions()):
+                yield (movie_dir, file_name)  # return full path and filename
+
+
+def get_full_path_of_movie_filename(file_name: str):
+    "Returns the full path of an episode, if found"
+    print("got", file_name)
+    for path, filename in list_all_movie_files():
+        if filename in file_name:
+            return os.path.join(path, filename)
+    return None
+
+
+def list_all(full_path=False) -> list:
     '''Returns a list of all current movies'''
     letters_dirs = [os.path.join(MOVIE_DIR, letter)
                     for letter in os.listdir(MOVIE_DIR)
                     if os.path.isdir(os.path.join(MOVIE_DIR, letter))]
+    if full_path:
+        return [os.path.join(letter, movie) for letter in letters_dirs for movie in os.listdir(letter)]
     return [movie for letter in letters_dirs for movie in os.listdir(letter)]
 
 
