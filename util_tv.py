@@ -27,7 +27,15 @@ def list_all_episodes():
     for season_path in season_paths:
         for file_name in os.listdir(season_path):
             if any(file_name.endswith(ext) for ext in util.video_extensions()):
-                yield (season_path, file_name) # return full path and filename
+                yield (season_path, file_name)  # return full path and filename
+
+
+def get_full_path_of_episode_filename(file_name: str):
+    "Returns the full path of an episode, if found"
+    for path, filename in list_all_episodes():
+        if filename in file_name:
+            return os.path.join(path, filename)
+    return None
 
 
 def parse_season_episode(episode_filename: str):
