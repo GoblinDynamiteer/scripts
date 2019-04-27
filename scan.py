@@ -223,21 +223,29 @@ def _movie_diagnostics():
 
 
 if __name__ == '__main__':
+
+    SCAN_ARGS_MOV = ['movies', 'm', 'film', 'f', 'mov', 'movie']
+    SCAN_ARGS_TV = ['tv', 'eps', 't', 'shows', 'episodes']
+    SCAN_ARGS_DIAG = ['diagnostics', 'diag', 'd']
+    SCAN_ARGS_DIAG_TV = ['diagnostics-tv', 'diag-tv', 'dtv']
+    SCAN_ARGS_DIAG_MOV = ['diagnostics-movies', 'diag-mov', 'dmov']
+
+    SCAN_ARGS_ALL = SCAN_ARGS_MOV + SCAN_ARGS_TV + \
+        SCAN_ARGS_DIAG + SCAN_ARGS_DIAG_TV + SCAN_ARGS_DIAG_MOV
+
     ARG_PARSER = argparse.ArgumentParser(description='Media Scanner')
-    ARG_PARSER.add_argument('type', type=str)
+    ARG_PARSER.add_argument('type', type=str, choices=SCAN_ARGS_ALL)
     ARGS = ARG_PARSER.parse_args()
 
-    if ARGS.type in ['movies', 'm', 'film', 'f', 'mov', 'movie']:
+    if ARGS.type in SCAN_ARGS_MOV:
         _scan_movies()
-    elif ARGS.type in ['tv', 'eps', 't', 'shows', 'episodes']:
+    elif ARGS.type in SCAN_ARGS_TV:
         _scan_new_shows()
         _scan_episodes()
-    elif ARGS.type in ['diagnostics', 'diag', 'd']:
+    elif ARGS.type in SCAN_ARGS_DIAG:
         _tv_diagnostics()
         _movie_diagnostics()
-    elif ARGS.type in ['diagnostics-tv', 'diag-tv', 'dtv']:
+    elif ARGS.type in SCAN_ARGS_DIAG_TV:
         _tv_diagnostics()
-    elif ARGS.type in ['diagnostics-movies', 'diag-mov', 'dmov']:
+    elif ARGS.type in SCAN_ARGS_DIAG_MOV:
         _movie_diagnostics()
-    else:
-        print('wrong scan target')
