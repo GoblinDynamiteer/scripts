@@ -30,10 +30,9 @@ def dmenu_play_episode():
     print('generating dmenu options...')
     selection = get_dmenu_selection(FIND_COMMAND_TV_FILES).replace('\n', '')
     print(f"starting tv episode {selection}, please wait...")
-    file_path = util_movie.get_full_path_of_movie_filename(selection)
-    print(file_path)
-    # if file_path:
-    #    run.local_command(f'{MOVIE_PLAYER} "{file_path}"')
+    file_path = util_tv.get_full_path_of_episode_filename(selection)
+    if file_path:
+        run.local_command(f'{MOVIE_PLAYER} "{file_path}"')
 
 
 def dmenu_play_movie():
