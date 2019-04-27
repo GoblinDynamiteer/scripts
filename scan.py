@@ -176,7 +176,7 @@ def _tv_diagnostics():
                         missing[ep] = 'gap'
                 if show_dir in DB_SHOW:
                     show_id = DB_SHOW.get(show_dir, 'tvmaze')
-                    while True:
+                    while show_id and True:
                         ep_num_last += 1
                         if tvmaze.episode_has_aired(show_dir, int(season_dir[1:]), ep_num_last, show_maze_id=show_id):
                             missing[season_dir.upper() +
