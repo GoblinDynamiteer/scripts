@@ -147,11 +147,15 @@ def _scan_episodes():
         print('found no new episodes')
 
 
-def _tv_diagnostics():
+def _tv_diagnostics(filter_show=None):
     print('tv diagnostics running')
+    if filter_show:
+        print(f"only processing shows matching: {filter_show}")
     tv_dir = CFG.get('path_tv')
     shows = util_tv.list_all_shows()
     for show_dir in shows:
+        if filter_show and filter_show.lower() not in show_dir.lower():
+            continue
         show_path = Path(tv_dir) / show_dir
         season_dirs = os.listdir(show_path)
         missing = {}
@@ -193,12 +197,16 @@ def _tv_diagnostics():
                     print(f'    {missing_ep} {CSTR("(aired)", "yellow")}')
 
 
-def _movie_diagnostics():
+def _movie_diagnostics(filter_mov=None):
     print('movie diagnostics running')
+    if filter_mov:
+        print(f"only processing movies matching: {filter_mov}")
     found_removed = False
     mov_disk_list = util_movie.list_all()
     for db_mov in DB_MOV:
         if DB_MOV.is_removed(db_mov):
+            continue
+        if filter_mov and filter_mov.lower() not in db_mov.lower():
             continue
         if db_mov not in mov_disk_list:
             found_removed = True
@@ -214,6 +222,8 @@ def _movie_diagnostics():
         for imdb_id in duplicate_imdb:
             dup_mov = []
             for mov in duplicate_imdb[imdb_id]:
+                if filter_mov and filter_mov.lower() not in mov.lower():
+                    continue
                 if not DB_MOV.is_removed(mov) and not 'swedish' in mov.lower():
                     dup_mov.append(mov)  # Allow swedish dubs as duplicates...
             if len(dup_mov) > 1:
@@ -236,17 +246,23 @@ if __name__ == '__main__':
 
     ARG_PARSER = argparse.ArgumentParser(description='Media Scanner')
     ARG_PARSER.add_argument('type', type=str, choices=SCAN_ARGS_ALL)
+    ARG_PARSER.add_argument('--filter', '-f', type=str,
+                            default=None, help='only process items matching string')
     ARGS = ARG_PARSER.parse_args()
 
     if ARGS.type in SCAN_ARGS_MOV:
+        if ARGS.filter:
+            print("filter is only used with diagnostics")
         _scan_movies()
     elif ARGS.type in SCAN_ARGS_TV:
+        if ARGS.filter:
+            print("filter is only used with diagnostics")
         _scan_new_shows()
         _scan_episodes()
     elif ARGS.type in SCAN_ARGS_DIAG:
-        _tv_diagnostics()
-        _movie_diagnostics()
+        _tv_diagnostics(filter_show=ARGS.filter)
+        _movie_diagnostics(filter_mov=ARGS.filter)
     elif ARGS.type in SCAN_ARGS_DIAG_TV:
-        _tv_diagnostics()
+        _tv_diagnostics(filter_show=ARGS.filter)
     elif ARGS.type in SCAN_ARGS_DIAG_MOV:
-        _movie_diagnostics()
+        _movie_diagnostics(filter_mov=ARGS.filter)
