@@ -42,7 +42,8 @@ def _scan_movies():
         elif guessed_title:
             json_data = movie_search(guessed_title, year=guessed_year)
         else:
-            print(CSTR(f'failed to determine title or imdb-id for {new_movie}', 'red'))
+            print(
+                CSTR(f'failed to determine title or imdb-id for {new_movie}', 'red'))
         if 'Year' in json_data:
             year = json_data['Year']
             if util.is_valid_year(year, min_value=1920, max_value=2019):
