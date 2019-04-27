@@ -28,8 +28,12 @@ def id_from_show_name(show_name: str):
     return result.get('id', None)
 
 
-def show_search(query_string):
+def show_search(query_string: str):
     ''' Search a TV Show, query can be show name or IMDb-id'''
+    if not isinstance(query_string, str):
+        raise TypeError('query has to be a string!')
+    if not query_string:
+        raise ValueError('query cannot be empty!')
     url_args = {}
     url = ""
     if util.is_imdbid(query_string):
