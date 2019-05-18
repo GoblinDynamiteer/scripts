@@ -21,9 +21,10 @@ FIND_COMMAND_MOVIE_FILES = f"find {MOV_HOME} {FIND_MOV_EXT_FILTER} {FIND_PRINTF_
 MOVIE_PLAYER = 'mpv --fs'
 
 
-def get_dmenu_selection(dmenu_iems):
+def get_dmenu_selection(dmenu_iems, lines=20):
+    command = DMENU_COMMAND + f' -l {lines}' if lines else DMENU_COMMAND
     return run.local_command_get_output(
-        f'{dmenu_iems} | {DMENU_COMMAND}')
+        f'{dmenu_iems} | {command}')
 
 
 def dmenu_play_episode():
