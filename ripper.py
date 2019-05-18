@@ -273,7 +273,7 @@ class ClipboardCatcher():
                         self.queue.put(contents)
                         print_listen_message = True
                 current_clipboard = contents
-            time.sleep(5)
+            time.sleep(0.5)
 
     def downloader(self):
         while True:
