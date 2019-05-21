@@ -2,9 +2,6 @@
 
 '''String output'''
 
-import platform
-
-
 COLORS = {"black": 0,
           "red": 196,
           "dred": 88,
@@ -27,123 +24,49 @@ COLORS = {"black": 0,
           "white": 256}
 
 
-def to_color_str(
-        string: str, foreground: str, background: str = None, bold: bool = False) -> str:
-    '''Returns "colorized" string'''
-    colstring = "\033[38;5;" + str(COLORS.get(foreground, '46')) + "m"
+ORANGE_GREEN_GRAD = {0: 196, 1: 202, 10: 208, 20: 215,
+                     30: 184, 40: 148, 50: 190, 60: 118, 70: 46}
+
+
+def test_colors():
+    for color_value in range(0, 257):
+        pcstr(f": {color_value} ##################", color_value)
+
+    for color_str, color_val in COLORS.items():
+        pcstr(color_str.upper() + f": {color_val}", color_str)
+
+
+def cstr(string, foreground, background=None, bold=False):
+    colstring = ""
+    if isinstance(foreground, int):
+        colstring = "\033[38;5;" + str(foreground) + "m"
+    else:
+        colstring = "\033[38;5;" + str(COLORS[foreground]) + "m"
     if background:
-        colstring += "\033[48;5;" + str(COLORS.get(foreground, '0')) + "m"
+        colstring += "\033[48;5;" + str(COLORS[background]) + "m"
     if bold:
         colstring += "\033[1m"
-    return colstring + string + "\033[0m"
+    return colstring + str(string) + "\033[0m"
 
 
-class PrintClass:
-    def __init__(self, script_name):
-        self.script_file_name = script_name
-        self.color = {
-            'black': 30, 'red': 31, 'green': 32,
-            'yellow': 33, 'blue': 34, 'magenta': 35,
-            'cyan': 36}
-        self.color_end_color = {'end': 0}
-        self.default_color = {
-            "script_name": "green",
-            "info_brackets": "blue",
-            "warning_brackets": "yellow",
-            "error_brackets": "red",
-            "success_brackets": "green"}
+def pcstr(string, foreground, background=None, bold=False):
+    print(cstr(string, foreground, background, bold))
 
-    def info(self, string, end_line=True, brackets_color=None, print_script_name=True):
-        if print_script_name:
-            self.__print_script_name()
-        if string.find('[') >= 0 and string.find(']') > 0:
-            if not brackets_color:
-                self.__print_color_between(string,
-                                           self.default_color['info_brackets'])
-            else:
-                self.__print_color_between(string, brackets_color)
-        else:
-            self.__print_no_line(string)
-        if end_line:
-            print("")
 
-    def warning(self, string, end_line=True):
-        self.__print_script_name()
-        self.__print_with_color("WARNING ", "yellow")
-        if string.find('[') >= 0 and string.find(']') > 0:
-            self.__print_color_between(string,
-                                       self.default_color['warning_brackets'])
-        else:
-            self.__print_no_line(string)
-        if end_line:
-            print("")
+def percentage_to_cstr(percentage: str)->str:
+    percentage_val = int(percentage.replace('%', ''))
+    for key, val in ORANGE_GREEN_GRAD.items():
+        if percentage_val > key:
+            continue
+        return cstr(percentage, val)
+    return cstr(percentage, 'lgreen')
 
-    def success(self, string, end_line=True):
-        self.__print_script_name()
-        self.__print_with_color("SUCCESS ", "green")
-        if string.find('[') >= 0 and string.find(']') > 0:
-            self.__print_color_between(string,
-                                       self.default_color['success_brackets'])
-        else:
-            self.__print_no_line(string)
-        if end_line:
-            print("")
 
-    def error(self, string, end_line=True):
-        self.__print_script_name()
-        self.__print_with_color("ERROR ", "red")
-        if string.find('[') >= 0 and string.find(']') > 0:
-            self.__print_color_between(string,
-                                       self.default_color['error_brackets'])
-        else:
-            self.__print_no_line(string)
-        if end_line:
-            print("")
+def to_color_str(
+        string: str, foreground, background=None, bold: bool = False) -> str:
+    "wrapper for cstr"
+    return cstr(string, foreground, background, bold)
 
-    def output(self, string, end_line=True):
-        self.__print_no_line(string)
-        if end_line:
-            print("")
-
-    def color_print(self, string, foreground, end_line=True, background=None, light=True):
-        self.__print_with_color(string, foreground, background, light)
-        if end_line:
-            print("")
-
-    def color_brackets(self, string, foreground, background=None, end_line=True):
-        self.__print_color_between(string, foreground, background)
-        if end_line:
-            print("")
-
-    def __print_with_color(self, string, foreground, background=None, light=True):
-        self.__set_color(foreground, background, light)
-        self.__print_no_line(string)
-        self.__color_off()
-
-    def __print_color_between(self, string, foreground, background=None,
-                              char_begin='[', char_end=']', light=True):
-        start_index = string.find(char_begin) + 1
-        end_index = string.find(char_end)
-        self.__print_no_line(string[0:start_index])
-        self.__print_with_color(string[start_index:end_index], foreground)
-        self.__print_no_line(string[end_index:])
-
-    def __print_script_name(self):
-        self.__print_color_between("[ {} ] ".format(self.script_file_name),
-                                   self.default_color['script_name'])
-
-    def __print_no_line(self, string):
-        print(string, end='')
-
-    def __set_color(self, foreground, background, light=True):
-        if platform.system() == 'Windows':
-            return ""
-        fg = self.color[foreground]
-        if light:
-            fg += 60
-        self.__print_no_line("\033[{}m".format(fg))
-
-    def __color_off(self):
-        if platform.system() == 'Windows':
-            return ""
-        self.__print_no_line("\033[{}m".format(self.color_end_color['end']))
+if __name__ == "__main__":
+    print("colors:\n")
+    test_colors()
