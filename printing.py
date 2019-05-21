@@ -5,6 +5,39 @@
 import platform
 
 
+COLORS = {"black": 0,
+          "red": 196,
+          "dred": 88,
+          "lblue": 74,
+          "blue": 33,
+          "dblue": 21,
+          "purple": 171,
+          "orange": 214,
+          "teal": 123,
+          "green": 70,
+          "dgreen": 28,
+          "lgreen": 46,
+          "pink": 218,
+          "lyellow": 229,
+          "dyellow": 220,
+          "brown": 130,
+          "lgrey": 250,
+          "grey": 244,
+          "dgrey": 239,
+          "white": 256}
+
+
+def to_color_str(
+        string: str, foreground: str, background: str = None, bold: bool = False) -> str:
+    '''Returns "colorized" string'''
+    colstring = "\033[38;5;" + str(COLORS.get(foreground, '46')) + "m"
+    if background:
+        colstring += "\033[48;5;" + str(COLORS.get(foreground, '0')) + "m"
+    if bold:
+        colstring += "\033[1m"
+    return colstring + string + "\033[0m"
+
+
 class PrintClass:
     def __init__(self, script_name):
         self.script_file_name = script_name
