@@ -6,6 +6,7 @@ from pathlib import Path
 
 import run
 import util_movie
+import util_tv
 from printing import cstr
 
 
@@ -38,11 +39,18 @@ if __name__ == "__main__":
         command = f"unzip -oj {file_path} {srt_filename}"
         if run.local_command(command, print_info=False):
             print(f"extracted {cstr(srt_filename, 154)}!")
+    elif file_path.suffix.endswith('srt'):
+        srt_filename = file_path.name
+    print(srt_filename)
+    #exit()
     count = 0
     matches = []
     for mov_name in util_movie.list_all():
         value = check_similarity(mov_name, srt_filename)
         matches.append((value, mov_name))
+    for _, ep_name in util_tv.list_all_episodes():
+        value = check_similarity(ep_name, srt_filename)
+        matches.append((value, ep_name))
     top_ten = sorted(matches, key=lambda tup: tup[0], reverse=True)[0:10]
     for match in top_ten:
         print(match)
