@@ -10,11 +10,18 @@ import util_movie
 import util_tv
 import util
 from printing import cstr
+import config
 
 
 class SubtitleMediaType(IntEnum):
     Episode = 0
     Movie = 1
+    Unknown = 2
+
+
+class Language(IntEnum):
+    English = 0
+    Swedish = 1
     Unknown = 2
 
 
@@ -24,9 +31,17 @@ class Subtitle():
         self.filename = util.filename_of_path(path)
         self.type = SubtitleMediaType.Unknown
         self.matching_media = []
+        self.language = Language.Unknown
+        self.contents = []
+
+        with open(self.filename, encoding='latin1', errors='replace') as subtitle_file:
+            self.contents = subtitle_file.read()
 
         self._determine_type()
+        self._determine_language()
         self._find_matching_media_files()
+
+        print(self.language)
 
     def _determine_type(self):
         if util_movie.is_movie(self.filename):
@@ -49,6 +64,16 @@ class Subtitle():
         if matches:
             self.matching_media = sorted(
                 matches, key=lambda tup: tup[0], reverse=True)[0:10]
+
+    def _determine_language(self):
+        cfg = config.ConfigurationManager()
+        path_txt = Path(cfg.get('path_scripts')) / 'txt'
+        langs = {'en': {'points': 0}, 'sv': {'points': 0}}
+        for lang in langs:
+            with open(path_txt / f'sub_words_{lang}.txt', encoding='utf-8') as word_file:
+                for word in word_file.read().split('\n'):
+                    langs[lang]['points'] += self.contents.count(word)
+        self.language = Language.English if langs['en']['points'] > langs['sv']['points'] else Language.Swedish
 
 
 def check_similarity(string1, string2):
