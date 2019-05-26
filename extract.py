@@ -20,12 +20,17 @@ CFG = config.ConfigurationManager()
 
 
 def _find_rar(source_dir):
-    rar_file = [f for f in os.listdir(
+    rar_files = [f for f in os.listdir(
         source_dir) if f.endswith('.rar')]
-    if len(rar_file) > 1:
+    if len(rar_files) > 1:
+        for rar_file in rar_files:
+            if '01.rar' in rar_file:
+                rar_files = [rar_file]
+                break
+    if len(rar_files) > 1:
         print("more than 1 rar!")
         return None
-    full_path = OPJ(os.getcwd(), source_dir, rar_file[0])
+    full_path = OPJ(os.getcwd(), source_dir, rar_files[0])
     if util.is_file(full_path):
         return full_path
     return None
