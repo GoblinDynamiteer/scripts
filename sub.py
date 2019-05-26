@@ -2,12 +2,53 @@
 
 import argparse
 import difflib
+from enum import IntEnum
 from pathlib import Path
 
 import run
 import util_movie
 import util_tv
+import util
 from printing import cstr
+
+
+class SubtitleMediaType(IntEnum):
+    Episode = 0
+    Movie = 1
+    Unknown = 2
+
+
+class Subtitle():
+    def __init__(self, path):
+        self.path = path
+        self.filename = util.filename_of_path(path)
+        self.type = SubtitleMediaType.Unknown
+        self.matching_media = []
+
+        self._determine_type()
+        self._find_matching_media_files()
+
+    def _determine_type(self):
+        if util_movie.is_movie(self.filename):
+            self.type = SubtitleMediaType.Movie
+        elif util_tv.is_episode(self.filename):
+            self.type = SubtitleMediaType.Episode
+        else:
+            self.type = SubtitleMediaType.Unknown
+
+    def _find_matching_media_files(self):
+        matches = []
+        if self.type in [SubtitleMediaType.Movie, SubtitleMediaType.Unknown]:
+            for mov_name in util_movie.list_all():
+                value = check_similarity(mov_name, self.filename)
+                matches.append((value, mov_name))
+        if self.type in [SubtitleMediaType.Episode, SubtitleMediaType.Unknown]:
+            for _, ep_name in util_tv.list_all_episodes():
+                value = check_similarity(ep_name, self.filename)
+                matches.append((value, ep_name))
+        if matches:
+            self.matching_media = sorted(
+                matches, key=lambda tup: tup[0], reverse=True)[0:10]
 
 
 def check_similarity(string1, string2):
@@ -41,18 +82,11 @@ if __name__ == "__main__":
             print(f"extracted {cstr(srt_filename, 154)}!")
     elif file_path.suffix.endswith('srt'):
         srt_filename = file_path.name
-    print(srt_filename)
-    #exit()
-    count = 0
-    matches = []
-    for mov_name in util_movie.list_all():
-        value = check_similarity(mov_name, srt_filename)
-        matches.append((value, mov_name))
-    for _, ep_name in util_tv.list_all_episodes():
-        value = check_similarity(ep_name, srt_filename)
-        matches.append((value, ep_name))
-    top_ten = sorted(matches, key=lambda tup: tup[0], reverse=True)[0:10]
-    for match in top_ten:
-        print(match)
+    else:
+        print("no subtitle file to process..")
+        exit()
+    subtitle = Subtitle(srt_filename)
+    print(subtitle.filename)
+    print(subtitle.matching_media)
     # TODO: move srt to corret location
     # TODO: match movie/episode
