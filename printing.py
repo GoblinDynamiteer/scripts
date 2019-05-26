@@ -16,7 +16,7 @@ COLORS = {"black": 0,
           "lgreen": 46,
           "pink": 218,
           "lyellow": 229,
-          "yellow" : 226
+          "yellow" : 226,
           "dyellow": 220,
           "brown": 130,
           "lgrey": 250,
