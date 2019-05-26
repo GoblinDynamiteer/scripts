@@ -13,7 +13,7 @@ import run
 import util
 import util_movie
 import util_tv
-from printing import to_color_str as CSTR
+from printing import cstr
 
 OPJ = os.path.join
 CFG = config.ConfigurationManager()
@@ -79,9 +79,9 @@ def _handle_item(source_item):
                 util_movie.create_movie_nfo(
                     dest, util.parse_imdbid_from_file(nfo_loc))
             shutil.rmtree(source_item)
-            print(f'removed {CSTR(source_item, "orange")}')
+            print(f'removed {cstr(source_item, "orange")}')
         else:
-            print(f'{CSTR("move movie file unimplemented", "orange")}')
+            print(f'{cstr("move movie file unimplemented", "orange")}')
     elif util_tv.is_episode(source_item):
         if util.is_dir(source_item):
             rar_loc = _find_rar(source_item)
@@ -97,9 +97,9 @@ def _handle_item(source_item):
             for item in os.listdir('.'):
                 _handle_item(str(item))
             print(
-                f'done! please manually remove {CSTR(source_item, "orange")}')
+                f'done! please manually remove {cstr(source_item, "orange")}')
     else:
-        print(f'{CSTR("unkown type!", "orange")}')
+        print(f'{cstr("unkown type!", "orange")}')
 
 
 if __name__ == '__main__':
