@@ -65,6 +65,8 @@ def _handle_item(source_item):
         if util.is_dir(source_item):
             nfo_loc = _find_nfo(source_item)
             rar_loc = _find_rar(source_item)
+            if not rar_loc:
+                exit()
             dest = _movie_dest(source_item)
             if not run.extract(rar_loc, dest, create_dirs=True):
                 return  # extract failed
