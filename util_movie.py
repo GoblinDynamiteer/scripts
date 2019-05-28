@@ -58,6 +58,14 @@ def get_full_path_of_movie_filename(file_name: str):
     return None
 
 
+def get_full_path_to_movie_filename(folder: str):
+    "Returns the full path of movie, if found"
+    for path, filename in list_all_movie_files():
+        if folder in path:
+            return os.path.join(path, filename)
+    return None
+
+
 def list_all(full_path=False) -> list:
     '''Returns a list of all current movies'''
     letters_dirs = [os.path.join(MOVIE_DIR, letter)
