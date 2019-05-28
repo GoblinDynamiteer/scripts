@@ -9,7 +9,7 @@ import run
 import util_movie
 import util_tv
 import util
-from printing import cstr
+from printing import cstr, pcstr
 import config
 
 
@@ -41,8 +41,6 @@ class Subtitle():
         self._determine_language()
         self._find_matching_media_files()
 
-        print(self.language)
-
     def _determine_type(self):
         if util_movie.is_movie(self.filename):
             self.type = SubtitleMediaType.Movie
@@ -72,7 +70,7 @@ class Subtitle():
         for lang in langs:
             with open(path_txt / f'sub_words_{lang}.txt', encoding='utf-8') as word_file:
                 for word in word_file.read().split('\n'):
-                    langs[lang]['points'] += self.contents.count(word)
+                    langs[lang]['points'] += self.contents.count(f' {word} ')
         self.language = Language.English if langs['en']['points'] > langs['sv']['points'] else Language.Swedish
 
 
@@ -112,6 +110,11 @@ if __name__ == "__main__":
         exit()
     subtitle = Subtitle(srt_filename)
     print(subtitle.filename)
-    print(subtitle.matching_media)
+    print(subtitle.matching_media[0])
+    print(subtitle.language)
+    movie_file = util_movie.get_full_path_to_movie_filename(subtitle.matching_media[0][1])
+    lang_str = 'en' if subtitle.language == Language.English else 'sv'
+    subtitle_dest = movie_file.replace('.mkv', f'.{lang_str}.srt')
+    pcstr(subtitle_dest, 'purple')
     # TODO: move srt to corret location
     # TODO: match movie/episode
