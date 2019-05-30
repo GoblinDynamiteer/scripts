@@ -2,12 +2,13 @@
 
 ''' Various movie helper/utility functions '''
 
-import re
 import os
-import util_tv
-import util
-import db_mov
+import re
 
+import db_mov
+import util
+import util_tv
+from cache import MovieCache
 from config import ConfigurationManager
 
 VALID_LETTERS = {'#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
@@ -49,9 +50,14 @@ def list_all_movie_files():
                 yield (movie_dir, file_name)  # return full path and filename
 
 
-def get_full_path_of_movie_filename(file_name: str):
+def get_full_path_of_movie_filename(file_name: str, use_cache=True):
     "Returns the full path of an episode, if found"
-    print("got", file_name)
+    if use_cache:
+        for path in MovieCache().mov_file_paths:
+            if file_name in path:
+                return path
+        else:
+            return None
     for path, filename in list_all_movie_files():
         if filename in file_name:
             return os.path.join(path, filename)
