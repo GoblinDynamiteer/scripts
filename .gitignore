@@ -5,3 +5,4 @@ mariadb_read.py
 mariadb_test.py
 .vscode/
 __pycache__/
+mov_cache.json
