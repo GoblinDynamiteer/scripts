@@ -64,15 +64,15 @@ class MovieCache(db_json.JSONDatabase):
         self.update(letter, 'files', letter_files)
 
     def get_file_path_list(self, only_letter=None):
-        file_list = []
         with self.cache_update_lock:
             for letter in self:
                 if only_letter and only_letter != letter:
                     continue
                 for file_path in self.get(letter, 'files'):
                     full_path = Path(util_movie.MOVIE_DIR) / letter / file_path
-                    file_list.append(str(full_path))
-        return file_list
+                    yield str(full_path)
+        return []
+
 
 if __name__ == "__main__":
     mov_cache = MovieCache()
