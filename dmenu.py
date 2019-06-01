@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 import argparse
-
-import run
-import util_tv
-import util_movie
-import db_mov
-from config import ConfigurationManager
 from tempfile import NamedTemporaryFile
+
+import db_mov
+import run
+import util_movie
+import util_tv
+from config import ConfigurationManager
 
 CFG = ConfigurationManager()
 TV_HOME = CFG.get('path_tv')
@@ -41,10 +41,8 @@ def dmenu_play_episode():
 
 
 def dmenu_play_movie():
-    print('generating dmenu options...')
     mov_items = list(db_mov.MovieDatabase().all_movies())
     selection = get_dmenu_selection('\n'.join(mov_items)).replace('\n', '')
-    print(f"starting movie {selection}, please wait...")
     file_path = util_movie.get_full_path_of_movie_filename(selection)
     if file_path:
         run.local_command(f'{MOVIE_PLAYER} "{file_path}"')
