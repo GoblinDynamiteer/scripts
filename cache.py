@@ -3,55 +3,80 @@
 import json
 import os
 from pathlib import Path
+from threading import Thread, Lock
 
+import db_json
 import util
 import util_movie
+from config import ConfigurationManager
 from printing import cstr
 
+CACHE_DB_PATH = ConfigurationManager().get('path_cachedb')
 
-class MovieCache():
+
+class MovieCache(db_json.JSONDatabase):
+    ''' Cached paths Database '''
+
     def __init__(self):
-        self.cache_file = 'mov_cache.json'
-        self.mov_file_paths = []
-        self.letter_modified = {}
-        try:
-            with open(self.cache_file, 'r') as json_file:
-                json_data = json.load(json_file)
-                self.mov_file_paths = json_data['paths']
-                self.letter_modified = json_data['mod_dates']
-        except FileNotFoundError:
-            pass
+        db_json.JSONDatabase.__init__(self, CACHE_DB_PATH)
+        self.set_valid_keys(
+            ['letter_dir', 'modified', 'files'])
+        self.set_key_type('letter_dir', str)
+        self.set_key_type('modified', int)  # unix timestamp
+        self.set_key_type('files', list)
+        self.cache_update_lock = Lock()
+        Thread(target=self.update_paths).start()
 
     def update_paths(self):
+        self.cache_update_lock.acquire()
         need_save = False
-        for item in os.listdir(util_movie.MOVIE_DIR):
-            path = Path(util_movie.MOVIE_DIR) / item
-            if path.is_dir():
-                mod_date = path.stat().st_mtime
-                if self.letter_modified.get(item, 0) < mod_date:
-                    self.letter_modified[item] = mod_date
-                    self.scan_dir(path)
+        for letter in os.listdir(util_movie.MOVIE_DIR):
+            if letter in util_movie.VALID_LETTERS:
+                letter_path = Path(util_movie.MOVIE_DIR) / letter
+                mtime = int(letter_path.stat().st_mtime)
+                if letter not in self:
+                    self.insert({'letter_dir': letter,
+                                 'modified': mtime,
+                                 'files': []})
+                    self.update_letter_files(letter)
+                    need_save = True
+                elif self.get(letter, 'modified') < mtime:
+                    self.update(letter, 'modified', mtime)
+                    self.update_letter_files(letter)
                     need_save = True
         if need_save:
             self.save()
+        self.cache_update_lock.release() 
 
-    def scan_dir(self, dir):
-        for root, _, files in os.walk(dir):
+    def update_letter_files(self, letter, debug_print=False):
+        root_path = Path(util_movie.MOVIE_DIR) / letter
+        letter_files = []
+        for root, _, files in os.walk(root_path):
             for file_ in files:
-                if any(file_.endswith(ext) for ext in util.video_extensions()):
-                    full_path = Path(root) / file_
-                    if str(full_path) not in self.mov_file_paths:
-                        self.mov_file_paths.append(str(full_path))
+                full_path = Path(root) / file_
+                movie_dir, file_name = full_path.parts[-2:]
+                if any(file_name.endswith(ext) for ext in util.video_extensions()):
+                    sub_path = Path(movie_dir) / file_name
+                    letter_files.append(str(sub_path))
+                    if debug_print:
                         print(
-                            f'added to mov cache: {cstr(full_path, "lgreen")}')
+                            f'added to mov cache: {cstr(sub_path, "lgreen")}')
+        self.update(letter, 'files', letter_files)
 
-    def save(self):
-        with open(self.cache_file, 'w') as json_file:
-            data = {'mod_dates': self.letter_modified,
-                    'paths': self.mov_file_paths}
-            json.dump(data, json_file)
-
+    def get_file_path_list(self, only_letter=None):
+        file_list = []
+        with self.cache_update_lock:
+            for letter in self:
+                if only_letter and only_letter != letter:
+                    continue
+                for file_path in self.get(letter, 'files'):
+                    full_path = Path(util_movie.MOVIE_DIR) / letter / file_path
+                    file_list.append(str(full_path))
+        return file_list
 
 if __name__ == "__main__":
     mov_cache = MovieCache()
-    mov_cache.update_paths()
+    for mov_file_path in mov_cache.get_file_path_list()[0:10]:
+        print(mov_file_path)
+    for mov_file_path in mov_cache.get_file_path_list(only_letter='Z')[0:10]:
+        print(mov_file_path)
