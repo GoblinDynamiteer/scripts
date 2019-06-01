@@ -76,7 +76,3 @@ class MovieCache(db_json.JSONDatabase):
 
 if __name__ == "__main__":
     mov_cache = MovieCache()
-    for mov_file_path in mov_cache.get_file_path_list()[0:10]:
-        print(mov_file_path)
-    for mov_file_path in mov_cache.get_file_path_list(only_letter='Z')[0:10]:
-        print(mov_file_path)
