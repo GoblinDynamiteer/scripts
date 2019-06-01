@@ -110,3 +110,8 @@ class MovieDatabase(db_json.JSONDatabase):
             print(f'wrote to {CSTR(target, "green")}')
         except:
             print(CSTR('could not save latest.txt', 'red'))
+
+    def all_movies(self):
+        for item in self.all():
+            if not self.json.get('removed', False):
+                yield item
