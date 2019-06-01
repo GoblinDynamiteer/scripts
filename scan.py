@@ -32,7 +32,9 @@ def _scan_movies():
         if is_ds_special_dir(new_movie):
             continue
         new = True
-        data = {'folder': new_movie, 'scanned': util.now_timestamp()}
+        data = {'folder': new_movie,
+                'scanned': util.now_timestamp(),
+                'removed': False}
         guessed_title = util_movie.determine_title(new_movie)
         guessed_year = util_movie.parse_year(new_movie)
         imdb_id_from_nfo = util_movie.get_movie_nfo_imdb_id(new_movie)
