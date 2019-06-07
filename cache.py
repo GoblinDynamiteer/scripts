@@ -11,14 +11,13 @@ import util_movie
 from config import ConfigurationManager
 from printing import cstr
 
-CACHE_DB_PATH = ConfigurationManager().get('path_mov_cachedb')
-
+CACHE_DB_MOV_PATH = ConfigurationManager().get('path_mov_cachedb')
 
 class MovieCache(db_json.JSONDatabase):
     ''' Cached paths Database '''
 
     def __init__(self):
-        db_json.JSONDatabase.__init__(self, CACHE_DB_PATH)
+        db_json.JSONDatabase.__init__(self, CACHE_DB_MOV_PATH)
         self.set_valid_keys(
             ['letter_dir', 'modified', 'files'])
         self.set_key_type('letter_dir', str)
