@@ -8,13 +8,49 @@ from threading import Thread, Lock
 import db_json
 import util
 import util_movie
+import util_tv
 from config import ConfigurationManager
 from printing import cstr
 
 CACHE_DB_MOV_PATH = ConfigurationManager().get('path_mov_cachedb')
+CACHE_DB_TV_PATH = ConfigurationManager().get('path_tv_cachedb')
+
+class TvCache(db_json.JSONDatabase):
+    ''' Cached tv paths Database '''
+
+    def __init__(self):
+        db_json.JSONDatabase.__init__(self, CACHE_DB_TV_PATH)
+        self.set_valid_keys(
+            ['season_dir', 'modified', 'files'])
+        self.set_key_type('season_dir', str) # ShowName/S##
+        self.set_key_type('modified', int)  # unix timestamp
+        self.set_key_type('files', list)
+        self.cache_update_lock = Lock()
+        Thread(target=self.update_paths).start()
+
+    def update_paths(self):
+        self.cache_update_lock.acquire()
+        need_save = False
+        shows = util_tv.list_all_shows()
+        for show in shows:
+            show_path = Path(util_tv.SHOW_DIR) / show
+            season_paths = [Path(show_path) / sp for sp in os.listdir(show_path)]
+            for sp in season_paths:
+                if sp.is_dir():
+                    show, season = sp.parts[-2:]
+                    season_dir = f"{show}/{season}"
+                    if season_dir not in self:
+                        self.insert({'season_dir': season_dir,
+                            'modified': mtime,
+                            'files': []})
+                    # TODO: complete....
+                    #self.update_letter_files(letter)
+                    need_save = True
+                    mtime = int(sp.stat().st_mtime)
+                    print(show, season)
 
 class MovieCache(db_json.JSONDatabase):
-    ''' Cached paths Database '''
+    ''' Cached movie paths Database '''
 
     def __init__(self):
         db_json.JSONDatabase.__init__(self, CACHE_DB_MOV_PATH)
@@ -74,4 +110,5 @@ class MovieCache(db_json.JSONDatabase):
 
 
 if __name__ == "__main__":
-    mov_cache = MovieCache()
+    #mov_cache = MovieCache()
+    tv_cache = TvCache()
