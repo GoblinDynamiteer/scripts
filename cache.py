@@ -11,7 +11,7 @@ import util_movie
 from config import ConfigurationManager
 from printing import cstr
 
-CACHE_DB_PATH = ConfigurationManager().get('path_cachedb')
+CACHE_DB_PATH = ConfigurationManager().get('path_mov_cachedb')
 
 
 class MovieCache(db_json.JSONDatabase):
