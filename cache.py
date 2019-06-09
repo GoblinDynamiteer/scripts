@@ -37,17 +37,37 @@ class TvCache(db_json.JSONDatabase):
             season_paths = [Path(show_path) / sp for sp in os.listdir(show_path)]
             for sp in season_paths:
                 if sp.is_dir():
+                    mtime = int(sp.stat().st_mtime)
                     show, season = sp.parts[-2:]
                     season_dir = f"{show}/{season}"
                     if season_dir not in self:
                         self.insert({'season_dir': season_dir,
                             'modified': mtime,
                             'files': []})
-                    # TODO: complete....
-                    #self.update_letter_files(letter)
-                    need_save = True
-                    mtime = int(sp.stat().st_mtime)
-                    print(show, season)
+                        self.update_season_files(season_dir)
+                        need_save = True
+                    elif self.get(season_dir, 'modified') < mtime:
+                        self.update(season_dir, 'modified', mtime)
+                        self.update_season_files(season_dir)
+                        need_save = True
+        if need_save:
+            self.save()
+        self.cache_update_lock.release()
+
+    def update_season_files(self, season_dir, debug_print=False):
+        root_path = Path(util_tv.SHOW_DIR) / season_dir
+        episode_files = []
+        for root, _, files in os.walk(root_path):
+            for file_ in files:
+                full_path = Path(root) / file_
+                file_name = full_path.parts[-1]
+                print(file_name)
+                if any(file_name.endswith(ext) for ext in util.video_extensions()):
+                    episode_files.append(str(file_name))
+                    if debug_print:
+                        print(
+                            f'added to tv cache: {cstr(file_name, "lgreen")}')
+        self.update(season_dir, 'files', episode_files)
 
 class MovieCache(db_json.JSONDatabase):
     ''' Cached movie paths Database '''
