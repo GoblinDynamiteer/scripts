@@ -61,7 +61,6 @@ class TvCache(db_json.JSONDatabase):
             for file_ in files:
                 full_path = Path(root) / file_
                 file_name = full_path.parts[-1]
-                print(file_name)
                 if any(file_name.endswith(ext) for ext in util.video_extensions()):
                     episode_files.append(str(file_name))
                     if debug_print:
