@@ -15,6 +15,7 @@ from printing import cstr
 CACHE_DB_MOV_PATH = ConfigurationManager().get('path_mov_cachedb')
 CACHE_DB_TV_PATH = ConfigurationManager().get('path_tv_cachedb')
 
+
 class TvCache(db_json.JSONDatabase):
     ''' Cached tv paths Database '''
 
@@ -22,7 +23,7 @@ class TvCache(db_json.JSONDatabase):
         db_json.JSONDatabase.__init__(self, CACHE_DB_TV_PATH)
         self.set_valid_keys(
             ['season_dir', 'modified', 'files'])
-        self.set_key_type('season_dir', str) # ShowName/S##
+        self.set_key_type('season_dir', str)  # ShowName/S##
         self.set_key_type('modified', int)  # unix timestamp
         self.set_key_type('files', list)
         self.cache_update_lock = Lock()
@@ -34,7 +35,8 @@ class TvCache(db_json.JSONDatabase):
         shows = util_tv.list_all_shows()
         for show in shows:
             show_path = Path(util_tv.SHOW_DIR) / show
-            season_paths = [Path(show_path) / sp for sp in os.listdir(show_path)]
+            season_paths = [
+                Path(show_path) / sp for sp in os.listdir(show_path)]
             for sp in season_paths:
                 if sp.is_dir():
                     mtime = int(sp.stat().st_mtime)
@@ -42,8 +44,8 @@ class TvCache(db_json.JSONDatabase):
                     season_dir = f"{show}/{season}"
                     if season_dir not in self:
                         self.insert({'season_dir': season_dir,
-                            'modified': mtime,
-                            'files': []})
+                                     'modified': mtime,
+                                     'files': []})
                         self.update_season_files(season_dir)
                         need_save = True
                     elif self.get(season_dir, 'modified') < mtime:
@@ -67,6 +69,17 @@ class TvCache(db_json.JSONDatabase):
                         print(
                             f'added to tv cache: {cstr(file_name, "lgreen")}')
         self.update(season_dir, 'files', episode_files)
+
+    def get_file_path_list(self, only_show=None):
+        with self.cache_update_lock:
+            for path in self:
+                if only_show and only_show not in path:
+                    continue
+                for file_path in self.get(path, 'files'):
+                    full_path = Path(util_movie.MOVIE_DIR) / path / file_path
+                    yield str(full_path)
+        return []
+
 
 class MovieCache(db_json.JSONDatabase):
     ''' Cached movie paths Database '''
@@ -100,7 +113,7 @@ class MovieCache(db_json.JSONDatabase):
                     need_save = True
         if need_save:
             self.save()
-        self.cache_update_lock.release() 
+        self.cache_update_lock.release()
 
     def update_letter_files(self, letter, debug_print=False):
         root_path = Path(util_movie.MOVIE_DIR) / letter
@@ -129,5 +142,5 @@ class MovieCache(db_json.JSONDatabase):
 
 
 if __name__ == "__main__":
-    #mov_cache = MovieCache()
+    mov_cache = MovieCache()
     tv_cache = TvCache()
