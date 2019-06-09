@@ -43,7 +43,7 @@ class JSONDatabase(object):
         except:
             print('could not save database')
 
-    def _backup(self):
+    def _backup(self, debug_print=False):
         ''' Backup json file '''
         timestamp = util.now_timestamp()
         backup_path = CFG.get('path_backup')
@@ -54,7 +54,8 @@ class JSONDatabase(object):
             shutil.copy(self.db_file_path, destination)
         except PermissionError:
             shutil.copyfile(self.db_file_path, destination)
-        print(f'backed up to {CSTR(destination, "green")}')
+        if debug_print:
+            print(f'backed up to {CSTR(destination, "green")}')
 
     def save(self):
         ''' Save database file '''
