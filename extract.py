@@ -53,6 +53,8 @@ def _movie_dest(source_dir):
 def _episode_dest(source_dir):
     show = util_tv.determine_show_from_episode_name(source_dir)
     if not show:
+        print(f"could not deremine show for {source_dir}")
+        print(f"guessing: {util_tv.guess_show_name_from_episode_name(source_dir)}")
         return None
     path = OPJ(CFG.get('path_tv'), show)
     if not os.path.exists(path):
@@ -86,6 +88,9 @@ def _handle_item(source_item):
         if util.is_dir(source_item):
             rar_loc = _find_rar(source_item)
             dest = _episode_dest(source_item)
+            if not dest:
+                print(f"could not determine destination for {source_item}")
+                return
             if not run.extract(rar_loc, dest, create_dirs=True):
                 return  # extract failed
         else:
