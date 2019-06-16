@@ -15,7 +15,7 @@ CACHE_DB_TV_PATH = ConfigurationManager().get('path_tv_cachedb')
 SHOW_DIR = ConfigurationManager().get('path_tv')
 MOVIE_DIR = ConfigurationManager().get('path_film')
 VALID_MOV_SUBDIR_LETTERS = {'#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
-                 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'VW', 'X', 'Y', 'Z'}
+                            'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'VW', 'X', 'Y', 'Z'}
 
 
 def list_all_shows() -> list:
@@ -28,7 +28,8 @@ class TvCache(db_json.JSONDatabase):
     ''' Cached tv paths Database '''
 
     def __init__(self, debug_print: bool = False):
-        db_json.JSONDatabase.__init__(self, CACHE_DB_TV_PATH, debug_print=debug_print)
+        db_json.JSONDatabase.__init__(
+            self, CACHE_DB_TV_PATH, debug_print=debug_print)
         self.set_valid_keys(
             ['season_dir', 'modified', 'files'])
         self.set_key_type('season_dir', str)  # ShowName/S##
@@ -94,7 +95,8 @@ class TvCache(db_json.JSONDatabase):
 class MovieCache(db_json.JSONDatabase):
 
     def __init__(self, debug_print: bool = False):
-        db_json.JSONDatabase.__init__(self, CACHE_DB_MOV_PATH, debug_print=debug_print)
+        db_json.JSONDatabase.__init__(
+            self, CACHE_DB_MOV_PATH, debug_print=debug_print)
         self.set_valid_keys(
             ['letter_dir', 'modified', 'files'])
         self.set_key_type('letter_dir', str)
