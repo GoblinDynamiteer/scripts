@@ -27,8 +27,8 @@ def list_all_shows() -> list:
 class TvCache(db_json.JSONDatabase):
     ''' Cached tv paths Database '''
 
-    def __init__(self):
-        db_json.JSONDatabase.__init__(self, CACHE_DB_TV_PATH)
+    def __init__(self, debug_print: bool = False):
+        db_json.JSONDatabase.__init__(self, CACHE_DB_TV_PATH, debug_print=debug_print)
         self.set_valid_keys(
             ['season_dir', 'modified', 'files'])
         self.set_key_type('season_dir', str)  # ShowName/S##
@@ -62,9 +62,11 @@ class TvCache(db_json.JSONDatabase):
                         need_save = True
         if need_save:
             self.save()
+        elif self.debug:
+            print('no new tv show files found')
         self.cache_update_lock.release()
 
-    def update_season_files(self, season_dir, debug_print=False):
+    def update_season_files(self, season_dir):
         root_path = Path(SHOW_DIR) / season_dir
         episode_files = []
         for root, _, files in os.walk(root_path):
@@ -73,7 +75,7 @@ class TvCache(db_json.JSONDatabase):
                 file_name = full_path.parts[-1]
                 if any(file_name.endswith(ext) for ext in util.video_extensions()):
                     episode_files.append(str(file_name))
-                    if debug_print:
+                    if self.debug:
                         print(
                             f'added to tv cache: {cstr(file_name, "lgreen")}')
         self.update(season_dir, 'files', episode_files)
@@ -90,10 +92,9 @@ class TvCache(db_json.JSONDatabase):
 
 
 class MovieCache(db_json.JSONDatabase):
-    ''' Cached movie paths Database '''
 
-    def __init__(self):
-        db_json.JSONDatabase.__init__(self, CACHE_DB_MOV_PATH)
+    def __init__(self, debug_print: bool = False):
+        db_json.JSONDatabase.__init__(self, CACHE_DB_MOV_PATH, debug_print=debug_print)
         self.set_valid_keys(
             ['letter_dir', 'modified', 'files'])
         self.set_key_type('letter_dir', str)
@@ -121,9 +122,11 @@ class MovieCache(db_json.JSONDatabase):
                     need_save = True
         if need_save:
             self.save()
+        elif self.debug:
+            print('no new movie files found')
         self.cache_update_lock.release()
 
-    def update_letter_files(self, letter, debug_print=False):
+    def update_letter_files(self, letter):
         root_path = Path(MOVIE_DIR) / letter
         letter_files = []
         for root, _, files in os.walk(root_path):
@@ -133,7 +136,7 @@ class MovieCache(db_json.JSONDatabase):
                 if any(file_name.endswith(ext) for ext in util.video_extensions()):
                     sub_path = Path(movie_dir) / file_name
                     letter_files.append(str(sub_path))
-                    if debug_print:
+                    if self.debug:
                         print(
                             f'added to mov cache: {cstr(sub_path, "lgreen")}')
         self.update(letter, 'files', letter_files)
@@ -150,5 +153,5 @@ class MovieCache(db_json.JSONDatabase):
 
 
 if __name__ == "__main__":
-    mov_cache = MovieCache()
-    tv_cache = TvCache()
+    mov_cache = MovieCache(debug_print=True)
+    tv_cache = TvCache(debug_print=True)
