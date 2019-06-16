@@ -25,7 +25,7 @@ def list_all_episodes(use_cache=True):
     if use_cache:
         for eisode_path in TvCache().get_file_path_list():
             path = Path(eisode_path)
-            yield (path.parts[-2:], path.parts[-1])
+            yield (path.parents[0], path.parts[-1])
         return []
     show_paths = [os.path.join(SHOW_DIR, sp) for sp in list_all_shows()]
     season_paths = [os.path.join(show, season)
