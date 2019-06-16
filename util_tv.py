@@ -6,7 +6,9 @@ import os
 import re
 
 from config import ConfigurationManager
+from cache import TvCache
 import util
+from pathlib import Path
 
 CFG = ConfigurationManager()
 SHOW_DIR = CFG.get('path_tv')
@@ -18,8 +20,13 @@ def list_all_shows() -> list:
             if os.path.isdir(os.path.join(SHOW_DIR, show))]
 
 
-def list_all_episodes():
+def list_all_episodes(use_cache=True):
     '''Returns a list of all current tv show files'''
+    if use_cache:
+        for eisode_path in TvCache().get_file_path_list():
+            path = Path(eisode_path)
+            yield (path.parts[-2:], path.parts[-1])
+        return []
     show_paths = [os.path.join(SHOW_DIR, sp) for sp in list_all_shows()]
     season_paths = [os.path.join(show, season)
                     for show in show_paths for season in os.listdir(show) if
@@ -30,8 +37,13 @@ def list_all_episodes():
                 yield (season_path, file_name)  # return full path and filename
 
 
-def get_full_path_of_episode_filename(file_name: str):
+def get_full_path_of_episode_filename(file_name: str, use_cache=True):
     "Returns the full path of an episode, if found"
+    if use_cache:
+        for path in TvCache().get_file_path_list():
+            if file_name in path:
+                return path
+        return ""
     for path, filename in list_all_episodes():
         if filename in file_name:
             return os.path.join(path, filename)
