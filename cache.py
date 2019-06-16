@@ -34,7 +34,7 @@ class TvCache(db_json.JSONDatabase):
         need_save = False
         shows = util_tv.list_all_shows()
         for show in shows:
-            show_path = Path(util_tv.SHOW_DIR) / show
+            show_path = Path(util_tv.show_root_dir()) / show
             season_paths = [
                 Path(show_path) / sp for sp in os.listdir(show_path)]
             for sp in season_paths:
@@ -57,7 +57,7 @@ class TvCache(db_json.JSONDatabase):
         self.cache_update_lock.release()
 
     def update_season_files(self, season_dir, debug_print=False):
-        root_path = Path(util_tv.SHOW_DIR) / season_dir
+        root_path = Path(util_tv.show_root_dir()) / season_dir
         episode_files = []
         for root, _, files in os.walk(root_path):
             for file_ in files:
@@ -76,7 +76,7 @@ class TvCache(db_json.JSONDatabase):
                 if only_show and only_show not in path:
                     continue
                 for file_path in self.get(path, 'files'):
-                    full_path = Path(util_tv.SHOW_DIR) / path / file_path
+                    full_path = Path(util_tv.show_root_dir()) / path / file_path
                     yield str(full_path)
         return []
 
@@ -97,9 +97,9 @@ class MovieCache(db_json.JSONDatabase):
     def update_paths(self):
         self.cache_update_lock.acquire()
         need_save = False
-        for letter in os.listdir(util_movie.MOVIE_DIR):
+        for letter in os.listdir(util_movie.movie_root_dir()):
             if letter in util_movie.VALID_LETTERS:
-                letter_path = Path(util_movie.MOVIE_DIR) / letter
+                letter_path = Path(util_movie.movie_root_dir()) / letter
                 mtime = int(letter_path.stat().st_mtime)
                 if letter not in self:
                     self.insert({'letter_dir': letter,
@@ -116,7 +116,7 @@ class MovieCache(db_json.JSONDatabase):
         self.cache_update_lock.release()
 
     def update_letter_files(self, letter, debug_print=False):
-        root_path = Path(util_movie.MOVIE_DIR) / letter
+        root_path = Path(util_movie.movie_root_dir()) / letter
         letter_files = []
         for root, _, files in os.walk(root_path):
             for file_ in files:
@@ -136,7 +136,8 @@ class MovieCache(db_json.JSONDatabase):
                 if only_letter and only_letter != letter:
                     continue
                 for file_path in self.get(letter, 'files'):
-                    full_path = Path(util_movie.MOVIE_DIR) / letter / file_path
+                    full_path = Path(util_movie.movie_root_dir()
+                                     ) / letter / file_path
                     yield str(full_path)
         return []
 
