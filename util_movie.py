@@ -154,3 +154,13 @@ def get_movie_nfo_imdb_id(movie_dir: str):
         return None
     with open(path, 'r') as file_item:
         return util.parse_imdbid(file_item.readline())
+
+
+def movie_root_dir():
+    'Get the root path to movie location'
+    return MOVIE_DIR
+
+
+def valid_letters():
+    'Get all valid subdirs for storing movies'
+    return VALID_LETTERS
