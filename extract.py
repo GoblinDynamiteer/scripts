@@ -53,15 +53,18 @@ def _movie_dest(source_dir):
 def _episode_dest(source_dir):
     show = util_tv.determine_show_from_episode_name(source_dir)
     if not show:
-        print(f"could not deremine show for {source_dir}")
-        print(f"guessing: {util_tv.guess_show_name_from_episode_name(source_dir)}")
-        return None
+        print(f"could not determine show for {cstr(source_dir, 'lblue')}")
+        show = util_tv.guess_show_name_from_episode_name(source_dir)
+        if not show:
+            return None
+        print(f"guessing: {cstr(show, 'orange')}")
     path = OPJ(CFG.get('path_tv'), show)
     if not os.path.exists(path):
-        print(path)
+        print(f"{cstr(path, 'orange')} does not exist! will create")
         return None
     season = util_tv.parse_season(source_dir)
     if not season:
+        print(f"could not determine season of {cstr(source_dir, 'orange')}")
         return None
     return OPJ(path, f'S{season:02d}')
 
