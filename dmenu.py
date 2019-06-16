@@ -13,27 +13,27 @@ CFG = ConfigurationManager()
 TV_HOME = CFG.get('path_tv')
 MOV_HOME = CFG.get('path_film')
 
-FIND_MOV_EXT_FILTER = r'\( -iname "*.mp4" -o -iname "*.mkv" -o -iname "*.avi" \)'
-FIND_PRINTF_FILE = r'-printf "%f\n"'
 DMENU_COMMAND = (r"dmenu -i -fn 'Ubuntu Mono:bold:pixelsize=28' -nb '#1e1e1e' "
                  r"-sf '#1e1e1e' -sb '#C54500' -nf '#F4800d'")
 
-FIND_COMMAND_TV_FILES = f"find {TV_HOME} {FIND_MOV_EXT_FILTER} {FIND_PRINTF_FILE}"
 MOVIE_PLAYER = 'mpv --fs'
 
 
-def get_dmenu_selection(dmenu_items, lines=20):
+def get_dmenu_selection(dmenu_items: list, lines=20):
     command = DMENU_COMMAND + f' -l {lines}' if lines else DMENU_COMMAND
     temp_file = NamedTemporaryFile()
     with open(temp_file.name, 'w') as dmenu_file:
-        dmenu_file.write(dmenu_items)
+        dmenu_file.write('\n'.join(dmenu_items))
     return run.local_command_get_output(
         f'cat {dmenu_file.name} | {command}')
 
 
 def dmenu_play_episode():
     print('generating dmenu options...')
-    selection = get_dmenu_selection(FIND_COMMAND_TV_FILES).replace('\n', '')
+    files = []
+    for _, _file in util_tv.list_all_episodes():
+        files.append(_file)
+    selection = get_dmenu_selection(files).replace('\n', '')
     print(f"starting tv episode {selection}, please wait...")
     file_path = util_tv.get_full_path_of_episode_filename(selection)
     if file_path:
@@ -42,7 +42,7 @@ def dmenu_play_episode():
 
 def dmenu_play_movie():
     mov_items = list(db_mov.MovieDatabase().all_movies())
-    selection = get_dmenu_selection('\n'.join(mov_items)).replace('\n', '')
+    selection = get_dmenu_selection(mov_items).replace('\n', '')
     file_path = util_movie.get_full_path_of_movie_filename(selection)
     if file_path:
         run.local_command(f'{MOVIE_PLAYER} "{file_path}"')
