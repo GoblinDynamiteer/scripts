@@ -137,3 +137,8 @@ def imdb_from_nfo(show_name: str):
     if not util.is_file(nfo_file):
         return None
     return util.parse_imdbid_from_file(nfo_file)
+
+
+def show_root_dir():
+    'Get path of show root directory'
+    return SHOW_DIR
