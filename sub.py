@@ -56,7 +56,10 @@ class Subtitle():
                 value = check_similarity(mov_name, self.filename)
                 matches.append((value, mov_name))
         if self.type in [SubtitleMediaType.Episode, SubtitleMediaType.Unknown]:
-            for _, ep_name in util_tv.list_all_episodes():
+            guessed_show = util_tv.guess_show_name_from_episode_name(self.filename)
+            for path, ep_name in util_tv.list_all_episodes():
+                if guessed_show.lower() not in str(path).lower():
+                    continue
                 value = check_similarity(ep_name, self.filename)
                 matches.append((value, ep_name))
         if matches:
@@ -78,12 +81,33 @@ def check_similarity(string1, string2):
     return difflib.SequenceMatcher(None, string1, string2).ratio()
 
 
-def find_srt_filename_in_zip(zip_file_path):
+def find_srt_filenames_in_zip(zip_file_path):
     command = f"unzip -l {zip_file_path}"
+    srt_files = []
     for line in run.local_command_get_output(command).split('\n'):
         if line.endswith('.srt'):
-            return line.split(' ')[-1]
-    return ""
+            srt_files.append(line.split(' ')[-1])
+    return srt_files
+
+
+def handle_srt(srt_file):
+    subtitle = Subtitle(srt_file)
+    print(subtitle.filename)
+    print(subtitle.matching_media[0])
+    print(subtitle.language)
+    lang_str = 'en' if subtitle.language == Language.English else 'sv'
+    if subtitle.type == SubtitleMediaType.Episode:
+        episode_file = util_tv.get_full_path_of_episode_filename(subtitle.matching_media[0][1])
+        subtitle_dest = episode_file.replace('.mkv', f'.{lang_str}.srt')
+        pcstr(subtitle_dest, 'purple')
+        pass
+    elif subtitle.type == SubtitleMediaType.Movie:
+        movie_file = util_movie.get_full_path_to_movie_filename(
+            subtitle.matching_media[0][1])
+        subtitle_dest = movie_file.replace('.mkv', f'.{lang_str}.srt')
+        pcstr(subtitle_dest, 'purple')
+        # TODO: move srt to corret location
+        # TODO: match movie/episode
 
 
 if __name__ == "__main__":
@@ -94,27 +118,19 @@ if __name__ == "__main__":
     if not file_path.exists():
         print("passed file does not exists")
         exit()
-    srt_filename = ""
+    srt_filenames = []
     if file_path.suffix.endswith('zip'):
-        srt_filename = find_srt_filename_in_zip(file_path)
-        if not srt_filename:
+        srt_filenames = find_srt_filenames_in_zip(file_path)
+        if not srt_filenames:
             print("could not find srt in zip file!")
             exit()
-        command = f"unzip -oj {file_path} {srt_filename}"
-        if run.local_command(command, print_info=False):
-            print(f"extracted {cstr(srt_filename, 154)}!")
+        for srt_filename in srt_filenames:
+            command = f"unzip -oj {file_path} {srt_filename}"
+            if run.local_command(command, print_info=False):
+                print(f"extracted {cstr(srt_filename, 154)}!")
     elif file_path.suffix.endswith('srt'):
-        srt_filename = file_path.name
+        srt_filenames = [file_path.name]
     else:
         print("no subtitle file to process..")
         exit()
-    subtitle = Subtitle(srt_filename)
-    print(subtitle.filename)
-    print(subtitle.matching_media[0])
-    print(subtitle.language)
-    movie_file = util_movie.get_full_path_to_movie_filename(subtitle.matching_media[0][1])
-    lang_str = 'en' if subtitle.language == Language.English else 'sv'
-    subtitle_dest = movie_file.replace('.mkv', f'.{lang_str}.srt')
-    pcstr(subtitle_dest, 'purple')
-    # TODO: move srt to corret location
-    # TODO: match movie/episode
+    [handle_srt(srt) for srt in srt_filenames]
