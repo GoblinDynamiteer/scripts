@@ -76,7 +76,7 @@ class TvCache(db_json.JSONDatabase):
                 if only_show and only_show not in path:
                     continue
                 for file_path in self.get(path, 'files'):
-                    full_path = Path(util_movie.MOVIE_DIR) / path / file_path
+                    full_path = Path(util_tv.SHOW_DIR) / path / file_path
                     yield str(full_path)
         return []
 
