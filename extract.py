@@ -61,7 +61,6 @@ def _episode_dest(source_dir):
     path = OPJ(CFG.get('path_tv'), show)
     if not os.path.exists(path):
         print(f"{cstr(path, 'orange')} does not exist! will create")
-        return None
     season = util_tv.parse_season(source_dir)
     if not season:
         print(f"could not determine season of {cstr(source_dir, 'orange')}")
