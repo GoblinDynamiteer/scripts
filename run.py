@@ -120,3 +120,13 @@ def move_file(source_file, destination, create_dirs=False, new_filename=None):
         return True
     print(CSTR('move failed!', 'red'))
     return False
+
+
+def rename_file(source_file, destination):
+    "Custom file move/rename method using mv command in the background"
+    if not util.is_file(source_file):
+        print(
+            f'source {CSTR(source_file, "orange")} does not exist!')
+        return False
+    command = f'mv {source_file} \"{destination}\"'
+    return local_command(command, hide_output=True, print_info=False)
