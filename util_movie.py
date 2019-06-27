@@ -17,7 +17,6 @@ VALID_LETTERS = {'#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
 
 CFG = ConfigurationManager()
 MOVIE_DIR = CFG.get('path_film')
-MOVIE_CACHE = MovieCache()
 
 
 def parse_year(movie_dir_name):
@@ -55,7 +54,7 @@ def get_full_path_of_movie_filename(file_name: str, use_cache=True):
     "Returns the full path of an episode, if found"
     if use_cache:
         letter = determine_letter(file_name)
-        for path in MOVIE_CACHE.get_file_path_list(letter):
+        for path in MovieCache().get_file_path_list(letter):
             if file_name in path:
                 return path
         else:
@@ -70,7 +69,7 @@ def get_full_path_to_movie_filename(folder: str, use_cache=True):
     "Returns the full path of movie, if found"
     if use_cache:
         letter = determine_letter(folder)
-        for path in MOVIE_CACHE.get_file_path_list(letter):
+        for path in MovieCache().get_file_path_list(letter):
             if folder in path:
                 return path
         else:
