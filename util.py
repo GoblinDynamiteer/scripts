@@ -2,6 +2,7 @@
 
 ''' Various helper/utility functions '''
 
+import difflib
 import ntpath
 import os
 import re
@@ -172,3 +173,14 @@ def shorten_string(string, size, suffix='...'):
     if trim_length < len(string):
         return string[:trim_length] + suffix
     return string[:trim_length]
+
+
+def remove_chars_from_string(string, char_list=[]):
+    return string.translate({ord(i): None for i in char_list})
+
+
+def check_string_similarity(string1, string2, remove_chars=[]):
+    if remove_chars:
+        string1 = remove_chars_from_string(string1, remove_chars)
+        string2 = remove_chars_from_string(string2, remove_chars)
+    return difflib.SequenceMatcher(None, string1, string2).ratio()
