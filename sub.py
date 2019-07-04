@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import difflib
 from enum import IntEnum
 from pathlib import Path
 
@@ -54,16 +53,17 @@ class Subtitle():
         if self.type in [SubtitleMediaType.Movie, SubtitleMediaType.Unknown]:
             for mov_name in util_movie.list_all():
                 guessed_movie_name = util_movie.determine_title(self.filename)
-                value = check_similarity(mov_name, self.filename)
+                value = util.check_string_similarity(mov_name, self.filename)
                 if guessed_movie_name.replace(" ", ".") in mov_name:
                     value += 0.5
                 matches.append((value, mov_name))
         if self.type in [SubtitleMediaType.Episode, SubtitleMediaType.Unknown]:
-            guessed_show = util_tv.guess_show_name_from_episode_name(self.filename)
+            guessed_show = util_tv.guess_show_name_from_episode_name(
+                self.filename)
             for path, ep_name in util_tv.list_all_episodes():
                 if guessed_show.lower() not in str(path).lower():
                     continue
-                value = check_similarity(ep_name, self.filename)
+                value = util.check_string_similarity(ep_name, self.filename)
                 matches.append((value, ep_name))
         if matches:
             self.matching_media = sorted(
@@ -81,9 +81,6 @@ class Subtitle():
 
     def best_match(self):
         return self.matching_media[0][1]
-
-def check_similarity(string1, string2):
-    return difflib.SequenceMatcher(None, string1, string2).ratio()
 
 
 def find_srt_filenames_in_zip(zip_file_path):
@@ -103,7 +100,8 @@ def handle_srt(srt_file):
     lang_str = 'en' if subtitle.language == Language.English else 'sv'
     subtitle_dest = None
     if subtitle.type == SubtitleMediaType.Episode:
-        episode_file = util_tv.get_full_path_of_episode_filename(subtitle.matching_media[0][1])
+        episode_file = util_tv.get_full_path_of_episode_filename(
+            subtitle.matching_media[0][1])
         subtitle_dest = episode_file.replace('.mkv', f'.{lang_str}.srt')
     elif subtitle.type == SubtitleMediaType.Movie:
         movie_file = util_movie.get_full_path_to_movie_filename(
