@@ -16,7 +16,7 @@ COLORS = {"black": 0,
           "lgreen": 46,
           "pink": 218,
           "lyellow": 229,
-          "yellow" : 226,
+          "yellow": 226,
           "dyellow": 220,
           "brown": 130,
           "lgrey": 250,
@@ -27,6 +27,9 @@ COLORS = {"black": 0,
 
 ORANGE_GREEN_GRAD = {0: 196, 1: 202, 10: 208, 20: 215,
                      30: 184, 40: 148, 50: 190, 60: 118, 70: 46}
+
+
+FORMAT_CODES = {'w[': 214, 'e[': 196, 'g[': 154, 'b[': 74}
 
 
 def test_colors():
@@ -54,6 +57,20 @@ def pcstr(string, foreground, background=None, bold=False):
     print(cstr(string, foreground, background, bold))
 
 
+def print_color_format_string(string, format_chars=('[', ']')):
+    if len(format_chars) != 2:
+        return
+    for code, color_val in FORMAT_CODES.items():
+        begin_code = code.replace('[', format_chars[0])
+        string = string.replace(
+            begin_code, "\033[38;5;" + str(color_val) + "m")
+    print(string.replace(format_chars[1], "\033[0m"))
+
+
+def pfcs(string, format_chars=('[', ']')):
+    print_color_format_string(string, format_chars=format_chars)
+
+
 def percentage_to_cstr(percentage: str)->str:
     percentage_val = int(percentage.replace('%', ''))
     for key, val in ORANGE_GREEN_GRAD.items():
@@ -68,6 +85,9 @@ def to_color_str(
     "wrapper for cstr"
     return cstr(string, foreground, background, bold)
 
+
 if __name__ == "__main__":
     print("colors:\n")
     test_colors()
+    pfcs(f"Hello I am e[error] and I am b[info]")
+    pfcs(f"Hello I am e.error- and I am b.info-", format_chars=('.', '-'))
