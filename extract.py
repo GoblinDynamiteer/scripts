@@ -27,10 +27,20 @@ def _find_rar(source_dir):
             if '01.rar' in rar_file:
                 rar_files = [rar_file]
                 break
-    if len(rar_files) > 1:
-        print("more than 1 rar!")
+    if not rar_files or len(rar_files) > 1:
         return None
     full_path = OPJ(os.getcwd(), source_dir, rar_files[0])
+    if util.is_file(full_path):
+        return full_path
+    return None
+
+
+def _find_mkv(source_dir):
+    mkv_files = [f for f in os.listdir(
+        source_dir) if f.endswith('.mkv') and "sample" not in f.lower()]
+    if not mkv_files or len(mkv_files) > 1:
+        return None
+    full_path = OPJ(os.getcwd(), source_dir, mkv_files[0])
     if util.is_file(full_path):
         return full_path
     return None
@@ -39,6 +49,8 @@ def _find_rar(source_dir):
 def _find_nfo(source_dir):
     nfo_files = [f for f in os.listdir(
         source_dir) if f.endswith('.nfo')]
+    if not nfo_files:
+        return None
     full_path = OPJ(os.getcwd(), ARGS.source, nfo_files[0])
     if util.is_file(full_path):
         return full_path
@@ -69,19 +81,31 @@ def _episode_dest(source_dir):
 
 
 def _handle_item(source_item):
-    print(source_item)
+    print("processing: ", cstr(source_item, 154))
     if util_movie.is_movie(source_item):
         if util.is_dir(source_item):
             nfo_loc = _find_nfo(source_item)
             rar_loc = _find_rar(source_item)
-            if not rar_loc:
-                exit()
+            mkv_loc = _find_mkv(source_item)
+            if not rar_loc and not mkv_loc:
+                print(f"could not find item to process in {cstr(source_item, 'orange')}!")
+                return
+            if rar_loc and mkv_loc:
+                print(f"found both rar and mkv in {cstr(source_item, 'orange')}!")
+                return
+            print(f"found file: {cstr(mkv_loc or rar_loc, 154)}")
             dest = _movie_dest(source_item)
-            if not run.extract(rar_loc, dest, create_dirs=True):
-                return  # extract failed
+            print(f"destinaion: {cstr(dest, 'lblue')}")
+            if rar_loc:
+                if not run.extract(rar_loc, dest, create_dirs=True):
+                    return  # extract failed
+            if mkv_loc:
+                run.move_file(mkv_loc, dest, create_dirs=True)
             if nfo_loc:
-                util_movie.create_movie_nfo(
-                    dest, util.parse_imdbid_from_file(nfo_loc))
+                imdb_id = util.parse_imdbid_from_file(nfo_loc)
+                if imdb_id:
+                    print(f"found imdb-id: {cstr(imdb_id, 154)}, will create movie.nfo")
+                    util_movie.create_movie_nfo(dest, imdb_id)
             shutil.rmtree(source_item)
             print(f'removed {cstr(source_item, "orange")}')
         else:
