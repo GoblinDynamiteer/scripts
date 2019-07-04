@@ -104,7 +104,7 @@ def move_file(source_file, destination, create_dirs=False, new_filename=None):
         return False
     if not util.is_dir(destination) and create_dirs:
         os.makedirs(destination)
-        print(f'extract: created dir {CSTR(destination, "lblue")}')
+        print(f'move_file: created dir {CSTR(destination, "lblue")}')
     elif not util.is_dir(destination) and not create_dirs:
         print(f'destination {CSTR(destination, "red")} does not exists!')
         return False
