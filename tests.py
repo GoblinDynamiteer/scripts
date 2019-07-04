@@ -3,11 +3,13 @@
 ''' Subtitle tools '''
 
 import os
+import string
 import unittest
 
 import db_json
 import printing
 import tvmaze
+import util
 import util_movie
 import util_tv
 
@@ -97,6 +99,7 @@ class TestTvMaze(unittest.TestCase):
         self.assertRaises(TypeError, m, None)
         self.assertRaises(TypeError, m, 123)
 
+
 class TestDb(unittest.TestCase):
     def setUp(self):
         self.file = "_testdb.json"
@@ -139,9 +142,31 @@ class TestDb(unittest.TestCase):
 
 class TestStrOut(unittest.TestCase):
 
-    def to_color_str(self):
+    def test_to_color_str(self):
         self.assertEqual(printing.to_color_str("ToColor", "red"),
                          "\033[38;5;196mToColor\033[0m")
+
+
+class TestUtilStr(unittest.TestCase):
+
+    def test_remove_chars(self):
+        self.assertEqual(
+            "ab", util.remove_chars_from_string("abcd", ["c", "d"]))
+        self.assertEqual(
+            "WoodPecker", util.remove_chars_from_string("W,ood.Peck_er", string.punctuation))
+
+    def test_string_similarity(self):
+        self.assertEqual(util.check_string_similarity(
+            "a.b", "a_b,", remove_chars=string.punctuation), 1.0)
+        string_orig = "The.Good.the.Bad.and.the.Ugly.1966.iNTERNAL" \
+                      ".1080p.EXTENDED.REMASTERED.BluRay.X264-CLASSiC"
+        check1 = "The Good The Bad & The Ugly Bluray"
+        check2 = "The Good The Weird and the Looney BLuray 1080p"
+        ratio1 = util.check_string_similarity(
+            string_orig, check1, remove_chars=string.punctuation)
+        ratio2 = util.check_string_similarity(
+            string_orig, check2, remove_chars=string.punctuation)
+        self.assertGreater(ratio1, ratio2)
 
 
 if __name__ == '__main__':
