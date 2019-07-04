@@ -90,7 +90,7 @@ def _handle_item(source_item):
             if not rar_loc and not mkv_loc:
                 pfcs(f"could e[not] find item to process in w[{source_item}]!")
                 return
-            if True or rar_loc and mkv_loc:
+            if rar_loc and mkv_loc:
                 pfcs(f"found e[both] rar and mkv in w[{source_item}]!")
                 return
             pfcs(f"found file: i[{mkv_loc or rar_loc}]")
