@@ -13,7 +13,7 @@ import run
 import util
 import util_movie
 import util_tv
-from printing import cstr
+from printing import cstr, pfcs
 
 OPJ = os.path.join
 CFG = config.ConfigurationManager()
@@ -81,21 +81,21 @@ def _episode_dest(source_dir):
 
 
 def _handle_item(source_item):
-    print("processing: ", cstr(source_item, 154))
+    pfcs(f"processing: i[{source_item}]")
     if util_movie.is_movie(source_item):
         if util.is_dir(source_item):
             nfo_loc = _find_nfo(source_item)
             rar_loc = _find_rar(source_item)
             mkv_loc = _find_mkv(source_item)
             if not rar_loc and not mkv_loc:
-                print(f"could not find item to process in {cstr(source_item, 'orange')}!")
+                pfcs(f"could e[not] find item to process in w[{source_item}]!")
                 return
-            if rar_loc and mkv_loc:
-                print(f"found both rar and mkv in {cstr(source_item, 'orange')}!")
+            if True or rar_loc and mkv_loc:
+                pfcs(f"found e[both] rar and mkv in w[{source_item}]!")
                 return
-            print(f"found file: {cstr(mkv_loc or rar_loc, 154)}")
+            pfcs(f"found file: i[{mkv_loc or rar_loc}]")
             dest = _movie_dest(source_item)
-            print(f"destinaion: {cstr(dest, 'lblue')}")
+            pfcs(f"destination: i[{dest}]")
             if rar_loc:
                 if not run.extract(rar_loc, dest, create_dirs=True):
                     return  # extract failed
