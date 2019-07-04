@@ -27,7 +27,7 @@ def list_all_shows() -> list:
 class TvCache(db_json.JSONDatabase):
     ''' Cached tv paths Database '''
 
-    def __init__(self, debug_print: bool = False):
+    def __init__(self, debug_print: bool = False, force_update_all: bool = False):
         db_json.JSONDatabase.__init__(
             self, CACHE_DB_TV_PATH, debug_print=debug_print)
         self.set_valid_keys(
@@ -35,6 +35,7 @@ class TvCache(db_json.JSONDatabase):
         self.set_key_type('season_dir', str)  # ShowName/S##
         self.set_key_type('modified', int)  # unix timestamp
         self.set_key_type('files', list)
+        self.force_update_all = force_update_all
         self.cache_update_lock = Lock()
         Thread(target=self.update_paths).start()
 
@@ -55,6 +56,10 @@ class TvCache(db_json.JSONDatabase):
                         self.insert({'season_dir': season_dir,
                                      'modified': mtime,
                                      'files': []})
+                        self.update_season_files(season_dir)
+                        need_save = True
+                    elif self.force_update_all:
+                        self.update(season_dir, 'modified', mtime)
                         self.update_season_files(season_dir)
                         need_save = True
                     elif self.get(season_dir, 'modified') < mtime:
@@ -94,7 +99,7 @@ class TvCache(db_json.JSONDatabase):
 
 class MovieCache(db_json.JSONDatabase):
 
-    def __init__(self, debug_print: bool = False):
+    def __init__(self, debug_print: bool = False, force_update_all: bool = False):
         db_json.JSONDatabase.__init__(
             self, CACHE_DB_MOV_PATH, debug_print=debug_print)
         self.set_valid_keys(
@@ -102,6 +107,7 @@ class MovieCache(db_json.JSONDatabase):
         self.set_key_type('letter_dir', str)
         self.set_key_type('modified', int)  # unix timestamp
         self.set_key_type('files', list)
+        self.force_update_all = force_update_all
         self.cache_update_lock = Lock()
         Thread(target=self.update_paths).start()
 
@@ -116,6 +122,10 @@ class MovieCache(db_json.JSONDatabase):
                     self.insert({'letter_dir': letter,
                                  'modified': mtime,
                                  'files': []})
+                    self.update_letter_files(letter)
+                    need_save = True
+                elif self.force_update_all:
+                    self.update(letter, 'modified', mtime)
                     self.update_letter_files(letter)
                     need_save = True
                 elif self.get(letter, 'modified') < mtime:
@@ -155,5 +165,7 @@ class MovieCache(db_json.JSONDatabase):
 
 
 if __name__ == "__main__":
-    mov_cache = MovieCache(debug_print=True)
-    tv_cache = TvCache(debug_print=True)
+    print("refreshing all cache")
+    mov_cache = MovieCache(debug_print=True, force_update_all=True)
+    tv_cache = TvCache(debug_print=True, force_update_all=True)
+    print("cache refresh complete!")
