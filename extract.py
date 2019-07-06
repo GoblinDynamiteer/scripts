@@ -80,64 +80,83 @@ def _episode_dest(source_dir):
     return OPJ(path, f'S{season:02d}')
 
 
+def process_movie_dir(movie_dir_source):
+    pfcs(f"processing: i[{movie_dir_source}] as type b[movie dir]")
+    nfo_loc = _find_nfo(movie_dir_source)
+    rar_loc = _find_rar(movie_dir_source)
+    mkv_loc = _find_mkv(movie_dir_source)
+    if not rar_loc and not mkv_loc:
+        pfcs(f"could e[not] find item to process in w[{movie_dir_source}]!")
+        return
+    if rar_loc and mkv_loc:
+        pfcs(f"found e[both] rar and mkv in w[{movie_dir_source}]!")
+        return
+    pfcs(f"found file: i[{mkv_loc or rar_loc}]")
+    dest = _movie_dest(movie_dir_source)
+    pfcs(f"destination: i[{dest}]")
+    if rar_loc:
+        if not run.extract(rar_loc, dest, create_dirs=True):
+            return  # extract failed
+    if mkv_loc:
+        run.move_file(mkv_loc, dest, create_dirs=True)
+    if nfo_loc:
+        imdb_id = util.parse_imdbid_from_file(nfo_loc)
+        if imdb_id:
+            print(
+                f"found imdb-id: {cstr(imdb_id, 154)}, will create movie.nfo")
+            util_movie.create_movie_nfo(dest, imdb_id)
+    shutil.rmtree(movie_dir_source)
+    print(f'removed {cstr(movie_dir_source, "orange")}')
+
+
+def process_movie_file(movie_file_source):
+    pfcs(f"processing: i[{movie_file_source}] as type b[movie file]")
+    pfcs("w[unimplemented!]")
+
+
+def process_movie(movie_source):
+    if util.is_dir(movie_source):
+        process_movie_dir(movie_source)
+    else:
+        process_movie_file(movie_source)
+
+
+def process_episode(episode_source):
+    if util.is_dir(episode_source):
+        pfcs(f"processing: i[{episode_source}] as type b[episode dir]")
+        rar_loc = _find_rar(episode_source)
+        dest = _episode_dest(episode_source)
+        if not dest:
+            pfcs(f"could not determine destination for w[{episode_source}]")
+            return
+        if not run.extract(rar_loc, dest, create_dirs=True):
+            return  # extract failed
+    else:
+        pfcs(f"processing: i[{episode_source}] as type b[episode file]")
+        run.move_file(episode_source, _episode_dest(
+            episode_source), create_dirs=True)
+
+
 def _handle_item(source_item):
-    pfcs(f"processing: i[{source_item}]")
     if util_movie.is_movie(source_item):
-        if util.is_dir(source_item):
-            nfo_loc = _find_nfo(source_item)
-            rar_loc = _find_rar(source_item)
-            mkv_loc = _find_mkv(source_item)
-            if not rar_loc and not mkv_loc:
-                pfcs(f"could e[not] find item to process in w[{source_item}]!")
-                return
-            if rar_loc and mkv_loc:
-                pfcs(f"found e[both] rar and mkv in w[{source_item}]!")
-                return
-            pfcs(f"found file: i[{mkv_loc or rar_loc}]")
-            dest = _movie_dest(source_item)
-            pfcs(f"destination: i[{dest}]")
-            if rar_loc:
-                if not run.extract(rar_loc, dest, create_dirs=True):
-                    return  # extract failed
-            if mkv_loc:
-                run.move_file(mkv_loc, dest, create_dirs=True)
-            if nfo_loc:
-                imdb_id = util.parse_imdbid_from_file(nfo_loc)
-                if imdb_id:
-                    print(f"found imdb-id: {cstr(imdb_id, 154)}, will create movie.nfo")
-                    util_movie.create_movie_nfo(dest, imdb_id)
-            shutil.rmtree(source_item)
-            print(f'removed {cstr(source_item, "orange")}')
-        else:
-            print(f'{cstr("move movie file unimplemented", "orange")}')
+        process_movie(source_item)
     elif util_tv.is_episode(source_item):
-        if util.is_dir(source_item):
-            rar_loc = _find_rar(source_item)
-            dest = _episode_dest(source_item)
-            if not dest:
-                print(f"could not determine destination for {source_item}")
-                return
-            if not run.extract(rar_loc, dest, create_dirs=True):
-                return  # extract failed
-        else:
-            run.move_file(source_item, _episode_dest(
-                source_item), create_dirs=True)
+        process_episode(source_item)
     elif util_tv.is_season(source_item):
         if util.is_dir(source_item):
+            pfcs(f"processing: i[{source_item}] as type b[season dir]")
             os.chdir(source_item)
             for item in os.listdir('.'):
                 _handle_item(str(item))
-            print(
-                f'done! please manually remove {cstr(source_item, "orange")}')
+            pfcs(f"g[done!] please remove w[{source_item}] manually.")
     else:
-        print(f'{cstr("unkown type!", "orange")}')
+        pfcs(f"could not determine type of w[{source_item}]")
 
 
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser(description='extractor')
     PARSER.add_argument('source', type=str, help='item(s) to process')
     ARGS, _ = PARSER.parse_known_args()
-
     if '*' in ARGS.source:
         items = glob.glob(ARGS.source)
         [_handle_item(i) for i in items]
