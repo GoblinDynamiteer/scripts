@@ -16,6 +16,7 @@ from db_tv import EpisodeDatabase, ShowDatabase
 from diskstation import is_ds_special_dir
 from omdb import movie_search
 from printing import to_color_str as CSTR
+from printing import pfcs
 
 DB_MOV = MovieDatabase()
 DB_EP = EpisodeDatabase()
@@ -23,47 +24,60 @@ DB_SHOW = ShowDatabase()
 CFG = ConfigurationManager()
 
 
+def process_new_movie(movie_folder: str)->dict:
+    pfcs(f"processing o[{movie_folder}]")
+    data = {'folder': movie_folder,
+            'scanned': util.now_timestamp(),
+            'removed': False}
+    guessed_title = util_movie.determine_title(movie_folder)
+    guessed_year = util_movie.parse_year(movie_folder)
+    imdb_id_from_nfo = util_movie.get_movie_nfo_imdb_id(movie_folder)
+    json_data = {}
+    if imdb_id_from_nfo:
+        pfcs(
+            f"searching OMDb for i[{movie_folder}] using b[{imdb_id_from_nfo}]")
+        json_data = movie_search(imdb_id_from_nfo)
+    elif guessed_title:
+        year_str = f" and b[{str(guessed_year)}]" if guessed_year else ""
+        pfcs(
+            f"searching OMDb for i[{movie_folder}] using b[{guessed_title}]{year_str}")
+        json_data = movie_search(guessed_title, year=guessed_year)
+    else:
+        pfcs(
+            f"failed to determine title or id from w[{movie_folder}] for OMDb query")
+        return {}
+    if 'Title' in json_data:
+        data['title'] = json_data['Title']
+        pfcs(f" - got title:   g[{data['title']}]")
+    if 'Year' in json_data:
+        year = json_data['Year']
+        if util.is_valid_year(year, min_value=1920, max_value=2019):
+            data['year'] = int(year)
+            pfcs(f" - got year:    g[{str(data['year'])}]")
+    if 'imdbID' in json_data:
+        imdb_id = json_data['imdbID']
+        imdb_id = util.parse_imdbid(imdb_id)
+        if imdb_id:
+            data['imdb'] = imdb_id
+            pfcs(f" - got imdb-id: g[{imdb_id}]")
+    return data
+
+
 def _scan_movies():
+    print("searching movie location for new movies...")
     movies_not_in_db = [
         movie for movie in util_movie.list_all() if not DB_MOV.exists(movie)]
-
     new = False
     for new_movie in movies_not_in_db:
         if is_ds_special_dir(new_movie):
             continue
-        new = True
-        data = {'folder': new_movie,
-                'scanned': util.now_timestamp(),
-                'removed': False}
-        guessed_title = util_movie.determine_title(new_movie)
-        guessed_year = util_movie.parse_year(new_movie)
-        imdb_id_from_nfo = util_movie.get_movie_nfo_imdb_id(new_movie)
-        json_data = {}
-        if imdb_id_from_nfo:
-            json_data = movie_search(imdb_id_from_nfo)
-        elif guessed_title:
-            json_data = movie_search(guessed_title, year=guessed_year)
-        else:
-            print(
-                CSTR(f'failed to determine title or imdb-id for {new_movie}', 'red'))
-        if 'Year' in json_data:
-            year = json_data['Year']
-            if util.is_valid_year(year, min_value=1920, max_value=2019):
-                data['year'] = int(year)
-        if 'imdbID' in json_data:
-            imdb_id = json_data['imdbID']
-            imdb_id = util.parse_imdbid(imdb_id)
-            if imdb_id:
-                data['imdb'] = imdb_id
-        if 'Title' in json_data:
-            data['title'] = json_data['Title']
+        data = process_new_movie(new_movie)
+        if not data:
+            continue
         DB_MOV.insert(data)
-        if imdb_id_from_nfo:
-            imdb_id_str = f' -> used imdb-id [{CSTR(imdb_id_from_nfo, "lblue")}]'
-        else:
-            imdb_id_str = ""
-        print(f'added new movie: {CSTR(new_movie, "green")}{imdb_id_str}')
-
+        new = True
+        pfcs(f"added g[{new_movie}] to database!")
+        pfcs(f"d[{'-' * util.terminal_width()}]")
     if new:
         DB_MOV.save()
         DB_MOV.export_last_added()
