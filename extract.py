@@ -111,7 +111,17 @@ def process_movie_dir(movie_dir_source):
 
 def process_movie_file(movie_file_source):
     pfcs(f"processing: i[{movie_file_source}] as type b[movie file]")
-    pfcs("w[unimplemented!]")
+    directory = ""
+    for ext in util.video_extensions():
+        if movie_file_source.endswith(ext):
+            directory = movie_file_source.replace(ext, "")
+            break
+    if not directory:
+        pfcs(f"could not determine destination for w[{movie_file_source}]")
+        return
+    dest = _movie_dest(directory)
+    pfcs(f"destination: i[{dest}]")
+    run.move_file(movie_file_source, dest, create_dirs=True)
 
 
 def process_movie(movie_source):
