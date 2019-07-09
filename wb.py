@@ -4,14 +4,16 @@
 
 import argparse
 import os
+from pathlib import Path
 
 import config
 import util
+import util_tv
 from db_mov import MovieDatabase
 from db_tv import EpisodeDatabase
 from printing import to_color_str as CSTR
+from printing import pfcs
 from run import local_command, remote_command_get_output
-from util_tv import is_episode
 
 
 def _parse_ls(line: str):
@@ -61,7 +63,7 @@ def wb_list_items(items):
         item_type = 'D' if item['type'] == 'dir' else 'F'
         media_type = 'Ukwn'  # unknown, TODO: determine seasonpack, movie
         index = f'#{item["index"]:02d}'
-        if is_episode(item["name"]):
+        if util_tv.is_episode(item["name"]):
             media_type = 'Epsd'
         item_str_color = 'orange'
         if item['downloaded']:
@@ -101,13 +103,25 @@ def _parse_get_indexes(items: list, indexes: str) -> list:
 def _download(item: dict, dest: str):
     file_name = item["name"].replace(' ', r'\ ')
     print(f'downloading: {CSTR(file_name, "orange")}')
-    command = f'scp -r wb:"~/files/{file_name}" {dest}'
+    if dest == "auto":
+        dest = CFG.get('path_download')
+        if util_tv.is_episode(file_name) and file_name.endswith(".mkv"):
+            show = util_tv.determine_show_from_episode_name(file_name)
+            if show:
+                path = Path(CFG.get('path_tv')) / show
+                season = util_tv.parse_season(file_name)
+                if path.exists() and season:
+                    path = Path(path) /  f'S{season:02d}'
+                    if path.exists():
+                        dest = path
+                        pfcs(f"using auto destination:\n  g[{dest}]")
+    command = f'scp -r wb:"~/files/{file_name}" "{dest}"'
     local_command(command, hide_output=False)
 
 
 def wb_download_items(items: list, indexes: str, dest_dir: str):
     "Downloads the items passed, based on indexes, to dest_dir"
-    if not os.path.exists(dest_dir):
+    if dest_dir != "auto" and not os.path.exists(dest_dir):
         print(f'{CSTR("destination does not exist, aborting!", "red")}')
         return
     items_to_dl = _parse_get_indexes(items, indexes)
