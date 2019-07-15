@@ -3,9 +3,12 @@
 """ pre search """
 
 import argparse
+import glob
 import json
 import sys
 from pathlib import Path
+
+import time
 
 import requests
 
@@ -66,6 +69,7 @@ def pre_search_from_file(file_name: str) -> str:
                 return result[0]
             trim_right -= 1
             trim_left += 1
+            time.sleep(2)
     return ""
 
 
@@ -82,27 +86,32 @@ if __name__ == "__main__":
     suffix = ARGS.suffix if ARGS.suffix else ""
 
     if ARGS.file:
-        RET = pre_search_from_file(ARGS.query)
-        if not RET:
+        if '*' in ARGS.query:
+            ITEMS = glob.glob(ARGS.query)
+        else:
+            ITEMS = [ARGS.query]
+        for item in ITEMS:
+            RET = pre_search_from_file(item)
+            if not RET:
+                if ARGS.rename:
+                    print(
+                        f"could not find release, not renaming file {item}")
+                    sys.exit(1)
+                else:
+                    print("could not find release")
+                    sys.exit(1)
+            print(RET + suffix)
             if ARGS.rename:
-                print(
-                    f"could not find release, not renaming file {ARGS.query}")
-                sys.exit(1)
-            else:
-                print("could not find release")
-                sys.exit(1)
-        print(RET + suffix)
-        if ARGS.rename:
-            FILE_NAME = Path(ARGS.query)
-            if not FILE_NAME.exists():
-                print(
-                    f'found release but {FILE_NAME} does not exist, will not rename...')
-                sys.exit(1)
-            NEW_FILE_NAME = RET
-            if not RET.endswith(FILE_NAME.suffix):
-                NEW_FILE_NAME = RET + FILE_NAME.suffix
-            print("renaming: " + str(FILE_NAME) + " -> " + NEW_FILE_NAME)
-            FILE_NAME.rename(NEW_FILE_NAME)
+                FILE_NAME = Path(item)
+                if not FILE_NAME.exists():
+                    print(
+                        f'found release but {FILE_NAME} does not exist, will not rename...')
+                    sys.exit(1)
+                NEW_FILE_NAME = RET
+                if not RET.endswith(FILE_NAME.suffix):
+                    NEW_FILE_NAME = RET + FILE_NAME.suffix
+                print("renaming: " + str(FILE_NAME) + " -> " + NEW_FILE_NAME)
+                FILE_NAME.rename(NEW_FILE_NAME)
     else:
         RET = pre_search(ARGS.query)
         if not RET:
