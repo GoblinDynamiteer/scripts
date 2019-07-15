@@ -96,29 +96,38 @@ def extract(compressed_file: 'full path', destination, create_dirs=True, overwri
     return False
 
 
-def move_file(source_file, destination, create_dirs=False, new_filename=None):
+def move_file(source_file, destination, create_dirs=False, new_filename=None, debug_print=True):
     "Custom file move method using mv command in the background"
     if not util.is_file(source_file):
-        print(
-            f'source {CSTR(source_file, "orange")} does not exist!')
+        if debug_print:
+            print(
+                f'source {CSTR(source_file, "orange")} does not exist!')
         return False
     if not util.is_dir(destination) and create_dirs:
         os.makedirs(destination)
-        print(f'move_file: created dir {CSTR(destination, "lblue")}')
+        if debug_print:
+            print(f'move_file: created dir {CSTR(destination, "lblue")}')
     elif not util.is_dir(destination) and not create_dirs:
-        print(f'destination {CSTR(destination, "red")} does not exists!')
+        if debug_print:
+            print(f'destination {CSTR(destination, "red")} does not exists!')
         return False
-    print(f'moving  {CSTR(source_file, "lblue")}')
+    if debug_print:
+        print(f'moving  {CSTR(source_file, "lblue")}')
     if new_filename:
-        command = f'mv {source_file} \"{destination}/{new_filename}\"'
-        print(f'destination {CSTR(f"{destination}/{new_filename}", "lblue")}')
+        command = f'mv \"{source_file}\" \"{destination}/{new_filename}\"'
+        if debug_print:
+            print(
+                f'destination {CSTR(f"{destination}/{new_filename}", "lblue")}')
     else:
-        command = f'mv {source_file} \"{destination}\"'
-        print(f'destination {CSTR(destination, "lblue")}')
+        command = f'mv \"{source_file}\" \"{destination}\"'
+        if debug_print:
+            print(f'destination {CSTR(destination, "lblue")}')
     if local_command(command, hide_output=True, print_info=False):
-        print(CSTR('done!', 'lgreen'))
+        if debug_print:
+            print(CSTR('done!', 'lgreen'))
         return True
-    print(CSTR('move failed!', 'red'))
+    if debug_print:
+        print(CSTR('move failed!', 'red'))
     return False
 
 
