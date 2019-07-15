@@ -25,8 +25,16 @@ class ConfigurationManager:
 
     def get(self, key):
         '''Get a config setting'''
-        setting = self.config['default'][key]
-        for var, rep in SETTING_VARS:
-            if var in setting:
-                return setting.replace(var, rep)
-        return setting
+        try:
+            setting = self.config['default'][key]
+            for var, rep in SETTING_VARS:
+                if var in setting:
+                    return setting.replace(var, rep)
+            return setting
+        except KeyError:
+            print(f"{key} is not a valid settings key")
+            return ""
+
+    def path(self, key):
+        '''Get a path config seting'''
+        return self.get(f'path_{key}')
