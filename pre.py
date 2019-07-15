@@ -26,7 +26,6 @@ def run_replace_list_on_query(query_string):
 
 def pre_search(query: str) -> list:
     """ runs a pre search, returns list matched names """
-    print("got q", query)
     json_response = requests.get(
         f"https://predb.ovh/api/v1/?q={query}&count=50")
     try:
