@@ -169,7 +169,7 @@ def _unknown_site(url: str, dl_loc: str, site: str):
 
 
 def _subtitle_dl(url: str, output_file: str):
-    if not output_file.endswith('.mp4') or output_file.endswith('.flv'):
+    if not any(output_file.endswith(ext) for ext in ['.mp4', '.flv']):
         return
     srt_file_path = f"{output_file[0:-4]}"
     ext_str = 'srt'
