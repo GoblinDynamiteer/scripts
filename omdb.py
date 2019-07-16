@@ -3,8 +3,10 @@
 ''' Searches the OMDb database '''
 
 import json
+import pprint
 import urllib.parse
 import urllib.request
+from argparse import ArgumentParser
 
 import util
 from config import ConfigurationManager
@@ -15,7 +17,7 @@ URL = "http://www.omdbapi.com"
 API_KEY = CFG.get('omdb_api_key')
 
 
-def _omdb_search(url):
+def omdb_search(url):
     json_response = {}
     try:
         response = urllib.request.urlopen(
@@ -37,4 +39,13 @@ def movie_search(query_string, year=None):
     if util.is_valid_year(year):
         url_args['y'] = year
     url = f'{URL}?{urllib.parse.urlencode(url_args)}'
-    return _omdb_search(url)
+    return omdb_search(url)
+
+
+if __name__ == "__main__":
+    PARSER = ArgumentParser()
+    PARSER.add_argument("query", help="OMDb query string")
+    PARSER.add_argument("--year", "-y", type=int, default=None)
+    ARGS = PARSER.parse_args()
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(movie_search(ARGS.query, year=ARGS.year))
