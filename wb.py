@@ -59,6 +59,7 @@ def _get_items():
 def wb_list_items(items):
     "Lists items on server"
     len_without_itemname = 45
+    item_len = len(items)
     for item in items:
         item_type = 'D' if item['type'] == 'dir' else 'F'
         media_type = 'Ukwn'  # unknown, TODO: determine seasonpack, movie
@@ -77,9 +78,10 @@ def wb_list_items(items):
                 item["name"], len(item["name"]) - diff)
             item_name = CSTR(trimmed_item_name, item_str_color)
         print(
-            f'[{CSTR(index, item_str_color)}] {item["date"]} '
+            f'[{CSTR(index, item_str_color)}] (-{item_len:03d}) {item["date"]} '
             f'{item["size"]:>10} ({item_type}/{media_type}) '
             f'[{item_name}]')
+        item_len -= 1
 
 
 def _parse_get_indexes(items: list, indexes: str) -> list:
