@@ -5,6 +5,7 @@
 import argparse
 import glob
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -20,7 +21,10 @@ def run_replace_list_on_query(query_string):
     replace_file_path = Path(CFG.path("scripts")) / 'pre_replace.json'
     with open(replace_file_path) as replace_fp:
         for string, replacement in json.load(replace_fp).items():
-            query_string = query_string.replace(string, replacement)
+            if '^' in string:
+                query_string = re.sub(string, replacement, query_string)
+            else:
+                query_string = query_string.replace(string, replacement)
     return query_string
 
 
