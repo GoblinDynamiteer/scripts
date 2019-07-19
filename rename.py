@@ -74,18 +74,17 @@ def op_unidecode(string):
 
 def rename_operation(file_path, operations, dont_rename=False):
     "Runs string operations on filename, then renames the file"
-    file_name = file_path.name
-    new_file_name = file_name
+    new_file_name = file_path.name
     for operation in operations:
         new_file_name = operation(new_file_name)
-    old = to_color_str(file_name, 'orange')
-    new = to_color_str(new_file_name, 'green')
-    if new_file_name == file_name:
-        print(f'kept filename: {to_color_str(file_name, "green")}')
+    old = to_color_str(file_path, 'orange')
+    new = to_color_str(file_path.parent / new_file_name, 'green')
+    if new_file_name == file_path.name:
+        print(f'kept filename: {to_color_str(file_path.name, "green")}')
     else:
         print(f'renamed {old} --> {new}')
         if not dont_rename:
-            os.rename(file_path, new_file_name)
+            os.rename(file_path, file_path.parent / new_file_name)
 
 
 def rename_string(string_to_rename, space_replace_char: str = '_'):
@@ -118,7 +117,9 @@ if __name__ == "__main__":
     CURRENT_WORK_DIR = Path.cwd()
     ROOT_ITEM_FULL_PATH = Path(ARGS.dir).resolve()
     if ROOT_ITEM_FULL_PATH.is_dir():
-        print(str(ROOT_ITEM_FULL_PATH), "DIR")  # TODO: traverse..
+        for root_path, dir_list, file_list in os.walk(ROOT_ITEM_FULL_PATH):
+            for file_item in file_list:
+                FILES.append(Path(root_path) / file_item)
     elif ROOT_ITEM_FULL_PATH.is_file():
         FILES.append(ROOT_ITEM_FULL_PATH)
     if ARGS.simulate:
