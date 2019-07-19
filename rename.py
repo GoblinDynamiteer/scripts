@@ -109,13 +109,16 @@ if UNIDECODE_LIB_AVAILABLE:
 
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
-    PARSER.add_argument("--dir", help="directory or file to process", type=str)
+    PARSER.add_argument(
+        "location", help="directory or file to process", type=str)
+    PARSER.add_argument("--rename-dirs", "-d",
+                        help="also rename directories", action="store_true", dest="renamedirs")
     PARSER.add_argument(
         "--simulate", "-s", help="only show new filenames, dont actually rename", action="store_true")
     ARGS = PARSER.parse_args()
     FILES = []
     CURRENT_WORK_DIR = Path.cwd()
-    ROOT_ITEM_FULL_PATH = Path(ARGS.dir).resolve()
+    ROOT_ITEM_FULL_PATH = Path(ARGS.location).resolve()
     if ROOT_ITEM_FULL_PATH.is_dir():
         for root_path, dir_list, file_list in os.walk(ROOT_ITEM_FULL_PATH):
             for file_item in file_list:
@@ -124,6 +127,8 @@ if __name__ == "__main__":
         FILES.append(ROOT_ITEM_FULL_PATH)
     if ARGS.simulate:
         print("running simulation!")
+    if ARGS.renamedirs:
+        print("renaming dirs..")
     if FILES:
         for f in FILES:
             rename_operation(f, OPERATIONS, dont_rename=ARGS.simulate)
