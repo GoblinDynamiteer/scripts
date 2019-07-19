@@ -1,11 +1,11 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 
-'''File renaming functions pass --dir file/dir to process, requires unidecode library'''
+"File renaming functions pass --dir file/dir to process, requires unidecode library"
 
 import os
 import argparse
-import sys
 import re
+from pathlib import Path
 
 from printing import to_color_str
 
@@ -17,75 +17,64 @@ except ImportError:
     pass
 
 
-def op_spaces_to_char(file_path, replace_char='_'):
-    '''Replace spaces in filename'''
-    file_name = str(os.path.basename(file_path))
-    new_file_name = file_name.replace(" ", replace_char)
-    return new_file_name
+def op_spaces_to_char(string, replace_char='_'):
+    "Replace spaces in string"
+    return string.replace(" ", replace_char)
 
 
-def op_tolower(file_path):
-    '''Lowercases filename'''
-    file_name = str(os.path.basename(file_path))
-    return file_name.lower()
+def op_tolower(string):
+    "Lowercases string"
+    return string.lower()
 
 
-def op_trim_extras(file_path):
-    '''Trims unneeded extras'''
-    file_name = str(os.path.basename(file_path))
-    new_file_name = file_name
+def op_trim_extras(string):
+    "Trims unneeded extras"
+    renamed_string = string
     # replace _-_ or " - " with -
     for rep in ["_-_", " - ", "_--_", ".-."]:
-        new_file_name = new_file_name.replace(rep, "-")
+        renamed_string = renamed_string.replace(rep, "-")
     # replace excess underscores
-    while "__" in new_file_name:
-        new_file_name = new_file_name.replace("__", "_")
-    return new_file_name
+    while "__" in renamed_string:
+        renamed_string = renamed_string.replace("__", "_")
+    return renamed_string
 
 
-def op_remove_special_chars(file_path):
-    '''Removes special characters like !#, '''
-    file_name = str(os.path.basename(file_path))
-    new_file_name = file_name
-    spec_chars = ["#", ",", "!", "’", "'", ":"]
-    for sc in spec_chars:
-        new_file_name = new_file_name.replace(sc, "")
-    return new_file_name
+def op_remove_special_chars(string):
+    "Removes special characters like !#, "
+    renamed_string = string
+    for search in ["#", ",", "!", "’", "'", ":"]:
+        renamed_string = renamed_string.replace(search, "")
+    return renamed_string
 
 
-def op_replace_special_chars(file_path):
-    '''Replaces special characters like & '''
-    file_name = str(os.path.basename(file_path))
-    new_file_name = file_name
-    spec_chars = [("&", "and")]
-    for sc, rep in spec_chars:
-        new_file_name = new_file_name.replace(sc, rep)
-    return new_file_name
+def op_replace_special_chars(string):
+    "Replaces special characters like & "
+    renamed_string = string
+    for search, replacement in [("&", "and")]:
+        renamed_string = renamed_string.replace(search, replacement)
+    return renamed_string
 
 
-def op_add_leading_zeroes(file_path):
-    ''' Adds leding zeroes filenames starting with one digit '''
-    file_name = str(os.path.basename(file_path))
-    digit_match = re.search(r"^\d+", file_name)
+def op_add_leading_zeroes(string):
+    " Adds leding zeroes filenames starting with one digit "
+    digit_match = re.search(r"^\d+", string)
     if digit_match:
         digit = digit_match.group(0)
         length = len(digit)
-        return f"{int(digit):02}{file_name[length:]}"
-    return file_name
+        return f"{int(digit):02}{string[length:]}"
+    return string
 
 
-def op_unidecode(file_path):
-    ''' Runs unidecode lib on string/filename '''
-    file_name = str(os.path.basename(file_path))
+def op_unidecode(string):
+    " Runs unidecode lib on string/filename "
     if not UNIDECODE_LIB_AVAILABLE:
-        print('unidecode not available, skipping operation')
-        return file_name
-    return unidecode(file_name)
+        return string
+    return unidecode(string)
 
 
 def rename_operation(file_path, operations, dont_rename=False):
-    '''Runs string operations on filename, then renames the file'''
-    file_name = str(os.path.basename(file_path))
+    "Runs string operations on filename, then renames the file"
+    file_name = file_path.name
     new_file_name = file_name
     for operation in operations:
         new_file_name = operation(new_file_name)
@@ -100,7 +89,7 @@ def rename_operation(file_path, operations, dont_rename=False):
 
 
 def rename_string(string_to_rename, space_replace_char: str = '_'):
-    ''' Run rename on a string, when script is used as lib '''
+    " Run rename on a string, when script is used as lib "
     for operation in OPERATIONS:
         if operation is op_spaces_to_char:
             string_to_rename = operation(string_to_rename, space_replace_char)
@@ -126,14 +115,12 @@ if __name__ == "__main__":
         "--simulate", "-s", help="only show new filenames, dont actually rename", action="store_true")
     ARGS = PARSER.parse_args()
     FILES = []
-    try:
-        if os.path.isdir(ARGS.dir):
-            FILES = os.listdir(ARGS.dir)
-        elif os.path.isfile(ARGS.dir):
-            FILES.append(ARGS.dir)
-    except TypeError:
-        print("could not process passed directory or file!")
-        sys.exit()
+    CURRENT_WORK_DIR = Path.cwd()
+    ROOT_ITEM_FULL_PATH = Path(ARGS.dir).resolve()
+    if ROOT_ITEM_FULL_PATH.is_dir():
+        print(str(ROOT_ITEM_FULL_PATH), "DIR")  # TODO: traverse..
+    elif ROOT_ITEM_FULL_PATH.is_file():
+        FILES.append(ROOT_ITEM_FULL_PATH)
     if ARGS.simulate:
         print("running simulation!")
     if FILES:
