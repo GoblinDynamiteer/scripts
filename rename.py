@@ -83,7 +83,7 @@ def op_unidecode(file_path):
     return unidecode(file_name)
 
 
-def rename_operation(file_path, operations):
+def rename_operation(file_path, operations, dont_rename=False):
     '''Runs string operations on filename, then renames the file'''
     file_name = str(os.path.basename(file_path))
     new_file_name = file_name
@@ -95,7 +95,8 @@ def rename_operation(file_path, operations):
         print(f'kept filename: {to_color_str(file_name, "green")}')
     else:
         print(f'renamed {old} --> {new}')
-        os.rename(file_path, new_file_name)
+        if not dont_rename:
+            os.rename(file_path, new_file_name)
 
 
 def rename_string(string_to_rename, space_replace_char: str = '_'):
@@ -121,6 +122,8 @@ if UNIDECODE_LIB_AVAILABLE:
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     PARSER.add_argument("--dir", help="directory or file to process", type=str)
+    PARSER.add_argument(
+        "--simulate", "-s", help="only show new filenames, dont actually rename", action="store_true")
     ARGS = PARSER.parse_args()
     FILES = []
     try:
@@ -131,10 +134,11 @@ if __name__ == "__main__":
     except TypeError:
         print("could not process passed directory or file!")
         sys.exit()
-
+    if ARGS.simulate:
+        print("running simulation!")
     if FILES:
         for f in FILES:
-            rename_operation(f, OPERATIONS)
+            rename_operation(f, OPERATIONS, dont_rename=ARGS.simulate)
         print("rename operations complete")
     else:
         print("no files to process")
