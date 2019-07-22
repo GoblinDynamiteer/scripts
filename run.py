@@ -3,8 +3,10 @@
 import os
 import shlex
 import subprocess
+from pathlib import Path
 
 import printing
+from printing import pfcs
 import util
 
 CSTR = printing.to_color_str
@@ -139,3 +141,38 @@ def rename_file(source_file, destination):
         return False
     command = f'mv {source_file} \"{destination}\"'
     return local_command(command, hide_output=True, print_info=False)
+
+
+def wget(url: str, destination: Path, create_dirs=True, overwrite=True, debug_print=False):
+    "Download a file using wget"
+    if not isinstance(destination, Path):
+        destination = Path(destination)
+    if destination.is_file() and not overwrite:
+        pfcs(f"file w[{destination}] already exists!", show=debug_print)
+        return False
+    if not destination.parent.is_dir():
+        if not create_dirs:
+            pfcs(
+                f"destination directory w[{destination.parent}] "
+                f"does not exists!", show=debug_print)
+            return False
+        else:
+            destination.parent.mkdir()
+            pfcs(
+                f"created directory w[{destination.parent}]", show=debug_print)
+    command = shlex.split(f"wget -O {destination} \"{url}\"")
+    process = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
+    while process.poll() is None:
+        byte_line = process.stderr.readline()
+        line = byte_line.decode()
+        if '%' in line:
+            percentage_done = util.parse_percent(line)
+            pfcs(
+                f'\rdownloading {destination.name} g[{percentage_done}]', end='')
+    print()
+    if process.returncode == 0:
+        pfcs("download g[complete]!", show=debug_print)
+        return True
+    pfcs("download e[failed]!", show=debug_print)
+    return False
