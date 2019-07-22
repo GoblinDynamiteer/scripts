@@ -9,14 +9,12 @@ from pathlib import Path
 import config
 import util
 import util_tv
-import util_movie
 from db_mov import MovieDatabase
 from db_tv import EpisodeDatabase
-from printing import to_color_str as CSTR
 from printing import pfcs
+from printing import to_color_str as CSTR
+from release import ReleaseType, determine_release_type
 from run import local_command, remote_command_get_output
-
-from release import determine_release_type, ReleaseType
 
 
 def _parse_ls(line: str):
