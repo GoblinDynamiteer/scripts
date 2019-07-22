@@ -9,11 +9,14 @@ from pathlib import Path
 import config
 import util
 import util_tv
+import util_movie
 from db_mov import MovieDatabase
 from db_tv import EpisodeDatabase
 from printing import to_color_str as CSTR
 from printing import pfcs
 from run import local_command, remote_command_get_output
+
+from release import determine_release_type, ReleaseType
 
 
 def _parse_ls(line: str):
@@ -61,11 +64,8 @@ def wb_list_items(items):
     len_without_itemname = 45
     item_len = len(items)
     for item in items:
-        item_type = 'D' if item['type'] == 'dir' else 'F'
-        media_type = 'Ukwn'  # unknown, TODO: determine seasonpack, movie
         index = f'#{item["index"]:02d}'
-        if util_tv.is_episode(item["name"]):
-            media_type = 'Epsd'
+        media_type = determine_release_type(item['name']).strshort
         item_str_color = 'orange'
         if item['downloaded']:
             item_str_color = 'lgreen'
@@ -79,7 +79,7 @@ def wb_list_items(items):
             item_name = CSTR(trimmed_item_name, item_str_color)
         print(
             f'[{CSTR(index, item_str_color)}] (-{item_len:03d}) {item["date"]} '
-            f'{item["size"]:>10} ({item_type}/{media_type}) '
+            f'{item["size"]:>10} ({media_type}) '
             f'[{item_name}]')
         item_len -= 1
 
