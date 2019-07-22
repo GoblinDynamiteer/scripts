@@ -59,7 +59,7 @@ def pcstr(string, foreground, background=None, bold=False):
     print(cstr(string, foreground, background, bold))
 
 
-def print_color_format_string(string, format_chars=('[', ']'), show=True):
+def print_color_format_string(string, format_chars=('[', ']'), show=True, end='\n'):
     "Prints with color, based on a special format in the passed string"
     if len(format_chars) != 2 or not show:
         return
@@ -67,17 +67,19 @@ def print_color_format_string(string, format_chars=('[', ']'), show=True):
         begin_code = code.replace('[', format_chars[0])
         string = string.replace(
             begin_code, "\033[38;5;" + str(color_val) + "m")
-    print(string.replace(format_chars[1], "\033[0m"))
+    print(string.replace(format_chars[1], "\033[0m"), end=end)
 
 
-def pfcs(string, format_chars=('[', ']'), show=True):
+def pfcs(string, format_chars=('[', ']'), show=True, end='\n'):
     "Short for PrintFormatColorString, same as pcfs method"
-    print_color_format_string(string, format_chars=format_chars, show=show)
+    print_color_format_string(
+        string, format_chars=format_chars, show=show, end=end)
 
 
-def pcfs(string, format_chars=('[', ']'), show=True):
+def pcfs(string, format_chars=('[', ']'), show=True, end='\n'):
     "Short for PrintColorFormatString, same as pfcs method"
-    print_color_format_string(string, format_chars=format_chars, show=show)
+    print_color_format_string(
+        string, format_chars=format_chars, show=show, end=end)
 
 
 def percentage_to_cstr(percentage: str)->str:
