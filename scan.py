@@ -169,7 +169,7 @@ def scan_new_shows():
 def scan_episodes():
     print("searching tv location for new episodes...")
     new = False
-    for full_path_season_dir, episode_filename in util_tv.list_all_episodes():
+    for full_path_season_dir, episode_filename in util_tv.list_all_episodes(use_cache=False):
         if episode_filename in DB_EP or is_ds_special_dir(episode_filename):
             continue
         new = True
@@ -189,7 +189,7 @@ def tv_diagnostics_find_removed(filter_show=None):
     # TODO: use filter
     print("finding removed shows and episodes")
     episode_files = [episode_filename for _,
-                     episode_filename in util_tv.list_all_episodes()]
+                     episode_filename in util_tv.list_all_episodes(use_cache=False)]
     removed_episodes = [
         episode for episode in DB_EP if episode not in episode_files and not DB_EP.is_removed(episode)]
     found_removed = False
