@@ -27,12 +27,16 @@ class ShowDatabase(db_json.JSONDatabase):
 
     def __init__(self):
         db_json.JSONDatabase.__init__(self, SHOW_DATABASE_PATH)
-        self.set_valid_keys(['folder', 'title', 'year', 'imdb', 'tvmaze'])
+        self.set_valid_keys(['folder', 'title', 'year', 'imdb',
+                             'tvmaze', 'scanned', 'removed', 'removed_date'])
         self.set_key_type('folder', str)
         self.set_key_type('title', str)
         self.set_key_type('year', int)
         self.set_key_type('imdb', str)
         self.set_key_type('tvmaze', int)
+        self.set_key_type('scanned', int)  # unix timestamp
+        self.set_key_type('removed', bool)
+        self.set_key_type('removed_date', int)
 
 
 class EpisodeDatabase(db_json.JSONDatabase):
@@ -41,7 +45,7 @@ class EpisodeDatabase(db_json.JSONDatabase):
     def __init__(self):
         db_json.JSONDatabase.__init__(self, EPISODE_DATABASE_PATH)
         self.set_valid_keys(['filename', 'season_number', 'released', 'tvshow',
-                             'episode_number', 'tvmaze', 'scanned'])
+                             'episode_number', 'tvmaze', 'scanned', 'removed', 'removed_date'])
         self.set_key_type('filename', str)
         self.set_key_type('tvshow', str)
         self.set_key_type('season_number', int)
@@ -49,6 +53,8 @@ class EpisodeDatabase(db_json.JSONDatabase):
         self.set_key_type('released', int)  # unix timestamp
         self.set_key_type('tvmaze', int)
         self.set_key_type('scanned', int)  # unix timestamp
+        self.set_key_type('removed', bool)
+        self.set_key_type('removed_date', int)
 
     def last_added(self, num=10):
         ''' Get the most recently added episodes '''
