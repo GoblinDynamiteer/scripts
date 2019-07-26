@@ -151,9 +151,14 @@ def is_file(string):
     return os.path.isfile(string) and os.path.exists(string)
 
 
+def str_is_vid_file(string):
+    "Returns true if string looks like a vid file"
+    return any(ext in string for ext in video_extensions())
+
+
 def is_vid_file(string):
     "Returns true if string is an existing vid file"
-    return is_file(string) and any(ext in string for ext in video_extensions())
+    return is_file(string) and str_is_vid_file(string)
 
 
 def terminal_width():
