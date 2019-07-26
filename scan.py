@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 
 '''Scan for media'''
 
@@ -24,7 +24,7 @@ DB_SHOW = ShowDatabase()
 CFG = ConfigurationManager()
 
 
-def process_new_movie(movie_folder: str)->dict:
+def process_new_movie(movie_folder: str) -> dict:
     pfcs(f"processing o[{movie_folder}]")
     data = {'folder': movie_folder,
             'scanned': util.now_timestamp(),
@@ -63,7 +63,7 @@ def process_new_movie(movie_folder: str)->dict:
     return data
 
 
-def process_new_show(show_folder: str)->dict:
+def process_new_show(show_folder: str) -> dict:
     pfcs(f"processing o[{show_folder}]")
     nfo_imdb_id = util_tv.imdb_from_nfo(show_folder)
     maze_data = {}
@@ -95,7 +95,7 @@ def process_new_show(show_folder: str)->dict:
     return data
 
 
-def process_new_episode(episode_filename: str, show_folder: str)->dict:
+def process_new_episode(episode_filename: str, show_folder: str) -> dict:
     pfcs(f"processing o[{episode_filename}]")
     data = {'filename': episode_filename,
             'scanned': util.now_timestamp(), 'removed': False}
@@ -185,54 +185,36 @@ def scan_episodes():
         print('found no new episodes')
 
 
+def tv_diagnostics_find_removed(filter_show=None):
+    # TODO: use filter
+    print("finding removed shows and episodes")
+    episode_files = [episode_filename for _,
+                     episode_filename in util_tv.list_all_episodes()]
+    removed_episodes = [
+        episode for episode in DB_EP if episode not in episode_files and not DB_EP.is_removed(episode)]
+    found_removed = False
+    for episode in removed_episodes:
+        pfcs(f"found removed episode: w[{episode}]")
+        DB_EP.mark_removed(episode)
+        found_removed = True
+    removed_shows = [
+        show for show in DB_SHOW if show not in util_tv.list_all_shows() and not DB_SHOW.is_removed(show)]
+    for show_dir in removed_shows:
+        pfcs(f"found removed show: w[{show_dir}]")
+        DB_SHOW.mark_removed(show_dir)
+        found_removed = True
+    return found_removed
+
+
 def tv_diagnostics(filter_show=None):
     print('tv diagnostics running')
     if filter_show:
         print(f"only processing shows matching: {filter_show}")
-    tv_dir = CFG.get('path_tv')
-    shows = util_tv.list_all_shows()
-    for show_dir in shows:
-        if filter_show and filter_show.lower() not in show_dir.lower():
-            continue
-        show_path = Path(tv_dir) / show_dir
-        season_dirs = os.listdir(show_path)
-        missing = {}
-        for season_dir in season_dirs:
-            if '00' in season_dir:
-                continue
-            season_path = show_path / season_dir
-            if season_path.is_dir():
-                file_list = sorted(os.listdir(season_path))
-                season_num = util_tv.parse_season(str(season_path))
-                ep_num_last = -1
-                for _file in file_list:
-                    _, ep_num = util_tv.parse_season_episode(_file)
-                    if not ep_num:
-                        continue
-                    if ep_num > ep_num_last:
-                        ep_num_last = ep_num
-                ep_list = util_tv.season_episode_str_list(
-                    season_num, 1, ep_num_last)
-                file_list_str = '|'.join(file_list)
-                for ep in ep_list:
-                    if ep.lower() not in file_list_str.lower():
-                        missing[ep] = 'gap'
-                if show_dir in DB_SHOW:
-                    show_id = DB_SHOW.get(show_dir, 'tvmaze')
-                    while show_id and True:
-                        ep_num_last += 1
-                        if tvmaze.episode_has_aired(show_dir, int(season_dir[1:]), ep_num_last, show_maze_id=show_id):
-                            missing[season_dir.upper() +
-                                    f'E{ep_num_last:02d}'] = 'aired'
-                        else:
-                            break
-        if missing:
-            print(f'missing eps for {show_dir}:')
-            for missing_ep in missing:
-                if missing[missing_ep] == 'gap':
-                    print(f'    {missing_ep} {CSTR("(gap)", "orange")}')
-                if missing[missing_ep] == 'aired':
-                    print(f'    {missing_ep} {CSTR("(aired)", "yellow")}')
+        # TODO: find episode gaps
+    if tv_diagnostics_find_removed(filter_show):
+        DB_EP.save()
+        DB_SHOW.save()
+        DB_EP.export_last_removed()
 
 
 def movie_diagnostics(filter_mov=None):
