@@ -63,7 +63,69 @@ def process_new_movie(movie_folder: str)->dict:
     return data
 
 
-def _scan_movies():
+def process_new_show(show_folder: str)->dict:
+    pfcs(f"processing o[{show_folder}]")
+    nfo_imdb_id = util_tv.imdb_from_nfo(show_folder)
+    maze_data = {}
+    if nfo_imdb_id:
+        pfcs(f"searching TVMaze for i[{show_folder}] using b[{nfo_imdb_id}]")
+        maze_data = tvmaze.show_search(nfo_imdb_id)
+    if not maze_data:
+        pfcs(f"searching TVMaze for i[{show_folder}] using b[{show_folder}]")
+        maze_data = tvmaze.show_search(show_folder)
+    data = {'folder': show_folder, 'scanned': util.now_timestamp(),
+            'removed': False}
+    if maze_data:
+        if 'id' in maze_data:
+            data['tvmaze'] = maze_data['id']
+            pfcs(f" - got tvmaze id:        g[{data['tvmaze']}]")
+        if 'name' in maze_data:
+            data['title'] = maze_data['name']
+            pfcs(f" - got title:            g[{data['title']}]")
+        if 'premiered' in maze_data:
+            year_str = maze_data['premiered'][0:4]
+            if util.is_valid_year(year_str):
+                data['year'] = int(year_str)
+            pfcs(f" - got premiered year:   g[{data['year']}]")
+        if 'externals' in maze_data:
+            ext = maze_data['externals']
+            if 'imdb' in ext and ext['imdb']:
+                data['imdb'] = ext['imdb']
+            pfcs(f" - got imdb-id:          g[{data['imdb']}]")
+    return data
+
+
+def process_new_episode(episode_filename: str, show_folder: str)->dict:
+    pfcs(f"processing o[{episode_filename}]")
+    data = {'filename': episode_filename,
+            'scanned': util.now_timestamp(), 'removed': False}
+    season_number, episode_number = util_tv.parse_season_episode(
+        episode_filename)
+    data['season_number'] = season_number
+    data['episode_number'] = episode_number
+    tvmaze_data = {}
+    if show_folder in DB_SHOW:
+        data['tvshow'] = show_folder
+        show_id = DB_SHOW.get(show_folder, 'tvmaze')
+        pfcs(
+            f"searching TVMaze for i[{episode_filename}]\n -> using b[{show_folder}]"
+            f" season: b[{season_number}] episode: b[{episode_number}] show-id: b[{show_id}]")
+        tvmaze_data = tvmaze.episode_search(
+            show_folder, season_number, episode_number, show_maze_id=show_id)
+    if tvmaze_data:
+        if 'id' in tvmaze_data:
+            data['tvmaze'] = tvmaze_data['id']
+            pfcs(f" - got tvmaze id:   g[{data['tvmaze']}]")
+        if 'airstamp' in tvmaze_data:
+            aired_date_str = tvmaze_data['airstamp']
+            aired_timestamp = util.date_str_to_timestamp(aired_date_str)
+            if aired_timestamp:  # not 0
+                data['released'] = aired_timestamp
+                pfcs(f" - got aired date:  g[{aired_date_str[0:10]}]")
+    return data
+
+
+def scan_movies():
     print("searching movie location for new movies...")
     movies_not_in_db = [
         movie for movie in util_movie.list_all() if not DB_MOV.exists(movie)]
@@ -85,77 +147,37 @@ def _scan_movies():
         print('found no new movies')
 
 
-def _scan_new_shows():
+def scan_new_shows():
+    print("searching tv location for new shows...")
     shows_not_in_db = [
         show for show in util_tv.list_all_shows()
         if show not in DB_SHOW and not is_ds_special_dir(show)]
-
-    new = False
-    if shows_not_in_db:
-        new = True
-        for new_show in shows_not_in_db:
-            if is_ds_special_dir(new_show):
-                continue
-            nfo_imdb_id = util_tv.imdb_from_nfo(new_show)
-            if nfo_imdb_id:
-                maze_data = tvmaze.show_search(nfo_imdb_id)
-                if not maze_data:
-                    maze_data = tvmaze.show_search(new_show)
-            else:
-                maze_data = tvmaze.show_search(new_show)
-            data = {'folder': new_show}
-            print(maze_data)
-            if maze_data:
-                if 'id' in maze_data:
-                    data['tvmaze'] = maze_data['id']
-                if 'name' in maze_data:
-                    data['title'] = maze_data['name']
-                if 'premiered' in maze_data:
-                    year_str = maze_data['premiered'][0:4]
-                    if util.is_valid_year(year_str):
-                        data['year'] = int(year_str)
-                if 'externals' in maze_data:
-                    ext = maze_data['externals']
-                    if 'imdb' in ext and ext['imdb']:
-                        data['imdb'] = ext['imdb']
-            DB_SHOW.insert(data)
-            print(f'added new show: {CSTR(new_show, "green")}')
+    new = len(shows_not_in_db) > 0
+    for new_show in shows_not_in_db:
+        if is_ds_special_dir(new_show):
+            continue
+        data = process_new_show(new_show)
+        DB_SHOW.insert(data)
+        pfcs(f"added g[{new_show}] to database!")
+        pfcs(f"d[{'-' * util.terminal_width()}]")
     if new:
         DB_SHOW.save()
     else:
         print('found no new shows')
 
 
-def _scan_episodes():
+def scan_episodes():
+    print("searching tv location for new episodes...")
     new = False
-    for path, episode in util_tv.list_all_episodes():  # uses yield
-        if episode in DB_EP or is_ds_special_dir(episode):
+    for full_path_season_dir, episode_filename in util_tv.list_all_episodes():
+        if episode_filename in DB_EP or is_ds_special_dir(episode_filename):
             continue
         new = True
-        data = {'filename': episode, 'scanned': util.now_timestamp()}
-        season_number, episode_number = util_tv.parse_season_episode(episode)
-        data['season_number'] = season_number
-        data['episode_number'] = episode_number
-        # TODO: use better way to get show
-        show_path, _ = os.path.split(path)
-        show = os.path.basename(show_path)
-        tvmaze_data = None
-        if show in DB_SHOW:
-            data['tvshow'] = show
-            show_id = DB_SHOW.get(show, 'tvmaze')
-            tvmaze_data = tvmaze.episode_search(
-                show, season_number, episode_number, show_maze_id=show_id)
-        if tvmaze_data:
-            if 'id' in tvmaze_data:
-                data['tvmaze'] = tvmaze_data['id']
-            if 'airstamp' in tvmaze_data:
-                aired_date_str = tvmaze_data['airstamp']
-                aired_timestamp = util.date_str_to_timestamp(aired_date_str)
-                if aired_timestamp:  # not 0
-                    data['released'] = aired_timestamp
+        full_path_to_show = Path(full_path_season_dir).parents[0]
+        data = process_new_episode(episode_filename, full_path_to_show.name)
         DB_EP.insert(data)
-        print(f'added new episode: {CSTR(episode, "green")}')
-
+        pfcs(f"added g[{episode_filename}] to database!")
+        pfcs(f"d[{'-' * util.terminal_width()}]")
     if new:
         DB_EP.save()
         DB_EP.export_last_added()
@@ -163,7 +185,7 @@ def _scan_episodes():
         print('found no new episodes')
 
 
-def _tv_diagnostics(filter_show=None):
+def tv_diagnostics(filter_show=None):
     print('tv diagnostics running')
     if filter_show:
         print(f"only processing shows matching: {filter_show}")
@@ -213,7 +235,7 @@ def _tv_diagnostics(filter_show=None):
                     print(f'    {missing_ep} {CSTR("(aired)", "yellow")}')
 
 
-def _movie_diagnostics(filter_mov=None):
+def movie_diagnostics(filter_mov=None):
     print('movie diagnostics running')
     if filter_mov:
         print(f"only processing movies matching: {filter_mov}")
@@ -269,16 +291,16 @@ if __name__ == '__main__':
     if ARGS.type in SCAN_ARGS_MOV:
         if ARGS.filter:
             print("filter is only used with diagnostics")
-        _scan_movies()
+        scan_movies()
     elif ARGS.type in SCAN_ARGS_TV:
         if ARGS.filter:
             print("filter is only used with diagnostics")
-        _scan_new_shows()
-        _scan_episodes()
+        scan_new_shows()
+        scan_episodes()
     elif ARGS.type in SCAN_ARGS_DIAG:
-        _tv_diagnostics(filter_show=ARGS.filter)
-        _movie_diagnostics(filter_mov=ARGS.filter)
+        tv_diagnostics(filter_show=ARGS.filter)
+        movie_diagnostics(filter_mov=ARGS.filter)
     elif ARGS.type in SCAN_ARGS_DIAG_TV:
-        _tv_diagnostics(filter_show=ARGS.filter)
+        tv_diagnostics(filter_show=ARGS.filter)
     elif ARGS.type in SCAN_ARGS_DIAG_MOV:
-        _movie_diagnostics(filter_mov=ARGS.filter)
+        movie_diagnostics(filter_mov=ARGS.filter)
