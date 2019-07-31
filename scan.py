@@ -11,17 +11,10 @@ import util
 import util_movie
 import util_tv
 from config import ConfigurationManager
-from db_mov import MovieDatabase
-from db_tv import EpisodeDatabase, ShowDatabase
 from diskstation import is_ds_special_dir
 from omdb import movie_search
 from printing import to_color_str as CSTR
 from printing import pfcs
-
-DB_MOV = MovieDatabase()
-DB_EP = EpisodeDatabase()
-DB_SHOW = ShowDatabase()
-CFG = ConfigurationManager()
 
 
 def process_new_movie(movie_folder: str) -> dict:
@@ -254,6 +247,8 @@ def movie_diagnostics(filter_mov=None):
 
 
 if __name__ == '__main__':
+    from db_mov import MovieDatabase  # enables db_mov to import this file
+    from db_tv import EpisodeDatabase, ShowDatabase
 
     SCAN_ARGS_MOV = ['movies', 'm', 'film', 'f', 'mov', 'movie']
     SCAN_ARGS_TV = ['tv', 'eps', 't', 'shows', 'episodes']
@@ -269,6 +264,11 @@ if __name__ == '__main__':
     ARG_PARSER.add_argument('--filter', '-f', type=str,
                             default=None, help='only process items matching string')
     ARGS = ARG_PARSER.parse_args()
+
+    DB_MOV = MovieDatabase()
+    DB_EP = EpisodeDatabase()
+    DB_SHOW = ShowDatabase()
+    CFG = ConfigurationManager()
 
     if ARGS.type in SCAN_ARGS_MOV:
         if ARGS.filter:
