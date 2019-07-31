@@ -1,7 +1,8 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 
 '''Movie Database handler'''
 
+import argparse
 import os
 from datetime import datetime
 
@@ -9,6 +10,9 @@ import config
 import db_json
 import printing
 import util
+import util_movie
+from printing import pfcs
+from scan import process_new_movie
 
 CFG = config.ConfigurationManager()
 MOVIE_DATABASE_PATH = CFG.get('path_movdb')
@@ -115,3 +119,36 @@ class MovieDatabase(db_json.JSONDatabase):
         for item in self.all():
             if not self.json.get('removed', False):
                 yield item
+
+
+if __name__ == "__main__":
+    PARSER = argparse.ArgumentParser()
+    PARSER.add_argument('movie', type=str)
+    PARSER.add_argument('--setimdb', '-i', type=str)
+    PARSER.add_argument('--rescan', '-r', action="store_true")
+    ARGS = PARSER.parse_args()
+    DB = MovieDatabase()
+    if ARGS.movie not in DB:
+        pfcs(f"w[{ARGS.movie}] not in movie database")
+        exit(1)
+    if DB.is_removed(ARGS.movie):
+        pfcs(f"w[{ARGS.movie}] is marked removed, not processing")
+        exit(1)
+    pfcs(f"processing g[{ARGS.movie}]")
+    if ARGS.setimdb:
+        if not util_movie.exists(ARGS.movie):
+            pfcs(f"could not find w[{ARGS.movie}] on disk!")
+            exit(1)
+        util_movie.create_movie_nfo(
+            ARGS.movie, ARGS.setimdb, debug_print=True)
+    NEED_SAVE = False
+    if ARGS.rescan:
+        pfcs(f"rescanning omdb-data for g[{ARGS.movie}]")
+        DATA = process_new_movie(ARGS.movie)
+        for key in ['title', 'year', 'imdb']:
+            if key in DATA:
+                if DB.update(ARGS.movie, key, DATA[key]):
+                    pfcs(f"set b[{key}] = {DATA[key]}")
+                    NEED_SAVE = True
+    if NEED_SAVE:
+        DB.save()
