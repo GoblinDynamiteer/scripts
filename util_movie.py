@@ -12,6 +12,8 @@ import util_tv
 from cache import MovieCache
 from config import ConfigurationManager
 
+from printing import pfcs
+
 VALID_LETTERS = {'#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
                  'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'VW', 'X', 'Y', 'Z'}
 
@@ -137,22 +139,40 @@ def find_deleted_movies():
             yield m
 
 
-def create_movie_nfo(movie_dir: str, imdb_id: str):
+def create_movie_nfo(movie_dir: str, imdb_id: str, debug_print=False):
+    mstr = __name__ + ".create_movie_nfo"
     imdb_id = util.parse_imdbid(imdb_id)
-    if not util.is_dir(movie_dir) or not imdb_id:
-        return
-    file_loc = os.path.join(movie_dir, 'movie.nfo')
+    if not imdb_id:
+        pfcs(
+            f"o[{mstr}] could not parse imdb-id from e[{imdb_id}]", show=debug_print)
+        return None
+    if not util.is_dir(movie_dir) and exists(movie_dir):
+        movie_dir = movie_path(movie_dir)
+    if not util.is_dir(movie_dir):
+        pfcs(
+            f"o[{mstr}] could not determine location of e[{Path(movie_dir).name}]", show=debug_print)
+        return None
+    previous_imdb = get_movie_nfo_imdb_id(movie_dir, debug_print=debug_print)
+    file_loc = Path(movie_dir) / 'movie.nfo'
     with open(file_loc, 'w') as file_item:
         file_item.write(f'https://www.imdb.com/title/{imdb_id}')
+    if debug_print:
+        prev_str = ""
+        if previous_imdb:
+            prev_str = f" previous id was o[{previous_imdb}]"
+        pfcs(
+            f"o[{mstr}] wrote g[{imdb_id}] to movie.nfo for g[{Path(movie_dir).name}]{prev_str}")
 
 
-def get_movie_nfo_imdb_id(movie_dir: str):
+def get_movie_nfo_imdb_id(movie_dir: str, debug_print=False):
     "Get the imdb-id from a movie.nfo in the movie folder location"
-    if not exists(movie_dir):
-        return None
-    path = os.path.join(MOVIE_DIR, determine_letter(
-        movie_dir), movie_dir, 'movie.nfo')
-    if not util.is_file(path):
+    mstr = __name__ + ".get_movie_nfo_imdb_id"
+    if not util.is_dir(movie_dir) and exists(movie_dir):
+        movie_dir = movie_path(movie_dir)
+    path = Path(movie_dir) / 'movie.nfo'
+    if not path.is_file():
+        pfcs(
+            f"o[{mstr}] movie.nfo file does not exist in w[{movie_dir}]", show=debug_print)
         return None
     with open(path, 'r') as file_item:
         return util.parse_imdbid(file_item.readline())
