@@ -4,6 +4,7 @@
 
 import os
 import re
+from pathlib import Path
 
 import db_mov
 import util
@@ -122,9 +123,11 @@ def is_movie(string: str):
 
 
 def exists(movie_dir_name: str):
-    path = os.path.join(MOVIE_DIR, determine_letter(
-        movie_dir_name), movie_dir_name)
-    return util.is_dir(path)
+    return util.is_dir(movie_path(movie_dir_name))
+
+
+def movie_path(movie_dir_name: str):
+    return Path(MOVIE_DIR) / determine_letter(movie_dir_name) / movie_dir_name
 
 
 def find_deleted_movies():
