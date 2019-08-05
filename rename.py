@@ -117,21 +117,25 @@ if __name__ == "__main__":
         "--simulate", "-s", help="only show new filenames, dont actually rename", action="store_true")
     ARGS = PARSER.parse_args()
     FILES = []
+    DIRECTORIES = []
     CURRENT_WORK_DIR = Path.cwd()
     ROOT_ITEM_FULL_PATH = Path(ARGS.location).resolve()
     if ROOT_ITEM_FULL_PATH.is_dir():
         for root_path, dir_list, file_list in os.walk(ROOT_ITEM_FULL_PATH):
             for file_item in file_list:
                 FILES.append(Path(root_path) / file_item)
+            for dir_item in dir_list:
+                DIRECTORIES.append(Path(root_path) / dir_item)
     elif ROOT_ITEM_FULL_PATH.is_file():
         FILES.append(ROOT_ITEM_FULL_PATH)
     if ARGS.simulate:
         print("running simulation!")
-    if ARGS.renamedirs:
-        print("renaming dirs..")
-    if FILES:
+    if FILES or DIRECTORIES:
         for f in FILES:
             rename_operation(f, OPERATIONS, dont_rename=ARGS.simulate)
+        if ARGS.renamedirs:
+            for d in DIRECTORIES:
+                rename_operation(d, OPERATIONS, dont_rename=ARGS.simulate)
         print("rename operations complete")
     else:
         print("no files to process")
