@@ -54,14 +54,14 @@ class Subtitle():
             for mov_name in util_movie.list_all():
                 guessed_movie_name = util_movie.determine_title(self.filename)
                 value = util.check_string_similarity(mov_name, self.filename)
-                if guessed_movie_name.replace(" ", ".") in mov_name:
+                if guessed_movie_name and guessed_movie_name.replace(" ", ".") in mov_name:
                     value += 0.5
                 matches.append((value, mov_name))
         if self.type in [SubtitleMediaType.Episode, SubtitleMediaType.Unknown]:
             guessed_show = util_tv.guess_show_name_from_episode_name(
                 self.filename)
             for path, ep_name in util_tv.list_all_episodes():
-                if guessed_show.lower() not in str(path).lower():
+                if guessed_show and guessed_show.lower() not in str(path).lower():
                     continue
                 value = util.check_string_similarity(ep_name, self.filename)
                 matches.append((value, ep_name))
@@ -103,7 +103,8 @@ def handle_srt(srt_file):
         episode_file = util_tv.get_full_path_of_episode_filename(
             subtitle.matching_media[0][1])
         subtitle_dest = episode_file.replace('.mkv', f'.{lang_str}.srt')
-    elif subtitle.type == SubtitleMediaType.Movie:
+    # Handle unknown type as movie, TODO: check both tv/mov
+    elif subtitle.type == SubtitleMediaType.Movie or subtitle.type == SubtitleMediaType.Unknown:
         movie_file = util_movie.get_full_path_to_movie_filename(
             subtitle.matching_media[0][1])
         subtitle_dest = movie_file.replace('.mkv', f'.{lang_str}.srt')
