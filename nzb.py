@@ -53,6 +53,8 @@ def move_finished_downloads(extensions=util.video_extensions(),
     if not found_items:
         pfcs(
             f'found no completed files with extension(s) i<{extensions}> in NZBGet destination path', format_chars=['<', '>'])
+    if found_items:
+        print("processing finished downloads...")
     for download in found_items:
         filename = download.name
         containing_dir = download.parent
@@ -61,7 +63,7 @@ def move_finished_downloads(extensions=util.video_extensions(),
             pre_result = pre_search_from_file(download.name)
             if pre_result:
                 filename = f"{pre_result}{download.suffix}"
-                rename_log_str = f" (renamed --> i[{filename}])"
+                rename_log_str = f"\n  renamed i[{filename}]"
         if move_file(download, dest_dir, new_filename=filename, debug_print=False):
             pfcs(f'moved i[{download.name}] to g[{dest_dir}]{rename_log_str}')
             count += 1
@@ -70,6 +72,7 @@ def move_finished_downloads(extensions=util.video_extensions(),
                 pfcs(f'removed w[{containing_dir}]')
         else:
             pfcs(f'failed to move e[{download.name}] to w[{dest_dir}]!')
+        pfcs(f"d[{'-' * util.terminal_width()}]")
     return count
 
 
