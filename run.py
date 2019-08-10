@@ -163,13 +163,15 @@ def wget(url: str, destination: Path, create_dirs=True, overwrite=True, debug_pr
     command = shlex.split(f"wget -O {destination} \"{url}\"")
     process = subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
+    dest_name = util.shorten_string(
+        destination.name, util.terminal_width() - 5 - 12) # minus "downloading " and percentage
     while process.poll() is None:
         byte_line = process.stderr.readline()
         line = byte_line.decode()
         if '%' in line:
             percentage_done = util.parse_percent(line)
             pfcs(
-                f'\rdownloading {destination.name} g[{percentage_done}]', end='')
+                f'\rdownloading {dest_name} g[{percentage_done}]', end='')
     print()
     if process.returncode == 0:
         pfcs("download g[complete]!", show=debug_print)
