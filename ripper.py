@@ -292,7 +292,8 @@ YDL_OPTS = {
     "logger": Logger(),
     "progress_hooks": [_ytdl_hooks],
     "simulate": False,
-    "quiet": True
+    "quiet": True,
+    "nocheckcertificate": True,
 }
 
 LANGUAGE = "en"
