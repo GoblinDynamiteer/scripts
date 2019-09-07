@@ -79,12 +79,12 @@ def process_new_show(show_folder: str) -> dict:
             year_str = maze_data['premiered'][0:4]
             if util.is_valid_year(year_str):
                 data['year'] = int(year_str)
-            pfcs(f" - got premiered year:   g[{data['year']}]")
+                pfcs(f" - got premiered year:   g[{data['year']}]")
         if 'externals' in maze_data:
             ext = maze_data['externals']
             if 'imdb' in ext and ext['imdb']:
                 data['imdb'] = ext['imdb']
-            pfcs(f" - got imdb-id:          g[{data['imdb']}]")
+                pfcs(f" - got imdb-id:          g[{data['imdb']}]")
     return data
 
 
