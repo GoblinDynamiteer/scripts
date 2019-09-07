@@ -22,6 +22,7 @@ JSON_FILE_PATH = OPJ(os.path.dirname(SCRIPT_DIR), "goto_locs.json")
 
 LOCS = {"dl":    {"destinations": [OPJ(HOME, "downloads"),
                                    OPJ(HOME, "Downloads"),
+                                   OPJ(os.sep, "mnt", "c", "Downloads"),
                                    OPJ(os.sep, "volume2", "DATA", "Temp", "Downloads")]},
         "code":  {"destinations": [OPJ(HOME, "code")]},
         "script":  {"destinations": [OPJ(HOME, "scripts")]},
