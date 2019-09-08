@@ -6,6 +6,7 @@ import argparse
 import os
 import queue
 import re
+import shlex
 import subprocess
 import sys
 import threading
@@ -165,6 +166,22 @@ def _unknown_site(url: str, dl_loc: str, site: str):
     print(LANG_OUTPUT["dl_init"][LANGUAGE].format(CSTR(site, "orange")))
     print(LANG_OUTPUT["using"][LANGUAGE].format(CSTR("youtube-dl", "lgreen")))
     _youtube_dl(url, dl_loc)
+
+
+def svtplay_dl_get_all_links(url: str) -> list:
+    print("getting links using svtplay-dl...")
+    found_urls = []
+    command = shlex.split(f"svtplay-dl -A -g {url}")
+    process = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
+    while process.poll() is None:
+        byte_line = process.stderr.readline()
+        line = byte_line.decode()
+        if line.startswith("INFO: Url: "):
+            found_url_str = line.replace("INFO: Url: ", "").replace("\n", "")
+            print(f"got url: {found_url_str}")
+            found_urls.append(found_url_str)
+    return found_urls
 
 
 def _subtitle_dl(url: str, output_file: str):
@@ -374,9 +391,12 @@ if __name__ == "__main__":
     PARSER.add_argument("--url", "-u", type=str, help="URL")
     PARSER.add_argument("--lang", type=str, default="en")
     PARSER.add_argument("--dir", type=str, default=os.getcwd())
-    PARSER.add_argument("--title-in-filename", action="store_true", dest="use_title")
+    PARSER.add_argument("--title-in-filename", action="store_true",
+                        dest="use_title")
     PARSER.add_argument("--sub-only", action="store_true", dest="sub_only")
-    PARSER.add_argument("--listen", "-l", action="store_true", dest="listen_mode")
+    PARSER.add_argument("--listen", "-l", action="store_true",
+                        dest="listen_mode")
+    PARSER.add_argument("--get-last", default=0, dest="get_last")
     ARGS = PARSER.parse_args()
 
     DEFAULT_DL = ARGS.dir
@@ -389,16 +409,26 @@ if __name__ == "__main__":
     if ARGS.lang == "sv":
         LANGUAGE = "sv"
 
-    print(LANG_OUTPUT["dest_info"][LANGUAGE].format(CSTR(DEFAULT_DL, "lgreen")))
+    print(LANG_OUTPUT["dest_info"][LANGUAGE].format(
+        CSTR(DEFAULT_DL, "lgreen")))
 
     if ARGS.listen_mode:
         listener = ClipboardCatcher()
         # _listen_mode()
     elif not ARGS.url:
         print(
-            LANG_OUTPUT["missing_url_arg"][LANGUAGE]
-            + CSTR(" (argument --url [url])", "orange")
+            LANG_OUTPUT["missing_url_arg"][LANGUAGE] + CSTR(
+                " (argument --url [url])", "orange")
         )
     else:
-        for arg in ARGS.url.split(","):
-            _handle_url(arg)
+        urls = ARGS.url.split(",")
+        if ARGS.get_last:
+            wanted_last = int(ARGS.get_last)
+            urls = svtplay_dl_get_all_links(urls[0])
+            if len(urls) >= wanted_last:
+                urls = urls[-1 * wanted_last:]
+            print(f"will download {len(urls)} links:")
+            for url in urls:
+                print(CSTR(f"  {url}", "lblue"))
+        for url in urls:
+            _handle_url(url)
