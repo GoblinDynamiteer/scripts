@@ -197,7 +197,7 @@ def _subtitle_dl(url: str, output_file: str):
         command = f"curl {sub_url} > {srt_file_path}.vtt"
         ext_str = "vtt"
     else:
-        command = f"svtplay-dl -S --force-subtitle -o {srt_file_path} {url}"
+        command = f"svtplay-dl -S --force-subtitle -o \"{srt_file_path}\" {url}"
     if run.local_command(command, hide_output=True, print_info=False):
         print(
             LANG_OUTPUT["dl_sub"][LANGUAGE].format(
