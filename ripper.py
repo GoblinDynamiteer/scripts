@@ -11,6 +11,7 @@ import subprocess
 import sys
 import threading
 import time
+from pathlib import Path
 from urllib.request import urlopen
 
 import printing
@@ -116,9 +117,9 @@ def _ytdl_hooks(event):
         print("\n" + LANG_OUTPUT["dl_done"][LANGUAGE])
     if event["status"] == "downloading":
         percentage = CSTR(event["_percent_str"].lstrip(), "lgreen")
-        file_path = CSTR(event["filename"], "lblue")
+        file_name = CSTR(Path(event["filename"]).name, "lblue")
         info_str = LANG_OUTPUT["dl_progress"][LANGUAGE].format(
-            file_path, percentage, event["_eta_str"]
+            file_name, percentage, event["_eta_str"]
         )
         print("\r" + info_str, end="")
 
