@@ -185,6 +185,8 @@ def svtplay_dl_get_all_links(url: str) -> list:
 
 
 def _subtitle_dl(url: str, output_file: str):
+    if not output_file:
+        return
     if not any(output_file.endswith(ext) for ext in [".mp4", ".flv"]):
         return
     srt_file_path = f"{output_file[0:-4]}"
