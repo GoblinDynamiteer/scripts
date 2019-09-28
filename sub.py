@@ -64,6 +64,9 @@ class Subtitle():
                 if guessed_show and guessed_show.lower() not in str(path).lower():
                     continue
                 value = util.check_string_similarity(ep_name, self.filename)
+                se_str = util_tv.parse_season_episode_str(self.filename)
+                if se_str and se_str.lower() in ep_name.lower():
+                    value += 0.5
                 matches.append((value, ep_name))
         if matches:
             self.matching_media = sorted(
