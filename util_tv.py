@@ -65,6 +65,13 @@ def parse_season_episode(episode_filename: str):
     return (None, None)
 
 
+def parse_season_episode_str(episode_filename: str) -> str:
+    match = re.search(r"[Ss]\d{1,2}[Ee]\d{1,2}", episode_filename)
+    if match:
+        return match.group().lower()
+    return ""
+
+
 def parse_season(episode_filename: str):
     season, _ = parse_season_episode(episode_filename)
     return season
