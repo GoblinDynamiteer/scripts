@@ -100,6 +100,7 @@ def handle_srt(srt_file):
     print(f"processed file: {cstr(subtitle.filename, 154)}")
     print(f" - guessed match: {cstr(subtitle.best_match(), 'lgreen')}")
     print(f" - guessed language: {cstr(subtitle.language, 'lgreen')}")
+    print(f" - guessed type: {cstr(subtitle.type.name, 'lgreen')}")
     lang_str = 'en' if subtitle.language == Language.English else 'sv'
     subtitle_dest = None
     if subtitle.type == SubtitleMediaType.Episode:
