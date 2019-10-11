@@ -18,6 +18,8 @@ import printing
 import rename
 import run
 
+from ripper_helpers import DPlayEpisodeLister
+
 LIB_AVAILABLE = {"youtube_dl": True, "BeautifulSoup": True, "pyperclip": True}
 
 try:
@@ -427,7 +429,11 @@ if __name__ == "__main__":
         urls = ARGS.url.split(",")
         if ARGS.get_last:
             wanted_last = int(ARGS.get_last)
-            urls = svtplay_dl_get_all_links(urls[0])
+            if "dplay" in urls[0]:
+                dplay_lister = DPlayEpisodeLister(urls[0])
+                urls = dplay_lister.list_episode_urls(revered_order=True, limit=wanted_last)
+            else:
+                urls = svtplay_dl_get_all_links(urls[0])
             if len(urls) >= wanted_last:
                 urls = urls[-1 * wanted_last:]
             print(f"will download {len(urls)} links:")
