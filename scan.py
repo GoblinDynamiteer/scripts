@@ -210,12 +210,10 @@ def tv_diagnostics(filter_show=None):
         DB_EP.export_last_removed()
 
 
-def movie_diagnostics(filter_mov=None):
-    print('movie diagnostics running')
-    if filter_mov:
-        print(f"only processing movies matching: {filter_mov}")
+def movie_diagnostics_find_removed(filter_mov=None):
     found_removed = False
     mov_disk_list = util_movie.list_all()
+    print("scanning for removed movies")
     for db_mov in DB_MOV:
         if DB_MOV.is_removed(db_mov):
             continue
@@ -228,26 +226,40 @@ def movie_diagnostics(filter_mov=None):
     if found_removed:
         DB_MOV.save()
         DB_MOV.export_last_removed()
-    print('-----------------------------------')
+    else:
+        print("found no removed movies")
+
+def movie_diagnostics_list_duplicates(filter_mov=None):
     duplicate_imdb = DB_MOV.find_duplicates('imdb')
-    if duplicate_imdb:
-        print('found duplicate movies:')
-        for imdb_id in duplicate_imdb:
-            dup_mov = []
-            for mov in duplicate_imdb[imdb_id]:
-                if filter_mov and filter_mov.lower() not in mov.lower():
-                    continue
-                if not DB_MOV.is_removed(mov) and not 'swedish' in mov.lower():
-                    dup_mov.append(mov)  # Allow swedish dubs as duplicates...
-            if len(dup_mov) > 1:
-                resp = movie_search(imdb_id)
-                if "Title" in resp and "Year" in resp:
-                    pfcs(f"g[{imdb_id}] (OMDb: b[{resp['Title']} - {resp['Year']}] )")
-                else:
-                    print(imdb_id + ":")
-                for mov in dup_mov:
-                    print('   ' + mov)
-        print('-----------------------------------')
+    print("scanning for duplicate movies")
+    if not duplicate_imdb:
+        print("found no duplicate movies")
+        return
+    print('found duplicate movies:')
+    for imdb_id in duplicate_imdb:
+        dup_mov = []
+        for mov in duplicate_imdb[imdb_id]:
+            if filter_mov and filter_mov.lower() not in mov.lower():
+                continue
+            if not DB_MOV.is_removed(mov) and not 'swedish' in mov.lower():
+                dup_mov.append(mov)  # Allow swedish dubs as duplicates...
+        if len(dup_mov) > 1:
+            resp = movie_search(imdb_id)
+            if "Title" in resp and "Year" in resp:
+                pfcs(f"g[{imdb_id}] (OMDb: b[{resp['Title']} - {resp['Year']}] )")
+            else:
+                print(imdb_id + ":")
+            for mov in dup_mov:
+                print('   ' + mov)
+
+def movie_diagnostics(filter_mov=None):
+    print('movie diagnostics running')
+    if filter_mov:
+        print(f"only processing movies matching: {filter_mov}")
+    movie_diagnostics_find_removed(filter_mov=filter_mov)
+    print("-" * 30)
+    movie_diagnostics_list_duplicates(filter_mov=filter_mov)
+    print("-" * 30)
 
 
 if __name__ == '__main__':
