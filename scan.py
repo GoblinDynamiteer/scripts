@@ -34,6 +34,7 @@ class AllowedDuplicate(Enum):
     EncoreEdition = ".Encore.Edition."  # Special cut for one movie
     BlackAndChromeEdition = ".Black.and.Chrome.Edition."  # Special cut for one movie
     NoirEdition = ".NOIR.EDITION."  # Special cut for one movie
+    JapDVD = ".DVD.JP" # Special case for one movie
 
 
 def process_new_movie(movie_folder: str) -> dict:
