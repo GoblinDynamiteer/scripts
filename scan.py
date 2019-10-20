@@ -25,8 +25,15 @@ class AllowedDuplicate(Enum):
     DirectorsCut = "Directors.Cut"
     Uncut = "UNCUT"
     Unrated = "UNRATED"
-    JapAnSeDb = ".SE.JAP."
+    JapAndSeDub = ".SE.JAP."
+    EngAndSeAndJapDub = ".SE.ENG.JAP."
+    EngAndSeDub = ".SE.ENG."
+    EngAndFiAndSeDub = ".EN.FI.SE."
     NordicDubs = "NORDiC"
+    RogueCut = ".THE.ROGUE.CUT."  # Special cut for one movie
+    EncoreEdition = ".Encore.Edition."  # Special cut for one movie
+    BlackAndChromeEdition = ".Black.and.Chrome.Edition."  # Special cut for one movie
+    NoirEdition = ".NOIR.EDITION."  # Special cut for one movie
 
 
 def process_new_movie(movie_folder: str) -> dict:
