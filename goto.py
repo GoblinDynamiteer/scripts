@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-'''
+"""
 Personal navigation script
 Use with external script, example for fish:
 
@@ -8,17 +8,19 @@ Use with external script, example for fish:
         set dir (~/scripts/goto.py $argv)
         cd $dir
     end
-'''
+"""
 
 import os
 import sys
 import json
 import util
 
+from diskstation import is_ds_special_dir
+
 
 def load(json_file):
     """ Loads json file with goto location data """
-    with open(json_file, 'r') as jf:
+    with open(json_file, "r") as jf:
         data = json.load(jf)
     return data
 
@@ -60,16 +62,17 @@ def _match_subdir(orig_path, sub_str: str):
     for item in os.listdir(orig_path):
         if util.is_file(os.path.join(orig_path, item)):
             continue
+        if is_ds_special_dir(item):
+            continue
         if sub_str.lower() in item.lower():
             return item  # TODO: handle several matches
     return ""
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     HOME = os.path.expanduser("~")
     SCRIPT_DIR = os.path.realpath(__file__)
-    JSON_FILE_PATH = os.path.join(
-        os.path.dirname(SCRIPT_DIR), "goto_locs.json")
+    JSON_FILE_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), "goto_locs.json")
     LOCS = load(JSON_FILE_PATH)
 
     GOTOS = []
