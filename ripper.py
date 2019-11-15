@@ -76,6 +76,9 @@ def _youtube_dl(url: str, dl_loc: str) -> str:
                 info = ydl.extract_info(url, download=False)
                 file_name = _youtube_dl_generate_filename(info)
                 full_dl_path = os.path.join(dl_loc, file_name)
+                if Path(full_dl_path).exists():
+                    print(f"file already exists: {full_dl_path}, skipping")
+                    return None
                 ydl.params["outtmpl"] = full_dl_path
                 if not SKIP_VIDEO_DOWNLOAD:
                     ydl.download([url])
