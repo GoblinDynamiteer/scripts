@@ -176,7 +176,8 @@ def svtplay_dl_get_all_links(url: str) -> list:
     found_urls = []
     command = shlex.split(f"svtplay-dl -A -g {url}")
     process = subprocess.Popen(
-        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1
+    )
     while process.poll() is None:
         byte_line = process.stderr.readline()
         line = byte_line.decode()
@@ -192,23 +193,22 @@ def _subtitle_dl(url: str, output_file: str):
         return
     if not any(output_file.endswith(ext) for ext in [".mp4", ".flv"]):
         return
-    srt_file_path = f"{output_file[0:-4]}"
-    ext_str = "srt"
+    sub_file_path = f"{output_file[0:-4]}"
     if "viafree" in url.lower():
+        sub_file_path += ".vtt"
         sub_url = _viafree_subtitle_link(ORIGINAL_URL)
         if not sub_url:
             print(CSTR(f'{LANG_OUTPUT["no_sub"][LANGUAGE]}', "orange"))
             return
-        command = f"curl {sub_url} > {srt_file_path}.vtt"
-        ext_str = "vtt"
+        command = f"curl {sub_url} > {sub_file_path}"
     else:
-        command = f"svtplay-dl -S --force-subtitle -o \"{srt_file_path}\" {url}"
+        sub_file_path += ".srt"
+        command = f'svtplay-dl -S --force-subtitle -o "{sub_file_path}" {url}'
+    if Path(sub_file_path).exists():
+        print(f"subtitle already exists: {sub_file_path}, skipping")
+        return
     if run.local_command(command, hide_output=True, print_info=False):
-        print(
-            LANG_OUTPUT["dl_sub"][LANGUAGE].format(
-                CSTR(f"{srt_file_path}.{ext_str}", "lblue")
-            )
-        )
+        print(LANG_OUTPUT["dl_sub"][LANGUAGE].format(CSTR(f"{sub_file_path}", "lblue")))
 
 
 def _viafree_subtitle_link(url: str):
@@ -396,11 +396,9 @@ if __name__ == "__main__":
     PARSER.add_argument("--url", "-u", type=str, help="URL")
     PARSER.add_argument("--lang", type=str, default="en")
     PARSER.add_argument("--dir", type=str, default=os.getcwd())
-    PARSER.add_argument("--title-in-filename", action="store_true",
-                        dest="use_title")
+    PARSER.add_argument("--title-in-filename", action="store_true", dest="use_title")
     PARSER.add_argument("--sub-only", action="store_true", dest="sub_only")
-    PARSER.add_argument("--listen", "-l", action="store_true",
-                        dest="listen_mode")
+    PARSER.add_argument("--listen", "-l", action="store_true", dest="listen_mode")
     PARSER.add_argument("--get-last", default=0, dest="get_last")
     ARGS = PARSER.parse_args()
 
@@ -414,16 +412,15 @@ if __name__ == "__main__":
     if ARGS.lang == "sv":
         LANGUAGE = "sv"
 
-    print(LANG_OUTPUT["dest_info"][LANGUAGE].format(
-        CSTR(DEFAULT_DL, "lgreen")))
+    print(LANG_OUTPUT["dest_info"][LANGUAGE].format(CSTR(DEFAULT_DL, "lgreen")))
 
     if ARGS.listen_mode:
         listener = ClipboardCatcher()
         # _listen_mode()
     elif not ARGS.url:
         print(
-            LANG_OUTPUT["missing_url_arg"][LANGUAGE] + CSTR(
-                " (argument --url [url])", "orange")
+            LANG_OUTPUT["missing_url_arg"][LANGUAGE]
+            + CSTR(" (argument --url [url])", "orange")
         )
     else:
         urls = ARGS.url.split(",")
@@ -431,11 +428,13 @@ if __name__ == "__main__":
             wanted_last = int(ARGS.get_last)
             if "dplay" in urls[0]:
                 dplay_lister = DPlayEpisodeLister(urls[0])
-                urls = dplay_lister.list_episode_urls(revered_order=True, limit=wanted_last)
+                urls = dplay_lister.list_episode_urls(
+                    revered_order=True, limit=wanted_last
+                )
             else:
                 urls = svtplay_dl_get_all_links(urls[0])
             if len(urls) >= wanted_last:
-                urls = urls[-1 * wanted_last:]
+                urls = urls[-1 * wanted_last :]
             print(f"will download {len(urls)} links:")
             for url in urls:
                 print(CSTR(f"  {url}", "lblue"))
