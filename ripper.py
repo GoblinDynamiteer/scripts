@@ -75,14 +75,14 @@ def _youtube_dl(url: str, dl_loc: str) -> str:
             with youtube_dl.YoutubeDL(YDL_OPTS) as ydl:
                 info = ydl.extract_info(url, download=False)
                 file_name = _youtube_dl_generate_filename(info)
-                full_dl_path = os.path.join(dl_loc, file_name)
-                if Path(full_dl_path).exists():
-                    print(f"file already exists: {full_dl_path}, skipping")
+                full_dl_path = Path(os.path.join(dl_loc, file_name))
+                if full_dl_path.exists():
+                    print(f"file already exists: {CSTR(full_dl_path.name, 'orange')}, skipping")
                     return None
-                ydl.params["outtmpl"] = full_dl_path
+                ydl.params["outtmpl"] = str(full_dl_path)
                 if not SKIP_VIDEO_DOWNLOAD:
                     ydl.download([url])
-                return full_dl_path
+                return str(full_dl_path)
         except youtube_dl.utils.DownloadError:
             pass
     print(LANG_OUTPUT["dl_failed"][LANGUAGE].format(CSTR(url, "orange")))
