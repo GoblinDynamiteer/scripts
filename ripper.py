@@ -210,9 +210,13 @@ def _subtitle_dl(url: str, output_file: str):
     if Path(sub_file_path).exists():
         print(f"subtitle already exists: {sub_file_path}, skipping")
         return
-    if run.local_command(command, hide_output=True, print_info=False):
+    dual_srt_extension_path = Path(sub_file_path + ".srt")
+    if dual_srt_extension_path.exists(): # svtplay-dl adds srt extension?
+        pass
+    elif run.local_command(command, hide_output=True, print_info=False):
         print(LANG_OUTPUT["dl_sub"][LANGUAGE].format(CSTR(f"{sub_file_path}", "lblue")))
-
+    if dual_srt_extension_path.exists(): # svtplay-dl adds srt extension?
+        dual_srt_extension_path.rename(sub_file_path)
 
 def _viafree_subtitle_link(url: str):
     page_contents = urlopen(url).read()
