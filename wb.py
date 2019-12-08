@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 import config
+import extract
 import util
 import util_tv
 from db_mov import MovieDatabase
@@ -15,7 +16,6 @@ from printing import pfcs
 from printing import to_color_str as CSTR
 from release import ReleaseType, determine_release_type
 from run import local_command, remote_command_get_output
-from extract import _handle_item as run_extract
 
 
 def _parse_ls(line: str):
@@ -128,7 +128,7 @@ def download(item: dict, dest: str, extr: bool = False):
         if not path_for_extract_cmd.exists():
             return
         pfcs(f"running extract command on: g[{dest}]")
-        run_extract(str(path_for_extract_cmd))
+        extract._handle_item(str(path_for_extract_cmd))
 
 
 def wb_download_items(items: list, indexes: str, dest_dir: str, extr=False):
