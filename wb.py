@@ -128,7 +128,9 @@ def download(item: dict, dest: str, extr: bool = False):
         if not path_for_extract_cmd.exists():
             return
         pfcs(f"running extract command on: g[{dest}]")
-        extract._handle_item(str(path_for_extract_cmd))
+        print("UNIMPLEMENTED")
+        #TODO: make extract work from other (this) script
+        #extract._handle_item(str(path_for_extract_cmd))
 
 
 def wb_download_items(items: list, indexes: str, dest_dir: str, extr=False):
