@@ -1,6 +1,6 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 
-''' Various movie helper/utility functions '''
+"Various movie helper/utility functions"
 
 import os
 import re
@@ -31,13 +31,15 @@ def parse_year(movie_dir_name):
     return None
 
 
-def determine_letter(movie_dir_name):
-    ''' Determines the letter dir '''
-    folder = movie_dir_name.replace(' ', '.')
+def determine_letter(movie_dir):
+    "Determines the letter dir"
+    if isinstance(movie_dir, Path):
+        movie_dir = movie_dir.name
+    folder = movie_dir.replace(' ', '.')
     letter = folder[0:1].upper()
     for prefix in ['The.', 'An.', 'A.']:
         if folder.startswith(prefix):
-            letter = movie_dir_name[len(prefix):len(prefix) + 1].upper()
+            letter = movie_dir[len(prefix):len(prefix) + 1].upper()
             break
     if str.isdigit(letter):
         return '#'
