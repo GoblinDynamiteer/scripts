@@ -1,6 +1,6 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 
-''' Various helper/utility functions '''
+"Various helper/utility functions"
 
 import difflib
 import ntpath
@@ -9,6 +9,7 @@ import re
 import shutil
 from datetime import datetime as DateTime
 from enum import Enum
+from pathlib import Path
 
 
 class Settings(Enum):
@@ -137,18 +138,26 @@ def bytes_to_human_readable(num, suffix='B'):
     return f"{num:.1f}Yi{suffix}"
 
 
-def is_dir(string):
-    "Returns true if string is an existing directory"
-    if not string:
+def is_dir(path):
+    "Returns true if path/str is an existing directory"
+    if not path:
         return False
-    return os.path.isdir(string) and os.path.exists(string)
+    if isinstance(path, Path):
+        return path.is_dir() and path.exists()
+    if isinstance(path, str):
+        return os.path.isdir(path) and os.path.exists(path)
+    return False
 
 
-def is_file(string):
-    "Returns true if string is an existing file"
-    if not string:
+def is_file(path):
+    "Returns true if path/str is an existing file"
+    if not path:
         return False
-    return os.path.isfile(string) and os.path.exists(string)
+    if isinstance(path, Path):
+        return path.is_file() and path.exists()
+    if isinstance(path, str):
+        return os.path.isfile(path) and os.path.exists(path)
+    return False
 
 
 def str_is_vid_file(string):
