@@ -167,7 +167,7 @@ def process_episode(ep_path: Path):
     run.move_file(ep_path, dest, create_dirs=True)
 
 
-def _handle_item(source_item_path):
+def extract_item(source_item_path):
     source_item_path = validate_path(source_item_path)
     if not source_item_path:
         return
@@ -180,11 +180,10 @@ def _handle_item(source_item_path):
         if source_item_path.is_dir():
             pfcs(f"processing: i[{name}] as type b[season dir]")
             for item in source_item_path.iterdir():
-                _handle_item(item)
+                extract_item(item)
             pfcs(f"g[done!] please remove w[{name}] manually.")
     else:
         pfcs(f"could not determine type of w[{name}]")
-
 
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser(description='extractor')
@@ -193,6 +192,6 @@ if __name__ == '__main__':
     CURRENT_DIR = Path.cwd()
     if '*' in ARGS.source:
         items = glob.glob(ARGS.source)
-        [_handle_item(CURRENT_DIR / i) for i in items]
+        [extract_item(CURRENT_DIR / i) for i in items]
     else:
-        _handle_item(Path(ARGS.source))
+        extract_item(Path(ARGS.source))
