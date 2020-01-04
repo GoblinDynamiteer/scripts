@@ -73,7 +73,8 @@ def wb_list_items(items):
         # Right trim filename strings if to prevent multiple lines in terminal window
         if len_without_itemname + len(item["name"]) + 1 > util.terminal_width():
             diff = abs(
-                util.terminal_width() - len_without_itemname - len(item["name"]) - 1
+                util.terminal_width() - len_without_itemname -
+                len(item["name"]) - 1
             )
             trimmed_item_name = util.shorten_string(
                 item["name"], len(item["name"]) - diff
@@ -89,7 +90,7 @@ def wb_list_items(items):
 
 def _parse_get_indexes(items: list, indexes: str) -> list:
     if indexes.startswith("-"):  # download last x items
-        return items[int(indexes) :]
+        return items[int(indexes):]
     indexes_to_dl = []
     try:
         for ix_split in indexes.split(","):
@@ -129,8 +130,8 @@ def download(item: dict, dest: str, extr: bool = False):
             return
         pfcs(f"running extract command on: g[{dest}]")
         print("UNIMPLEMENTED")
-        #TODO: make extract work from other (this) script
-        #extract._handle_item(str(path_for_extract_cmd))
+        # TODO: make extract work from other (this) script
+        # extract._handle_item(str(path_for_extract_cmd))
 
 
 def wb_download_items(items: list, indexes: str, dest_dir: str, extr=False):
@@ -142,10 +143,31 @@ def wb_download_items(items: list, indexes: str, dest_dir: str, extr=False):
     [download(item, dest_dir, extr=extr) for item in items_to_dl]
 
 
+def wb_scp_torrents():
+    "send torrent files to wb watch dir"
+    torrent_file_list = []
+    dl_paths = [Path.home() / "mnt" / "downloads",
+                Path(CFG.get("path_download"))]
+    for dl_path in dl_paths:
+        if not dl_path.exists():
+            continue
+        torrent_file_list += dl_path.glob("**/*.torrent")
+    for torrent_file in torrent_file_list:
+        command = f'scp "{str(torrent_file)}" wb:~/watch'
+        pfcs(f"sending torrent: g[{torrent_file.name}]")
+        if local_command(command, hide_output=True):
+            try:
+                torrent_file.unlink()  # remove file
+                pfcs(f"removed local torrent: o[{torrent_file.name}]")
+            except:
+                pfcs(f"failed to remove local torrent: e[{torrent_file.name}]")
+
+
 if __name__ == "__main__":
     CFG = config.ConfigurationManager()
     PARSER = argparse.ArgumentParser(description="ripper")
-    PARSER.add_argument("command", type=str, choices=["list", "download"])
+    PARSER.add_argument("command", type=str, choices=[
+                        "list", "download", "send"])
     PARSER.add_argument("--dest", type=str, default=CFG.get("path_download"))
     PARSER.add_argument(
         "--get", type=str, default="-1", help="items to download. indexes"
@@ -159,12 +181,11 @@ if __name__ == "__main__":
     )
     ARGS = PARSER.parse_args()
 
-    print("listing items...")
-    DOWNLOAD_ITEMS = _get_items()
-
     if ARGS.command == "list":
-        wb_list_items(DOWNLOAD_ITEMS)
+        wb_list_items(_get_items())
     elif ARGS.command == "download":
-        wb_download_items(DOWNLOAD_ITEMS, ARGS.get, ARGS.dest, ARGS.extract)
+        wb_download_items(_get_items(), ARGS.get, ARGS.dest, ARGS.extract)
+    elif ARGS.command == "send":
+        wb_scp_torrents()
     else:
         print(CSTR("wrong command!", "orange"))
