@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
-''' Subtitle tools '''
+"Unit tests"
 
 import os
 import string
 import unittest
+import platform
+import tempfile
 
 import db_json
 import printing
@@ -12,6 +14,7 @@ import tvmaze
 import util
 import util_movie
 import util_tv
+from pathlib import Path
 
 
 class TestUtilMovie(unittest.TestCase):
@@ -168,6 +171,40 @@ class TestUtilStr(unittest.TestCase):
             string_orig, check2, remove_chars=string.punctuation)
         self.assertGreater(ratio1, ratio2)
 
+
+class TestUtilPaths(unittest.TestCase):
+    def test_direname_of_file(self):
+        if platform.system() == "Linux":
+            path_to_file_str = "/home/user_name/folder_8271/filename.txt"
+            correct_path = "/home/user_name/folder_8271"
+        elif platform.system() == "Windows":
+            path_to_file_str = "D:\\dirdir\\user_name\\folder_8271\\filename.txt"
+            correct_path = "D:\\dirdir\\user_name\\folder_8271"
+        else:
+            return
+        self.assertEqual(util.dirname_of_file(path_to_file_str), correct_path)
+        self.assertEqual(util.dirname_of_file(Path(path_to_file_str)), correct_path)
+
+    def test_filename_of_path(self):
+        if platform.system() == "Linux":
+            path_to_file_str = "/home/user_name/folder_8271/filename.txt"
+            correct_path = "filename.txt"
+        elif platform.system() == "Windows":
+            path_to_file_str = "D:\\dirdir\\user_name\\folder_8271\\filename.txt"
+            correct_path = "filename.txt"
+        else:
+            return
+        self.assertEqual(util.filename_of_path(path_to_file_str), correct_path)
+        self.assertEqual(util.filename_of_path(Path(path_to_file_str)), correct_path)
+
+    def test_get_file_contents(self):
+        contents = "HellOWWOOORLD12344$£@"
+        fp = tempfile.NamedTemporaryFile(mode="w+", delete=False)
+        fp.write(contents)
+        fp.close()
+        self.assertEqual(util.get_file_contents(fp.name), [contents])
+        self.assertEqual(util.get_file_contents(Path(fp.name)), [contents])
+        os.remove(fp.name)
 
 if __name__ == '__main__':
     unittest.main()
