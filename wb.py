@@ -167,7 +167,7 @@ if __name__ == "__main__":
     CFG = config.ConfigurationManager()
     PARSER = argparse.ArgumentParser(description="ripper")
     PARSER.add_argument("command", type=str, choices=[
-                        "list", "download", "send"])
+                        "list", "new", "download", "get", "send"])
     PARSER.add_argument("--dest", type=str, default=CFG.get("path_download"))
     PARSER.add_argument(
         "--get", type=str, default="-1", help="items to download. indexes"
@@ -181,9 +181,9 @@ if __name__ == "__main__":
     )
     ARGS = PARSER.parse_args()
 
-    if ARGS.command == "list":
+    if ARGS.command in ["list", "new"]:
         wb_list_items(_get_items())
-    elif ARGS.command == "download":
+    elif ARGS.command in ["download", "get"]:
         wb_download_items(_get_items(), ARGS.get, ARGS.dest, ARGS.extract)
     elif ARGS.command == "send":
         wb_scp_torrents()
