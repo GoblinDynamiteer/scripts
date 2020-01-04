@@ -62,8 +62,18 @@ def command_exists(command):
     return False
 
 
+def path_to_str(path):
+    if isinstance(path, Path):
+        return str(path)
+    if isinstance(path, str):
+        return path
+    return None
+
+
 def extract(compressed_file: 'full path', destination, create_dirs=True, overwrite=True):
     "Extract files with fancy color output"
+    compressed_file = path_to_str(compressed_file)
+    destination = path_to_str(destination)
     if not util.is_file(compressed_file):
         print(
             f'compressed_file {CSTR(compressed_file, "orange")} does not exist!')
@@ -100,6 +110,8 @@ def extract(compressed_file: 'full path', destination, create_dirs=True, overwri
 
 def move_file(source_file, destination, create_dirs=False, new_filename=None, debug_print=True):
     "Custom file move method using mv command in the background"
+    source_file = path_to_str(source_file)
+    destination = path_to_str(destination)
     if not util.is_file(source_file):
         if debug_print:
             print(
@@ -135,6 +147,8 @@ def move_file(source_file, destination, create_dirs=False, new_filename=None, de
 
 def rename_file(source_file, destination):
     "Custom file move/rename method using mv command in the background"
+    source_file = path_to_str(source_file)
+    destination = path_to_str(destination)
     if not util.is_file(source_file):
         print(
             f'source {CSTR(source_file, "orange")} does not exist!')
@@ -164,7 +178,7 @@ def wget(url: str, destination: Path, create_dirs=True, overwrite=True, debug_pr
     process = subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
     dest_name = util.shorten_string(
-        destination.name, util.terminal_width() - 5 - 12) # minus "downloading " and percentage
+        destination.name, util.terminal_width() - 5 - 12)  # minus "downloading " and percentage
     while process.poll() is None:
         byte_line = process.stderr.readline()
         line = byte_line.decode()
