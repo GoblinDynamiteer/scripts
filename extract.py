@@ -70,9 +70,11 @@ def find_nfo_file_in_path(path):
         return None
 
 
-def determine_movie_destination(source_dir):
-    letter = util_movie.determine_letter(source_dir)
-    return OPJ(CFG.get('path_film'), letter, source_dir)
+def determine_movie_destination(movie_name):
+    letter = util_movie.determine_letter(movie_name)
+    if isinstance(movie_name, Path):
+        movie_name = movie_name.name
+    return OPJ(CFG.get('path_film'), letter, movie_name)
 
 
 def determine_episode_destination(episode_name):
@@ -93,8 +95,9 @@ def determine_episode_destination(episode_name):
     return OPJ(path, f'S{season:02d}')
 
 
-def process_movie_dir(movie_dir_source):
-    pfcs(f"processing: i[{movie_dir_source}] as type b[movie dir]")
+def process_movie_dir(movie_dir_source: Path):
+    name = movie_dir_source.name
+    pfcs(f"processing: i[{name}] as type b[movie dir]")
     nfo_loc = find_nfo_file_in_path(movie_dir_source)
     rar_loc = find_rar_in_path(movie_dir_source)
     mkv_loc = find_mkv_in_path(movie_dir_source)
@@ -105,7 +108,7 @@ def process_movie_dir(movie_dir_source):
         pfcs(f"found e[both] rar and mkv in w[{movie_dir_source}]!")
         return
     pfcs(f"found file: i[{mkv_loc or rar_loc}]")
-    dest = determine_movie_destination(movie_dir_source)
+    dest = determine_movie_destination(name)
     pfcs(f"destination: i[{dest}]")
     if rar_loc:
         if not run.extract(rar_loc, dest, create_dirs=True):
@@ -184,6 +187,7 @@ def extract_item(source_item_path):
             pfcs(f"g[done!] please remove w[{name}] manually.")
     else:
         pfcs(f"could not determine type of w[{name}]")
+
 
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser(description='extractor')
