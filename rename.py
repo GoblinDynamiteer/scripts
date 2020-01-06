@@ -72,11 +72,15 @@ def op_unidecode(string):
     return unidecode(string)
 
 
-def rename_operation(file_path, operations, dont_rename=False):
+def rename_operation(file_path, operations, dont_rename=False, space_replace_char: str = '_'):
     "Runs string operations on filename, then renames the file"
     new_file_name = file_path.name
     for operation in operations:
-        new_file_name = operation(new_file_name)
+        if operation is op_spaces_to_char:
+            new_file_name = operation(
+                new_file_name, replace_char=space_replace_char)
+        else:
+            new_file_name = operation(new_file_name)
     old = to_color_str(file_path, 'orange')
     new = to_color_str(file_path.parent / new_file_name, 'green')
     if new_file_name == file_path.name:
@@ -115,11 +119,14 @@ if __name__ == "__main__":
                         help="also rename directories", action="store_true", dest="renamedirs")
     PARSER.add_argument(
         "--simulate", "-s", help="only show new filenames, dont actually rename", action="store_true")
+    PARSER.add_argument(
+        "--spaces-to-dots", help="only replace spaces with dots", action="store_true", dest="space_op")
     ARGS = PARSER.parse_args()
     FILES = []
     DIRECTORIES = []
     CURRENT_WORK_DIR = Path.cwd()
     ROOT_ITEM_FULL_PATH = Path(ARGS.location).resolve()
+    REP_CHAR = "_"
     if ROOT_ITEM_FULL_PATH.is_dir():
         for root_path, dir_list, file_list in os.walk(ROOT_ITEM_FULL_PATH):
             for file_item in file_list:
@@ -130,12 +137,17 @@ if __name__ == "__main__":
         FILES.append(ROOT_ITEM_FULL_PATH)
     if ARGS.simulate:
         print("running simulation!")
+    if ARGS.space_op:
+        OPERATIONS = [op_spaces_to_char]
+        REP_CHAR = "."
     if FILES or DIRECTORIES:
         for f in FILES:
-            rename_operation(f, OPERATIONS, dont_rename=ARGS.simulate)
+            rename_operation(
+                f, OPERATIONS, dont_rename=ARGS.simulate, space_replace_char=REP_CHAR)
         if ARGS.renamedirs:
             for d in DIRECTORIES:
-                rename_operation(d, OPERATIONS, dont_rename=ARGS.simulate)
+                rename_operation(
+                    d, OPERATIONS, dont_rename=ARGS.simulate, space_replace_char=REP_CHAR)
         print("rename operations complete")
     else:
         print("no files to process")
