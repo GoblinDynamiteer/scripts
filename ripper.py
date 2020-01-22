@@ -18,7 +18,7 @@ import printing
 import rename
 import run
 
-from ripper_helpers import DPlayEpisodeLister
+from ripper_helpers import DPlayEpisodeLister, Tv4PlayEpisodeData
 
 LIB_AVAILABLE = {"youtube_dl": True, "BeautifulSoup": True, "pyperclip": True}
 
@@ -434,9 +434,14 @@ if __name__ == "__main__":
         if ARGS.get_last:
             wanted_last = int(ARGS.get_last)
             if "dplay" in urls[0]:
-                dplay_lister = DPlayEpisodeLister(urls[0])
-                urls = dplay_lister.list_episode_urls(
+                lister = DPlayEpisodeLister(urls[0])
+                urls = lister.list_episode_urls(
                     revered_order=True, limit=wanted_last
+                )
+            elif "tv4play" in urls[0]:
+                lister = Tv4PlayEpisodeData(urls[0])
+                urls = lister.list_episode_urls(
+                    revered_order=False, limit=wanted_last
                 )
             else:
                 urls = svtplay_dl_get_all_links(urls[0])
