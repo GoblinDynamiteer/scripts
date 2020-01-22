@@ -132,11 +132,11 @@ def process_movie_file(movie_file_path):
     if not movie_file_path.is_file():
         print(f"path {movie_file_path.name} is not a file!")
         return
-    pfcs(f"processing: i[{movie_file_path}] as type b[movie file]")
+    pfcs(f"processing: i[{movie_file_path.name}] as type b[movie file]")
     if not movie_file_path.suffix in util.video_extensions():
         pfcs(f"could not determine destination for w[{movie_file_path.name}]")
         return
-    directory = str(movie_file_path).replace(movie_file_path.suffix, "")
+    directory = str(movie_file_path.name).replace(movie_file_path.suffix, "")
     dest = determine_movie_destination(directory)
     pfcs(f"destination: i[{dest}]")
     run.move_file(movie_file_path, dest, create_dirs=True)
