@@ -18,7 +18,7 @@ import printing
 import rename
 import run
 
-from ripper_helpers import DPlayEpisodeLister, Tv4PlayEpisodeData
+from ripper_helpers import DPlayEpisodeLister, Tv4PlayEpisodeLister
 
 LIB_AVAILABLE = {"youtube_dl": True, "BeautifulSoup": True, "pyperclip": True}
 
@@ -439,7 +439,7 @@ if __name__ == "__main__":
                     revered_order=True, limit=wanted_last
                 )
             elif "tv4play" in urls[0]:
-                lister = Tv4PlayEpisodeData(urls[0])
+                lister = Tv4PlayEpisodeLister(urls[0])
                 urls = lister.list_episode_urls(
                     revered_order=False, limit=wanted_last
                 )
