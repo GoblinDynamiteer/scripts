@@ -100,11 +100,8 @@ class Tv4PlayEpisodeLister():
         if revered_order:
             ep_list.reverse()
         if limit:
-            for ep in ep_list[0:limit]:
-                yield ep.url()
-        else:
-            for ep in ep_list:
-                yield ep.url()
+            return [ep.url() for ep in ep_list[0:limit]]
+        return [ep.url() for ep in ep_list]
 
 
 class DPlayEpisodeLister():
