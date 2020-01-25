@@ -257,64 +257,8 @@ def _handle_url(url: str):
             match = True
             method(url, DEFAULT_DL, site_hit)
     if not match:
-        _unknown_site(url, DEFAULT_DL, LANG_OUTPUT["url_unknown_site"][LANGUAGE])
-
-
-class ClipboardCatcher:
-    def __init__(self, interval=1):
-        self.interval = interval
-        if not LIB_AVAILABLE["pyperclip"]:
-            print("no papyrclip lib, cannot start..")
-            return
-        watcher_thread = threading.Thread(target=self.watcher, args=())
-        downloader_thread = threading.Thread(target=self.downloader, args=())
-        self.current_clipboard = ""
-        valid_sites = []
-        for site, _ in METHODS:
-            valid_sites.append(site)
-        self.print_listen_message = True
-        self.queue = queue.Queue()
-        self.dl_running = False
-        watcher_thread.start()
-        downloader_thread.start()
-
-    def watcher(self):
-        current_clipboard = ""
-        valid_sites = []
-        for site, _ in METHODS:
-            valid_sites.append(site)
-        print_listen_message = True
-        while True:
-            contents = pyperclip.paste()
-            if print_listen_message:
-                if self.dl_running:
-                    print()  # download info prints on same line
-                    print(LANG_OUTPUT["listen_info_queue"][LANGUAGE])
-                else:
-                    print(LANG_OUTPUT["listen_info"][LANGUAGE])
-                print_listen_message = False
-            if current_clipboard != contents:
-                for site in valid_sites:
-                    if site.lower() in contents.lower():
-                        if self.dl_running:
-                            print()  # download info prints on same line
-                        print(
-                            LANG_OUTPUT["listen_got_url"][LANGUAGE].format(
-                                CSTR(f"{contents}", "lblue")
-                            )
-                        )
-                        self.queue.put(contents)
-                        print_listen_message = True
-                current_clipboard = contents
-            time.sleep(0.5)
-
-    def downloader(self):
-        while True:
-            url = self.queue.get()
-            self.dl_running = True
-            _handle_url(url)
-            self.dl_running = False
-            time.sleep(1)
+        _unknown_site(url, DEFAULT_DL,
+                      LANG_OUTPUT["url_unknown_site"][LANGUAGE])
 
 
 YDL_OPTS = {
@@ -400,12 +344,11 @@ if __name__ == "__main__":
     ]
 
     PARSER = argparse.ArgumentParser(description="ripper")
-    PARSER.add_argument("--url", "-u", type=str, help="URL")
+    PARSER.add_argument("url", type=str, help="URL")
     PARSER.add_argument("--lang", type=str, default="en")
     PARSER.add_argument("--dir", type=str, default=os.getcwd())
     PARSER.add_argument("--title-in-filename", action="store_true", dest="use_title")
     PARSER.add_argument("--sub-only", action="store_true", dest="sub_only")
-    PARSER.add_argument("--listen", "-l", action="store_true", dest="listen_mode")
     PARSER.add_argument("--get-last", default=0, dest="get_last")
     ARGS = PARSER.parse_args()
 
@@ -419,36 +362,28 @@ if __name__ == "__main__":
     if ARGS.lang == "sv":
         LANGUAGE = "sv"
 
-    print(LANG_OUTPUT["dest_info"][LANGUAGE].format(CSTR(DEFAULT_DL, "lgreen")))
+    print(LANG_OUTPUT["dest_info"][LANGUAGE].format(
+        CSTR(DEFAULT_DL, "lgreen")))
 
-    if ARGS.listen_mode:
-        listener = ClipboardCatcher()
-        # _listen_mode()
-    elif not ARGS.url:
-        print(
-            LANG_OUTPUT["missing_url_arg"][LANGUAGE]
-            + CSTR(" (argument --url [url])", "orange")
-        )
-    else:
-        urls = ARGS.url.split(",")
-        if ARGS.get_last:
-            wanted_last = int(ARGS.get_last)
-            if "dplay" in urls[0]:
-                lister = DPlayEpisodeLister(urls[0])
-                urls = lister.list_episode_urls(
-                    revered_order=True, limit=wanted_last
-                )
-            elif "tv4play" in urls[0]:
-                lister = Tv4PlayEpisodeLister(urls[0])
-                urls = lister.list_episode_urls(
-                    revered_order=False, limit=wanted_last
-                )
-            else:
-                urls = svtplay_dl_get_all_links(urls[0])
-            if len(urls) >= wanted_last:
-                urls = urls[-1 * wanted_last :]
-            print(f"will download {len(urls)} links:")
-            for url in urls:
-                print(CSTR(f"  {url}", "lblue"))
+    urls = ARGS.url.split(",")
+    if ARGS.get_last:
+        wanted_last = int(ARGS.get_last)
+        if "dplay" in urls[0]:
+            lister = DPlayEpisodeLister(urls[0])
+            urls = lister.list_episode_urls(
+                revered_order=True, limit=wanted_last
+            )
+        elif "tv4play" in urls[0]:
+            lister = Tv4PlayEpisodeLister(urls[0])
+            urls = lister.list_episode_urls(
+                revered_order=False, limit=wanted_last
+            )
+        else:
+            urls = svtplay_dl_get_all_links(urls[0])
+        if len(urls) >= wanted_last:
+            urls = urls[-1 * wanted_last:]
+        print(f"will download {len(urls)} links:")
         for url in urls:
-            _handle_url(url)
+            print(CSTR(f"  {url}", "lblue"))
+    for url in urls:
+        _handle_url(url)
