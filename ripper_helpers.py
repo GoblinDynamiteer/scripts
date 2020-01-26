@@ -122,6 +122,15 @@ class DPlayEpisodeLister():
         res = self.session.get(url)
         return res.status_code < 400
 
+    def set_filter(self, **kwargs):
+        for key, val in kwargs.items():
+            if key not in VALID_FILTER_KEYS:
+                print(f"invalid filter: {key}={val}")
+            else:
+                #TODO: implement..
+                print("warning: filter not yet implemented for dplay",
+                      "\nNot applying...")
+
     def list_episode_urls(self, revered_order=False, limit=None):
         match = re.search(
             "/(program|programmer|videos|videoer)/([^/]+)", self.url)
