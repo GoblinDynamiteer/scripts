@@ -11,6 +11,7 @@ import subprocess
 import sys
 import threading
 import time
+import json
 from pathlib import Path
 from urllib.request import urlopen
 
@@ -350,6 +351,7 @@ if __name__ == "__main__":
     PARSER.add_argument("--title-in-filename", action="store_true", dest="use_title")
     PARSER.add_argument("--sub-only", action="store_true", dest="sub_only")
     PARSER.add_argument("--get-last", default=0, dest="get_last")
+    PARSER.add_argument("--filter", "-f", type=str, default="")
     ARGS = PARSER.parse_args()
 
     DEFAULT_DL = ARGS.dir
@@ -367,6 +369,13 @@ if __name__ == "__main__":
 
     urls = ARGS.url.split(",")
     if ARGS.get_last:
+        filter_dict = {}
+        if ARGS.filter:
+            try:
+                filter_dict = json.loads(ARGS.filter)
+            except:
+                print(f"invalid json for filter: {ARGS.filter}, quitting...")
+                sys.exit(1)
         wanted_last = int(ARGS.get_last)
         if "dplay" in urls[0]:
             lister = DPlayEpisodeLister(urls[0])
@@ -375,6 +384,8 @@ if __name__ == "__main__":
             )
         elif "tv4play" in urls[0]:
             lister = Tv4PlayEpisodeLister(urls[0])
+            if filter_dict:
+                lister.set_filter(**filter_dict)
             urls = lister.list_episode_urls(
                 revered_order=False, limit=wanted_last
             )
