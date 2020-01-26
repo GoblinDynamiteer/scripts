@@ -4,6 +4,7 @@ import hashlib
 import json
 import random
 import re
+import sys
 
 from requests import Session
 
@@ -14,8 +15,6 @@ def apply_filter(ep_list: list, filter_type: str, filter_val: str):
     "Just for Tv4PlayEpisodeData for now"
     filtered_list = []
     for ep_item in ep_list:
-        if not isinstance(ep_item, Tv4PlayEpisodeData):
-            continue
         if filter_type == "season":
             try:
                 if int(filter_val) == ep_item.season_num:
@@ -56,6 +55,25 @@ class Tv4PlayEpisodeData():
     def url(self):
         return f"{self.URL_PREFIX}{self.show}/{self.id}"
 
+
+class DPlayEpisodeData():
+    URL_PREFIX = r"https://www.dplay.se"
+
+    def __init__(self, episode_data: dict):
+        self.raw_data = episode_data
+        attr = episode_data.get("attributes", {})
+        self.episode_path = attr.get("path", "")
+        self.season_num = attr.get("seasonNumber", 0)
+        self.episode_num = attr.get("episodeNumber", 0)
+        self.title = episode_data.get("name", "N/A")
+        self.show = "N/A" # TODO: get from parent data...
+
+    def __str__(self):
+        return f"{self.show} S{self.season_num}E{self.episode_num} " \
+               f"\"{self.title}\" -- {self.id}"
+
+    def url(self):
+        return f"{self.URL_PREFIX}/videos/{self.episode_path}"
 
 class Tv4PlayEpisodeLister():
     REGEX = r"application\/json\">(.*\}\})<\/script><script "
@@ -106,12 +124,12 @@ class Tv4PlayEpisodeLister():
 
 class DPlayEpisodeLister():
     API_URL = "https://disco-api.dplay.se"
-    SITE_URL = "https://www.dplay.se"
 
     def __init__(self, url):
         if not "dplay.se" in url:
             print("cannot handle non-dplay.se urls!")
         self.url = url
+        self.filter = {}
         self.session = Session()
         self.check_token()
 
@@ -127,9 +145,7 @@ class DPlayEpisodeLister():
             if key not in VALID_FILTER_KEYS:
                 print(f"invalid filter: {key}={val}")
             else:
-                #TODO: implement..
-                print("warning: filter not yet implemented for dplay",
-                      "\nNot applying...")
+                self.filter[key] = val
 
     def list_episode_urls(self, revered_order=False, limit=None):
         match = re.search(
@@ -143,7 +159,7 @@ class DPlayEpisodeLister():
         show_id = res.json()["data"]["id"]
         season_numbers = res.json()["data"]["attributes"]["seasonNumbers"]
 
-        url_list = []
+        ep_list = []
 
         for season_number in season_numbers:
             qyerystring = (
@@ -154,14 +170,14 @@ class DPlayEpisodeLister():
             res = self.session.get(
                 f"{self.API_URL}/content/videos?{qyerystring}")
             for data in res.json()["data"]:
-                episode_path = data["attributes"]["path"]
-                url_list.append(f"{self.SITE_URL}/videos/{episode_path}")
-
+                ep_list.append(DPlayEpisodeData(data))
+        for filter_key, filter_val in self.filter.items():
+            ep_list = apply_filter(ep_list, filter_key, filter_val)
         if revered_order:
-            url_list.reverse()
+            ep_list.reverse()
         if limit:
-            return url_list[0:limit]
-        return url_list
+            return [ep.url() for ep in ep_list[0:limit]]
+        return [ep.url() for ep in ep_list]
 
 
 def test_dplay():
