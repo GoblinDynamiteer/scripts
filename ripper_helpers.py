@@ -93,7 +93,7 @@ class Tv4PlayEpisodeLister():
             else:
                 self.filter[key] = val
 
-    def list_episode_urls(self, revered_order=False, limit=None):
+    def list_episode_urls(self, revered_order=False, limit=None, objects=False):
         res = self.session.get(f"{self.url}")
         match = re.search(self.REGEX, res.text)
         if not match:
@@ -118,8 +118,8 @@ class Tv4PlayEpisodeLister():
         if revered_order:
             ep_list.reverse()
         if limit:
-            return [ep.url() for ep in ep_list[0:limit]]
-        return [ep.url() for ep in ep_list]
+            return [ep if objects else ep.url() for ep in ep_list[0:limit]]
+        return [ep if objects else ep.url() in ep_list]
 
 
 class DPlayEpisodeLister():
@@ -147,7 +147,7 @@ class DPlayEpisodeLister():
             else:
                 self.filter[key] = val
 
-    def list_episode_urls(self, revered_order=False, limit=None):
+    def list_episode_urls(self, revered_order=False, limit=None, objects=False):
         match = re.search(
             "/(program|programmer|videos|videoer)/([^/]+)", self.url)
         if not match:
@@ -176,8 +176,8 @@ class DPlayEpisodeLister():
         if revered_order:
             ep_list.reverse()
         if limit:
-            return [ep.url() for ep in ep_list[0:limit]]
-        return [ep.url() for ep in ep_list]
+            return [ep if objects else ep.url() for ep in ep_list[0:limit]]
+        return [ep if objects else ep.url() in ep_list]
 
 
 def test_dplay():
