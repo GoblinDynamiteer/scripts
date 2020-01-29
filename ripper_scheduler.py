@@ -4,7 +4,7 @@ import json
 import os
 import sys
 from time import sleep
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, tzinfo
 from enum import Enum
 from pathlib import Path
 
@@ -18,6 +18,13 @@ from printing import cstr, pfcs
 JSON_SCHEDULE_FILE = r"ripper_schedule.json"
 
 CFG = config.ConfigurationManager()
+
+
+class TimeZoneInfo(tzinfo):
+    def utcoffset(self, dt):
+         return timedelta(hours=+1)
+    def dst(self, dt):
+         return timedelta(hours=+1)
 
 
 class Day(Enum):
@@ -39,17 +46,20 @@ DAY = {"mon": Day.Monday,
        "sun": Day.Sunday}
 
 
+def get_now():
+    return datetime.now(tz=TimeZoneInfo())
+
 def write_to_log(show_str, file_str):
     path = Path(CFG.path("ripper_log"))
     if not path.is_file():
         return
     with open(path, "w+") as log_file:
-        now = datetime.now().strftime(r"%Y-%m-%d %T")
+        now = get_now().strftime(r"%Y-%m-%d %T")
         log_file.write(f"{now} : {show_str} {file_str}\n")
 
 
 def today_weekday():
-    now = datetime.now()
+    now = get_now()
     return now.weekday()
 
 
@@ -70,14 +80,14 @@ class Airtime():
                 weekday = Day.Monday.value
             else:
                 weekday += 1
-        airdate = datetime.now() + timedelta(days=days_to)
+        airdate = get_now() + timedelta(days=days_to)
         return airdate.replace(hour=self.hour,
                                minute=self.min,
                                second=0,
                                microsecond=0)
 
     def seconds_to(self):
-        return int((self.next_airdate() - datetime.now()).total_seconds())
+        return int((self.next_airdate() - get_now()).total_seconds())
 
 
 class ScheduledShow():
@@ -181,7 +191,7 @@ if __name__ == "__main__":
                 show.reset_downloaded_today()
             weekday = today_weekday()
             pfcs(f"today is b[{Day(weekday).name}]")
-        print(f"{datetime.now()}: checking shows....")
+        print(f"{get_now()}: checking shows....")
         show.download()
         pfcs(f"sleeping i[{TIME_TO_SLEEP_S / 60}] minutes...")
         sleep(TIME_TO_SLEEP_S)
