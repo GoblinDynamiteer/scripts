@@ -91,6 +91,7 @@ class ScheduledShow():
         for obj in self.get_url_objects():
             filename = rip(obj.url(), str(self.dest_path), self.site)
             if filename:
+                print(f"downloaded: {filename}")
                 self.downloaded_today = True
                 subrip(filename)
         return True
