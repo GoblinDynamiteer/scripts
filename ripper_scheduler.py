@@ -76,6 +76,7 @@ class ScheduledShow():
         self.dest_path = Path(data["dest"])
         self.filter_dict = data.get("filter", {})
         self.url = data["url"]
+        self.use_title = data.get("use_title", False)
         self.site = "TV4Play" if "tv4" in self.url else "DPlay"
         self.downloaded_today = False
         self.airtimes = []
@@ -89,7 +90,10 @@ class ScheduledShow():
             return False
         print(f"trying to download {self.name}")
         for obj in self.get_url_objects():
-            filename = rip(obj.url(), str(self.dest_path), self.site)
+            filename = rip(obj.url(),
+                           str(self.dest_path),
+                           self.site,
+                           use_title=self.use_title)
             if filename:
                 print(f"downloaded: {filename}")
                 self.downloaded_today = True
