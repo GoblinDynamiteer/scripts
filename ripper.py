@@ -64,7 +64,7 @@ def _make_soup(url: str):
     return soup
 
 
-def _youtube_dl(url: str, dl_loc: str) -> str:
+def _youtube_dl(url: str, dl_loc: str, use_title=False) -> str:
     if not LIB_AVAILABLE["youtube_dl"]:
         lib = CSTR("youtube_dl", "red")
         print(LANG_OUTPUT["lib_missing"][LANGUAGE].format(lib))
@@ -75,7 +75,7 @@ def _youtube_dl(url: str, dl_loc: str) -> str:
         try:
             with youtube_dl.YoutubeDL(YDL_OPTS) as ydl:
                 info = ydl.extract_info(url, download=False)
-                file_name = _youtube_dl_generate_filename(info)
+                file_name = _youtube_dl_generate_filename(info, use_title=use_title)
                 full_dl_path = Path(os.path.join(dl_loc, file_name))
                 if full_dl_path.exists():
                     print(f"file already exists: {CSTR(full_dl_path.name, 'orange')}, skipping")
@@ -90,7 +90,7 @@ def _youtube_dl(url: str, dl_loc: str) -> str:
     return None
 
 
-def _youtube_dl_generate_filename(info: dict) -> str:
+def _youtube_dl_generate_filename(info: dict, use_title=False) -> str:
     series = info.get("series", None)
     title = info.get("title", None)
     season_number = info.get("season_number", None)
@@ -104,7 +104,7 @@ def _youtube_dl_generate_filename(info: dict) -> str:
     file_name = ""
     if series and season_number and episode_number:
         file_name = f"{series}.s{season_number:02d}e{episode_number:02d}"
-        if USE_TITLE_IN_FILENAME and title:
+        if (USE_TITLE_IN_FILENAME or use_title) and title:
             file_name = f"{file_name}.{title}"
 
     if not file_name:
@@ -161,10 +161,10 @@ def _sveriges_radio(url: str, dl_loc: str, site: str):
                 break
 
 
-def _rip_with_youtube_dl(url: str, dl_loc: str, site: str):
+def _rip_with_youtube_dl(url: str, dl_loc: str, site: str, use_title=False):
     if not SKIP_VIDEO_DOWNLOAD:
         print(LANG_OUTPUT["dl_init"][LANGUAGE].format(CSTR(site, "lgreen")))
-    downloaded_file = _youtube_dl(url, dl_loc)
+    downloaded_file = _youtube_dl(url, dl_loc, use_title=use_title)
     if LIB_AVAILABLE["svtplay_dl"]:
         _subtitle_dl(url, downloaded_file)
 
