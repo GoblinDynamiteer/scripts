@@ -8,14 +8,16 @@ from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 
+import config
+
 from ripper import _rip_with_youtube_dl as rip
 from ripper import _subtitle_dl as subrip
-
 from ripper_helpers import Tv4PlayEpisodeLister, DPlayEpisodeLister
-
 from printing import cstr, pfcs
 
 JSON_SCHEDULE_FILE = r"ripper_schedule.json"
+
+CFG = config.ConfigurationManager()
 
 
 class Day(Enum):
@@ -35,6 +37,15 @@ DAY = {"mon": Day.Monday,
        "fri": Day.Friday,
        "sat": Day.Saturday,
        "sun": Day.Sunday}
+
+
+def write_to_log(show_str, file_str):
+    path = Path(CFG.path("ripper_log"))
+    if not path.is_file():
+        return
+    with open(path, "w+") as log_file:
+        now = datetime.now().strftime(r"%Y-%m-%d %T")
+        log_file.write(f"{now} : {show_str} {file_str}\n")
 
 
 def today_weekday():
@@ -97,6 +108,7 @@ class ScheduledShow():
             if filename:
                 pfcs(f"downloaded: i[{filename}]")
                 self.downloaded_today = True
+                write_to_log(self.name, filename)
                 subrip(filename)
         return True
 
@@ -150,7 +162,7 @@ def parse_json_schedule():
 
 
 if __name__ == "__main__":
-    TIME_TO_SLEEP_S = (5 * 60) # 5 minutes
+    TIME_TO_SLEEP_S = (5 * 60)  # 5 minutes
     schedule_data = parse_json_schedule()
     sheduled_shows = []
     for show_data in schedule_data:
