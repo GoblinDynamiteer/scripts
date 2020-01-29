@@ -13,7 +13,7 @@ from ripper import _subtitle_dl as subrip
 
 from ripper_helpers import Tv4PlayEpisodeLister, DPlayEpisodeLister
 
-from printing import cstr
+from printing import cstr, pfcs
 
 JSON_SCHEDULE_FILE = r"ripper_schedule.json"
 
@@ -81,21 +81,21 @@ class ScheduledShow():
         self.downloaded_today = False
         self.airtimes = []
 
-        print(f"added {self.name}")
+        pfcs(f"added show i[{self.name}]")
         for day, time in data["airtime"].items():
             self.airtimes.append(Airtime(day, time))
 
     def download(self, force=False):
-        if not self.should_download() and not force:
+        if not force and not self.should_download():
             return False
-        print(f"trying to download {self.name}")
+        pfcs(f"trying to download i[{self.name}]")
         for obj in self.get_url_objects():
             filename = rip(obj.url(),
                            str(self.dest_path),
                            self.site,
                            use_title=self.use_title)
             if filename:
-                print(f"downloaded: {filename}")
+                pfcs(f"downloaded: i[{filename}]")
                 self.downloaded_today = True
                 subrip(filename)
         return True
@@ -106,7 +106,11 @@ class ScheduledShow():
     def should_download(self):
         if self.downloaded_today:
             return False
-        return self.shortest_airtime() < 0
+        sec_to = self.shortest_airtime()
+        if sec_to > 0:
+            delta = timedelta(seconds=sec_to)
+            pfcs(f"b[{self.name}] will start in i[{delta}]...")
+        return sec_to < 0
 
     def shortest_airtime(self):
         return min([at.seconds_to() for at in self.airtimes])
@@ -134,13 +138,13 @@ class ScheduledShow():
 def parse_json_schedule():
     file_path = Path(os.path.realpath(__file__)).parent / JSON_SCHEDULE_FILE
     if not file_path.exists():
-        print(f"could not find file: {str(file_path)}")
+        pfcs(f"could not find file: e[{str(file_path)}]")
         sys.exit(1)
     try:
         with open(file_path) as json_file:
             data = json.load(json_file)
     except:
-        print(f"could parse json from file: {str(file_path)}")
+        pfcs(f"could parse json from file: e[{str(file_path)}]")
         sys.exit(1)
     return data
 
@@ -155,7 +159,7 @@ if __name__ == "__main__":
         print("no shows to process.. exiting.")
         sys.exit(1)
     weekday = today_weekday()
-    print(f"today is {Day(weekday).name}")
+    pfcs(f"today is b[{Day(weekday).name}]")
     for show in sheduled_shows:
         show.download(force=True)
     while True:
@@ -164,8 +168,8 @@ if __name__ == "__main__":
             for show in sheduled_shows:
                 show.reset_downloaded_today()
             weekday = today_weekday()
-            print(f"today is {Day(weekday).name}")
+            pfcs(f"today is b[{Day(weekday).name}]")
         print(f"{datetime.now()}: checking shows....")
         show.download()
-        print(f"sleeping {TIME_TO_SLEEP_S / 60} minutes...")
+        pfcs(f"sleeping i[{TIME_TO_SLEEP_S / 60}] minutes...")
         sleep(TIME_TO_SLEEP_S)
