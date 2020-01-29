@@ -329,7 +329,7 @@ LANG_OUTPUT = {
 }
 
 CSTR = printing.to_color_str
-USE_TITLE_IN_FILENAME = True
+USE_TITLE_IN_FILENAME = False
 SKIP_VIDEO_DOWNLOAD = False
 ORIGINAL_URL = None
 
