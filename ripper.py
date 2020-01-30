@@ -9,8 +9,6 @@ import re
 import shlex
 import subprocess
 import sys
-import threading
-import time
 import json
 from pathlib import Path
 from urllib.request import urlopen
@@ -27,11 +25,6 @@ try:
     import youtube_dl
 except ImportError:
     LIB_AVAILABLE["youtube_dl"] = False
-
-try:
-    import pyperclip
-except ImportError:
-    LIB_AVAILABLE["pyperclip"] = False
 
 
 if run.program_exists("svtplay-dl"):
