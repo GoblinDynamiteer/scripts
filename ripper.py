@@ -19,18 +19,17 @@ import run
 
 from ripper_helpers import DPlayEpisodeLister, Tv4PlayEpisodeLister
 
-LIB_AVAILABLE = {"youtube_dl": True}
-
 try:
     import youtube_dl
 except ImportError:
-    LIB_AVAILABLE["youtube_dl"] = False
+    print("youtube-dl lib is required ")
+    sys.exit(1)
 
 
 if run.program_exists("svtplay-dl"):
-    LIB_AVAILABLE["svtplay_dl"] = True
+    SVTPLAY_DL_AVAILABLE = True
 else:
-    LIB_AVAILABLE["svtplay_dl"] = False
+    SVTPLAY_DL_AVAILABLE = False
 
 
 class Logger(object):
@@ -47,11 +46,6 @@ class Logger(object):
 
 
 def _youtube_dl(url: str, dl_loc: str, use_title=False) -> str:
-    if not LIB_AVAILABLE["youtube_dl"]:
-        lib = CSTR("youtube_dl", "red")
-        print(LANG_OUTPUT["lib_missing"][LANGUAGE].format(lib))
-        sys.exit()
-
     for index, dl_format in enumerate(FORMATS):
         YDL_OPTS["format"] = dl_format
         try:
@@ -118,7 +112,7 @@ def _rip_with_youtube_dl(url: str, dl_loc: str, site: str, use_title=False):
     if not SKIP_VIDEO_DOWNLOAD:
         print(LANG_OUTPUT["dl_init"][LANGUAGE].format(CSTR(site, "lgreen")))
     downloaded_file = _youtube_dl(url, dl_loc, use_title=use_title)
-    if LIB_AVAILABLE["svtplay_dl"]:
+    if SVTPLAY_DL_AVAILABLE:
         _subtitle_dl(url, downloaded_file)
 
 
@@ -129,6 +123,8 @@ def _unknown_site(url: str, dl_loc: str, site: str):
 
 
 def svtplay_dl_get_all_links(url: str) -> list:
+    if not SVTPLAY_DL_AVAILABLE:
+        return []
     print("getting links using svtplay-dl...")
     found_urls = []
     command = shlex.split(f"svtplay-dl -A -g {url}")
