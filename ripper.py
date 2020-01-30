@@ -3,20 +3,21 @@
 "Rip things from various websites, call script with URL"
 
 import argparse
+import json
 import os
 import queue
 import re
 import shlex
 import subprocess
 import sys
-import json
+from enum import Enum
 from pathlib import Path
 from urllib.request import urlopen
 
 import printing
 import rename
 import run
-
+from printing import cstr, pfcs
 from ripper_helpers import DPlayEpisodeLister, Tv4PlayEpisodeLister
 
 try:
@@ -30,6 +31,126 @@ if run.program_exists("svtplay-dl"):
     SVTPLAY_DL_AVAILABLE = True
 else:
     SVTPLAY_DL_AVAILABLE = False
+
+
+class YoutubeDLFormats(Enum):
+    Best = "best"
+    BestFLV = "best[ext=flv]"
+    BestMP4 = "best[ext=mp4]"
+    MP4 = "mp4"
+    FLV = "flv"
+    HLS6543 = "hls-6543"
+    WorstVideo = "worstvideo"
+
+
+class PlayRipperYoutubeDl():
+    def __init__(self, url, dest=None):
+        self.url = url
+        self.dest_path = dest
+        self.format = None
+        self.options = {
+            "format": YoutubeDLFormats.Best.value,
+            "logger": self.Logger(),
+            "progress_hooks": [self.hooks],
+            "simulate": False,
+            "quiet": True,
+            "nocheckcertificate": True,
+        }
+        self.use_title = False
+        self.info = None
+        self.filename = ""
+
+        self.retrieve_info()
+
+    def download(self, destination_path = None):
+        if destination_path:
+            self.dest_path = destination_path
+        if self.file_already_exists():
+            pfcs(f"file already exists: o[{self.filename}], skipping")
+            return None
+        try:
+            with youtube_dl.YoutubeDL(self.options) as ydl:
+                    ydl.params["outtmpl"] = str(self.get_dest_path())
+                    ydl.download([self.url])
+                    return str(self.get_dest_path())
+        except youtube_dl.utils.DownloadError as error:
+            print(error)
+            return None
+        return None
+
+    def file_already_exists(self):
+        path = self.get_dest_path()
+        if not path:
+            return False
+        return path.is_file()
+
+    def get_dest_path(self):
+        if not self.filename:
+            return None
+        return Path(self.dest_path) / self.filename
+
+    def print_info(self):
+        pfcs(f"url i[{self.url}]")
+        pfcs(f"format i[{self.format.value}]")
+        pfcs(f"filename i[{self.filename}]")
+        pfcs(f"dest i[{self.dest_path}]")
+        pfcs(f"full_dest i[{self.get_dest_path()}]")
+        pfcs(f"file_exists i[{self.file_already_exists()}]")
+
+    def hooks(self, event):
+        if event["status"] == "finished":
+            print("\nDone downloading! Now converting or downloading audio.")
+        if event["status"] == "downloading":
+            percentage = cstr(event["_percent_str"].lstrip(), "lgreen")
+            file_name = cstr(Path(event["filename"]).name, "lblue")
+            print(f"\rDownloading: {file_name} ({percentage} "
+                  f"- {event['_eta_str']})    ", end="")
+
+    def retrieve_info(self):
+        for vid_format in YoutubeDLFormats:
+            self.options["format"] = vid_format.value
+            self.format = vid_format
+            try:
+                with youtube_dl.YoutubeDL(self.options) as ydl:
+                    self.info = ydl.extract_info(url, download=False)
+                    self.filename = self.generate_filename()
+                return  # succeeded
+            except youtube_dl.utils.DownloadError as error:
+                pass
+
+    def generate_filename(self):
+        series = self.info.get("series", None)
+        title = self.info.get("title", None)
+        season_number = self.info.get("season_number", None)
+        episode_number = self.info.get("episode_number", None)
+        ext = self.info.get("ext", None)
+        ident = self.info.get("id", None)
+        if not ext:
+            ext = "mp4"
+        file_name = ""
+        if series and season_number and episode_number:
+            file_name = f"{series}.s{season_number:02d}e{episode_number:02d}"
+            if self.use_title and title:
+                file_name = f"{file_name}.{title}"
+        if not file_name:
+            for possible_filename in [title, ident, "UnknownFile"]:
+                if possible_filename:
+                    file_name = possible_filename
+                    break
+        file_name += f".{ext}"
+        return rename.rename_string(file_name, space_replace_char=".")
+
+    class Logger(object):
+        "Logger for youtube-dl"
+
+        def debug(self, msg):
+            pass
+
+        def warning(self, msg):
+            pass
+
+        def error(self, msg):
+            pass
 
 
 class Logger(object):
@@ -352,4 +473,8 @@ if __name__ == "__main__":
         for url in urls:
             print(CSTR(f"  {url}", "lblue"))
     for url in urls:
-        _handle_url(url)
+        ripper = PlayRipperYoutubeDl(url, ARGS.dir)
+        # _handle_url(url)
+        ripper.print_info()
+        ripper.download()
+        print("=" * 100)
