@@ -150,7 +150,7 @@ class ScheduledShow():
         if self.filter_dict:
             lister.set_filter(**self.filter_dict)
         return lister.list_episode_urls(revered_order=rev_order,
-                                        limit=5,
+                                        limit=2,
                                         objects=True)
 
     def get_url_list(self):
@@ -172,7 +172,7 @@ def parse_json_schedule():
 
 
 if __name__ == "__main__":
-    TIME_TO_SLEEP_S = (5 * 60)  # 5 minutes
+    TIME_TO_SLEEP_S = (10 * 60)  # 5 minutes
     schedule_data = parse_json_schedule()
     sheduled_shows = []
     for show_data in schedule_data:
@@ -192,6 +192,7 @@ if __name__ == "__main__":
             weekday = today_weekday()
             pfcs(f"today is b[{Day(weekday).name}]")
         print(f"{get_now()}: checking shows....")
-        show.download()
+        for show in sheduled_shows:
+            show.download()
         pfcs(f"sleeping i[{TIME_TO_SLEEP_S / 60}] minutes...")
         sleep(TIME_TO_SLEEP_S)
