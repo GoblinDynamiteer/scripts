@@ -21,17 +21,12 @@ import run
 
 from ripper_helpers import DPlayEpisodeLister, Tv4PlayEpisodeLister
 
-LIB_AVAILABLE = {"youtube_dl": True, "BeautifulSoup": True, "pyperclip": True}
+LIB_AVAILABLE = {"youtube_dl": True}
 
 try:
     import youtube_dl
 except ImportError:
     LIB_AVAILABLE["youtube_dl"] = False
-
-try:
-    from bs4 import BeautifulSoup as bs
-except ImportError:
-    LIB_AVAILABLE["BeautifulSoup"] = False
 
 try:
     import pyperclip
@@ -58,12 +53,6 @@ class Logger(object):
         pass
 
 
-def _make_soup(url: str):
-    page = urlopen(url).read()
-    soup = bs(page, "lxml")
-    return soup
-
-
 def _youtube_dl(url: str, dl_loc: str, use_title=False) -> str:
     if not LIB_AVAILABLE["youtube_dl"]:
         lib = CSTR("youtube_dl", "red")
@@ -75,10 +64,12 @@ def _youtube_dl(url: str, dl_loc: str, use_title=False) -> str:
         try:
             with youtube_dl.YoutubeDL(YDL_OPTS) as ydl:
                 info = ydl.extract_info(url, download=False)
-                file_name = _youtube_dl_generate_filename(info, use_title=use_title)
+                file_name = _youtube_dl_generate_filename(
+                    info, use_title=use_title)
                 full_dl_path = Path(os.path.join(dl_loc, file_name))
                 if full_dl_path.exists():
-                    print(f"file already exists: {CSTR(full_dl_path.name, 'orange')}, skipping")
+                    print(
+                        f"file already exists: {CSTR(full_dl_path.name, 'orange')}, skipping")
                     return None
                 ydl.params["outtmpl"] = str(full_dl_path)
                 if not SKIP_VIDEO_DOWNLOAD:
@@ -128,37 +119,6 @@ def _ytdl_hooks(event):
             file_name, percentage, event["_eta_str"]
         )
         print("\r" + info_str, end="")
-
-
-def _sveriges_radio(url: str, dl_loc: str, site: str):
-    del site  # Unused variable
-    print(LANG_OUTPUT["dl_init"][LANGUAGE].format(CSTR("Sveriges Radio", "lgreen")))
-    if not LIB_AVAILABLE["BeautifulSoup"]:
-        lib = CSTR("BeautifulSoup", "red")
-        print(LANG_OUTPUT["lib_missing"][LANGUAGE].format(lib))
-        sys.exit()
-
-    soup = _make_soup(url)
-    links = [(a.get("href"), a.text) for a in soup.find_all("a", href=True, text=True)]
-
-    episodes = [
-        (f"https://sverigesradio.se{link}", title)
-        for link, title in links
-        if "avsnitt" in link
-    ]
-
-    for link, title in episodes:
-        print(f"{link}")
-        episode_page = urlopen(link).read()
-        episode_soup = bs(episode_page, "lxml")
-        episode_links = [a.get("href") for a in episode_soup.find_all("a", href=True)]
-        for episode_link in episode_links:
-            if episode_link.endswith(".mp3"):
-                file_name = f"{rename.rename_string(title)}.mp3"
-                subprocess.run(
-                    f"wget -O {dl_loc}/{file_name} https:{episode_link}", shell=True
-                )
-                break
 
 
 def _rip_with_youtube_dl(url: str, dl_loc: str, site: str, use_title=False):
@@ -212,19 +172,22 @@ def _subtitle_dl(url: str, output_file: str):
         print(f"subtitle already exists: {sub_file_path}, skipping")
         return
     dual_srt_extension_path = Path(sub_file_path + ".srt")
-    if dual_srt_extension_path.exists(): # svtplay-dl adds srt extension?
+    if dual_srt_extension_path.exists():  # svtplay-dl adds srt extension?
         pass
     elif run.local_command(command, hide_output=True, print_info=False):
-        print(LANG_OUTPUT["dl_sub"][LANGUAGE].format(CSTR(f"{sub_file_path}", "lblue")))
-    if dual_srt_extension_path.exists(): # svtplay-dl adds srt extension?
+        print(LANG_OUTPUT["dl_sub"][LANGUAGE].format(
+            CSTR(f"{sub_file_path}", "lblue")))
+    if dual_srt_extension_path.exists():  # svtplay-dl adds srt extension?
         dual_srt_extension_path.rename(sub_file_path)
+
 
 def _viafree_subtitle_link(url: str):
     page_contents = urlopen(url).read()
     if not page_contents:
         return None
     match = re.search(
-        r"\"subtitlesWebvtt\"\:\"https.+[cdn\-subtitles].+\_sv\.vtt", str(page_contents)
+        r"\"subtitlesWebvtt\"\:\"https.+[cdn\-subtitles].+\_sv\.vtt", str(
+            page_contents)
     )
     if not match:
         return None
@@ -244,7 +207,8 @@ def _viafree_workaround_dl(url: str, dl_loc: str, site: str):
     vid_id = match.group(0).replace(r'"productGuid":"', "")
     vid_id = vid_id.replace(r'"', "")
     new_url = re.sub(r"avsnitt-\d{1,2}", vid_id, url)
-    print(LANG_OUTPUT["viafree_new_url"][LANGUAGE].format(CSTR(f"{new_url}", "lblue")))
+    print(LANG_OUTPUT["viafree_new_url"]
+          [LANGUAGE].format(CSTR(f"{new_url}", "lblue")))
 
     _rip_with_youtube_dl(new_url, dl_loc, site)
 
@@ -337,7 +301,6 @@ if __name__ == "__main__":
     print(CSTR("======= ripper =======".upper(), "purple"))
     HOME = os.path.expanduser("~")
     METHODS = [
-        ("sverigesradio", _sveriges_radio),
         ("TV4Play", _rip_with_youtube_dl),
         ("DPlay", _rip_with_youtube_dl),
         ("SVTPlay", _rip_with_youtube_dl),
@@ -348,7 +311,8 @@ if __name__ == "__main__":
     PARSER.add_argument("url", type=str, help="URL")
     PARSER.add_argument("--lang", type=str, default="en")
     PARSER.add_argument("--dir", type=str, default=os.getcwd())
-    PARSER.add_argument("--title-in-filename", action="store_true", dest="use_title")
+    PARSER.add_argument("--title-in-filename",
+                        action="store_true", dest="use_title")
     PARSER.add_argument("--sub-only", action="store_true", dest="sub_only")
     PARSER.add_argument("--get-last", default=0, dest="get_last")
     PARSER.add_argument("--filter", "-f", type=str, default="")
