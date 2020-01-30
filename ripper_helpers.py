@@ -110,7 +110,9 @@ class Tv4PlayEpisodeLister():
             if not "VideoAsset:" in key:
                 continue
             video_data = program_data[key]
-            if video_data["clip"]:  # skip clips
+            if "clip" in video_data and video_data["clip"]:  # skip clips
+                continue
+            elif "id" not in video_data:
                 continue
             ep_list.append(Tv4PlayEpisodeData(video_data))
         for filter_key, filter_val in self.filter.items():
