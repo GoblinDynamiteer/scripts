@@ -52,8 +52,9 @@ def get_now():
 def write_to_log(show_str, file_str):
     path = Path(CFG.path("ripper_log"))
     if not path.is_file():
+        print(f"warning: could not write to log: {str(path)}")
         return
-    with open(path, "w+") as log_file:
+    with open(path, "a+") as log_file:
         now = get_now().strftime(r"%Y-%m-%d %T")
         log_file.write(f"{now} : {show_str} {file_str}\n")
 
