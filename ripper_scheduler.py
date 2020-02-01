@@ -1,5 +1,6 @@
 #!/usr/bin/python3.8
 
+import argparse
 import json
 import os
 import sys
@@ -22,9 +23,10 @@ CFG = config.ConfigurationManager()
 
 class TimeZoneInfo(tzinfo):
     def utcoffset(self, dt):
-         return timedelta(hours=+1)
+        return timedelta(hours=+1)
+
     def dst(self, dt):
-         return timedelta(hours=+1)
+        return timedelta(hours=+1)
 
 
 class Day(Enum):
@@ -48,6 +50,7 @@ DAY = {"mon": Day.Monday,
 
 def get_now():
     return datetime.now(tz=TimeZoneInfo())
+
 
 def write_to_log(show_str, file_str):
     path = Path(CFG.path("ripper_log"))
@@ -174,6 +177,13 @@ def parse_json_schedule():
 
 if __name__ == "__main__":
     TIME_TO_SLEEP_S = (10 * 60)  # 5 minutes
+    PARSER = argparse.ArgumentParser()
+    PARSER.add_argument("--force",
+                        "-f",
+                        dest="force_download",
+                        action="store_true",
+                        help="force check/download all shows")
+    ARGS = PARSER.parse_args()
     schedule_data = parse_json_schedule()
     sheduled_shows = []
     for show_data in schedule_data:
@@ -181,10 +191,11 @@ if __name__ == "__main__":
     if not sheduled_shows:
         print("no shows to process.. exiting.")
         sys.exit(1)
+    if ARGS.force_download:
+        for show in sheduled_shows:
+            show.download(force=True)
     weekday = today_weekday()
     pfcs(f"today is b[{Day(weekday).name}]")
-    for show in sheduled_shows:
-        show.download(force=True)
     while True:
         if weekday != today_weekday():
             print("new day, resetting all show \"downloaded\" flags")
