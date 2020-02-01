@@ -135,7 +135,7 @@ class ScheduledShow():
         sec_to = self.shortest_airtime()
         if sec_to > 0:
             delta = timedelta(seconds=sec_to)
-            pfcs(f"b[{self.name}] will start in i[{delta}]...")
+            pfcs(f"b[{self.name}] airs in i[{delta}]...")
         return sec_to < 0
 
     def shortest_airtime(self):
@@ -176,7 +176,6 @@ def parse_json_schedule():
 
 
 if __name__ == "__main__":
-    TIME_TO_SLEEP_S = (10 * 60)  # 5 minutes
     PARSER = argparse.ArgumentParser()
     PARSER.add_argument("--force",
                         "-f",
@@ -203,8 +202,22 @@ if __name__ == "__main__":
                 show.reset_downloaded_today()
             weekday = today_weekday()
             pfcs(f"today is b[{Day(weekday).name}]")
-        print(f"{get_now()}: checking shows....")
+        print(f"{get_now()}: checking shows...")
         for show in sheduled_shows:
             show.download()
-        pfcs(f"sleeping i[{TIME_TO_SLEEP_S / 60}] minutes...")
-        sleep(TIME_TO_SLEEP_S)
+        sleep_time = None
+        name =  None
+        for show in sheduled_shows:
+            if sleep_time is None:
+                sleep_time = show.shortest_airtime()
+                name = show.name
+            else:
+                airtime = show.shortest_airtime()
+                if sleep_time > airtime:
+                    sleep_time = airtime
+                    name = show.name
+        sleep_time += 10
+        sleep_time_delta = timedelta(seconds=sleep_time)
+        pfcs(f"d[{'=' * 30}]")
+        pfcs(f"sleeping p[{sleep_time_delta}], next show is p[{name}]")
+        sleep(sleep_time)
