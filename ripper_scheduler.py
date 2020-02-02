@@ -150,7 +150,10 @@ class ScheduledShow():
         return sec_to < 0
 
     def shortest_airtime(self):
-        return min([at.seconds_to() for at in self.airtimes])
+        if not self.downloaded_today:
+            return min([at.seconds_to() for at in self.airtimes])
+        return min([at.seconds_to() for at in self.airtimes
+                   if at.seconds_to() >= 0])
 
     def get_url_objects(self):
         lister = None
