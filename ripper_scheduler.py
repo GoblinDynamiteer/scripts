@@ -48,8 +48,21 @@ DAY = {"mon": Day.Monday,
        "sun": Day.Sunday}
 
 
+def date_to_full_str(datetime_obj: datetime):
+    return datetime_obj.strftime(r"%Y-%m-%d %T")
+
+
+def date_to_time_str(datetime_obj: datetime):
+    return datetime_obj.strftime(r"%T")
+
+
 def get_now():
     return datetime.now(tz=TimeZoneInfo())
+
+
+def get_now_str():
+    dt = datetime.now(tz=TimeZoneInfo())
+    return date_to_full_str(dt)
 
 
 def write_to_log(show_str, file_str):
@@ -58,8 +71,7 @@ def write_to_log(show_str, file_str):
         print(f"warning: could not write to log: {str(path)}")
         return
     with open(path, "a+") as log_file:
-        now = get_now().strftime(r"%Y-%m-%d %T")
-        log_file.write(f"{now} : {show_str} {file_str}\n")
+        log_file.write(f"{get_now_str()} : {show_str} {file_str}\n")
 
 
 def today_weekday():
@@ -201,7 +213,7 @@ if __name__ == "__main__":
                 show.reset_downloaded_today()
             weekday = today_weekday()
             pfcs(f"today is b[{Day(weekday).name}]")
-        print(f"{get_now()}: checking shows...")
+        print(f"{get_now_str()}: checking shows...")
         for show in sheduled_shows:
             show.download()
         sleep_time = None
@@ -217,6 +229,11 @@ if __name__ == "__main__":
                     name = show.name
         sleep_time += 10
         sleep_time_delta = timedelta(seconds=sleep_time)
-        pfcs(f"d[{'=' * 30}]")
-        pfcs(f"sleeping p[{sleep_time_delta}], next show is p[{name}]")
+        wake_date = get_now() + sleep_time_delta
+        wake_date_str = date_to_time_str(wake_date)
+        if wake_date.weekday() != weekday:
+            wake_date_str = date_to_full_str(wake_date)
+        pfcs(f"d[{'=' * 50}]")
+        pfcs(f"sleeping p[{sleep_time_delta}] (to {wake_date_str}), "
+             f"next show is p[{name}]")
         sleep(sleep_time)
