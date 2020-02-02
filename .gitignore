@@ -1,6 +1,7 @@
 omdb_api.txt
 goto_locs.json
 settings.ini
+ripper_*.json
 mariadb_read.py
 mariadb_test.py
 .vscode/
