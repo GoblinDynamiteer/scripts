@@ -11,7 +11,7 @@ from pathlib import Path
 
 import config
 
-from ripper import _youtube_dl as rip
+from ripper import PlayRipperYoutubeDl as youtube_ripper
 from ripper import _subtitle_dl as subrip
 from ripper_helpers import Tv4PlayEpisodeLister, DPlayEpisodeLister
 from printing import cstr, pfcs
@@ -127,14 +127,20 @@ class ScheduledShow():
             return False
         pfcs(f"trying to download i[{self.name}]")
         for obj in self.get_url_objects():
-            filename = rip(url=obj.url(),
-                           dl_loc=str(self.dest_path),
-                           use_title=self.use_title)
-            if filename:
-                pfcs(f"downloaded: i[{filename}]")
-                self.downloaded_today = True
-                write_to_log(self.name, filename)
-                subrip(obj.url(), filename)
+            rip = youtube_ripper(obj.url(),
+                                 dest=self.dest_path,
+                                 use_title=self.use_title)
+            file_path = None
+            if not rip.file_already_exists():
+                file_path = rip.download()
+                if file_path:
+                    pfcs(f"downloaded: i[{str(file_path)}]")
+                    self.downloaded_today = True
+                    write_to_log(self.name, str(file_path))
+            else:
+                file_path = rip.get_dest_path()
+            if file_path:
+                subrip(obj.url(), str(file_path))
         return True
 
     def reset_downloaded_today(self):
