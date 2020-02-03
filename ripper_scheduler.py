@@ -134,7 +134,7 @@ class ScheduledShow():
                 pfcs(f"downloaded: i[{filename}]")
                 self.downloaded_today = True
                 write_to_log(self.name, filename)
-                subrip(self.url, filename)
+                subrip(obj.url(), filename)
         return True
 
     def reset_downloaded_today(self):
