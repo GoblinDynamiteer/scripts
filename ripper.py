@@ -44,7 +44,7 @@ class YoutubeDLFormats(Enum):
 
 
 class PlayRipperYoutubeDl():
-    def __init__(self, url, dest=None):
+    def __init__(self, url, dest=None, use_title=False):
         self.url = url
         self.dest_path = dest
         self.format = None
@@ -56,7 +56,7 @@ class PlayRipperYoutubeDl():
             "quiet": True,
             "nocheckcertificate": True,
         }
-        self.use_title = False
+        self.use_title = use_title
         self.info = None
         self.filename = ""
 
@@ -112,7 +112,7 @@ class PlayRipperYoutubeDl():
             self.format = vid_format
             try:
                 with youtube_dl.YoutubeDL(self.options) as ydl:
-                    self.info = ydl.extract_info(url, download=False)
+                    self.info = ydl.extract_info(self.url, download=False)
                     self.filename = self.generate_filename()
                 return  # succeeded
             except youtube_dl.utils.DownloadError as error:
