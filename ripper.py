@@ -229,7 +229,7 @@ if __name__ == "__main__":
     PARSER.add_argument("--dir", type=str, default=os.getcwd())
     PARSER.add_argument("--title-in-filename",
                         action="store_true", dest="use_title")
-    PARSER.add_argument("--sub-only", action="store_true", dest="sub_only")
+    PARSER.add_argument("--sub-only", "-s", action="store_true", dest="sub_only")
     PARSER.add_argument("--get-last", default=0, dest="get_last")
     PARSER.add_argument("--filter", "-f", type=str, default="")
     ARGS = PARSER.parse_args()
@@ -274,7 +274,11 @@ if __name__ == "__main__":
     for url in urls:
         ripper = PlayRipperYoutubeDl(url, ARGS.dir)
         ripper.print_info()
-        file_name = ripper.download()
-        if file_name and ripper.download_succeeded:
+        if ARGS.sub_only:
+            ripper.get_dest_path()
             _subtitle_dl(url, file_name)
+        else:
+            file_name = ripper.download()
+            if file_name and ripper.download_succeeded:
+                _subtitle_dl(url, file_name)
         print("=" * 100)
