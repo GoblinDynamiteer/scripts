@@ -61,6 +61,7 @@ class PlayRipperYoutubeDl():
         self.use_title = use_title
         self.info = None
         self.filename = ""
+        self.download_succeeded = False
 
         self.retrieve_info()
 
@@ -74,6 +75,8 @@ class PlayRipperYoutubeDl():
             with youtube_dl.YoutubeDL(self.options) as ydl:
                     ydl.params["outtmpl"] = str(self.get_dest_path())
                     ydl.download([self.url])
+                    if self.file_already_exists():
+                        self.download_succeeded = True
                     return str(self.get_dest_path())
         except youtube_dl.utils.DownloadError as error:
             print(error)
