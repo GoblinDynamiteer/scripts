@@ -66,7 +66,8 @@ class DPlayEpisodeData():
         self.season_num = attr.get("seasonNumber", 0)
         self.episode_num = attr.get("episodeNumber", 0)
         self.title = episode_data.get("name", "N/A")
-        self.show = "N/A" # TODO: get from parent data...
+        self.show = "N/A"  # TODO: get from parent data...
+        self.id = 0  # TODO: available in data?
 
     def __str__(self):
         return f"{self.show} S{self.season_num}E{self.episode_num} " \
@@ -74,6 +75,7 @@ class DPlayEpisodeData():
 
     def url(self):
         return f"{self.URL_PREFIX}/videos/{self.episode_path}"
+
 
 class Tv4PlayEpisodeLister():
     REGEX = r"application\/json\">(.*\}\})<\/script><script "
@@ -121,7 +123,7 @@ class Tv4PlayEpisodeLister():
             ep_list.reverse()
         if limit:
             return [ep if objects else ep.url() for ep in ep_list[0:limit]]
-        return [ep if objects else ep.url() in ep_list]
+        return [ep if objects else ep.url() for ep in ep_list]
 
 
 class DPlayEpisodeLister():
@@ -179,7 +181,7 @@ class DPlayEpisodeLister():
             ep_list.reverse()
         if limit:
             return [ep if objects else ep.url() for ep in ep_list[0:limit]]
-        return [ep if objects else ep.url() in ep_list]
+        return [ep if objects else ep.url() for ep in ep_list]
 
 
 def test_dplay():
