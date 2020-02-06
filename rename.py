@@ -17,6 +17,17 @@ except ImportError:
     pass
 
 
+def op_replace_umlauts(string):
+    for char, rep in [("Å", "A"),
+                      ("å", "a"),
+                      ("Ä", "A"),
+                      ("ä", "a"),
+                      ("Ö", "O"),
+                      ("ö", "o")]:
+        string = string.replace(char, rep)
+    return string
+
+
 def op_spaces_to_char(string, replace_char='_'):
     "Replace spaces in string"
     return string.replace(" ", replace_char)
