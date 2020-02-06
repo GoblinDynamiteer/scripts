@@ -479,7 +479,8 @@ if __name__ == "__main__":
             print(CSTR(f"  {url}", "lblue"))
     for url in urls:
         ripper = PlayRipperYoutubeDl(url, ARGS.dir)
-        # _handle_url(url)
         ripper.print_info()
-        ripper.download()
+        file_name = ripper.download()
+        if file_name and ripper.download_succeeded:
+            _subtitle_dl(url, file_name)
         print("=" * 100)
