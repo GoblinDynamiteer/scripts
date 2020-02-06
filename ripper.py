@@ -36,6 +36,8 @@ else:
 class YoutubeDLFormats(Enum):
     Best = "best"
     BestFLV = "best[ext=flv]"
+    BestMP4M4A = "bestvideo[ext=mp4]+bestaudio" \
+                 "[ext=m4a]/bestvideo+bestaudio"
     BestMP4 = "best[ext=mp4]"
     MP4 = "mp4"
     FLV = "flv"
