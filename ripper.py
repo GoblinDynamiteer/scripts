@@ -275,8 +275,8 @@ if __name__ == "__main__":
         ripper = PlayRipperYoutubeDl(url, ARGS.dir)
         ripper.print_info()
         if ARGS.sub_only:
-            ripper.get_dest_path()
-            _subtitle_dl(url, file_name)
+            file_name = ripper.get_dest_path()
+            _subtitle_dl(url, str(file_name))
         else:
             file_name = ripper.download()
             if file_name and ripper.download_succeeded:
