@@ -17,6 +17,7 @@ from ripper_helpers import Tv4PlayEpisodeLister, DPlayEpisodeLister
 from printing import cstr, pfcs
 
 JSON_SCHEDULE_FILE = r"ripper_schedule.json"
+WEEK_IN_SECONDS = 60 * 60 * 24 * 7
 
 CFG = config.ConfigurationManager()
 
@@ -158,8 +159,12 @@ class ScheduledShow():
     def shortest_airtime(self):
         if not self.downloaded_today:
             return min([at.seconds_to() for at in self.airtimes])
-        return min([at.seconds_to() for at in self.airtimes
-                   if at.seconds_to() >= 0])
+        at_list = []
+        for at in self.airtimes:
+            sec = at.seconds_to()
+            if sec >= 0:
+                at_list.append(sec)
+        return min(at_list) if at_list else WEEK_IN_SECONDS
 
     def get_url_objects(self):
         lister = None
