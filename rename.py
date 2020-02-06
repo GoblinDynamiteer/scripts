@@ -117,7 +117,8 @@ OPERATIONS = [op_spaces_to_char,
               op_replace_special_chars,
               op_remove_special_chars,
               op_add_leading_zeroes,
-              op_trim_extras]
+              op_trim_extras,
+              op_replace_umlauts]
 
 if UNIDECODE_LIB_AVAILABLE:
     OPERATIONS.append(op_unidecode)
