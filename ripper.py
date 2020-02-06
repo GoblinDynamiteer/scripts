@@ -63,9 +63,14 @@ class PlayRipperYoutubeDl():
         self.filename = ""
         self.download_succeeded = False
 
+        if "viafree" in self.url:
+            self.url = self.viafree_url()
+            if not self.url:
+                return
+
         self.retrieve_info()
 
-    def download(self, destination_path = None):
+    def download(self, destination_path=None):
         if destination_path:
             self.dest_path = destination_path
         if self.file_already_exists():
@@ -73,11 +78,11 @@ class PlayRipperYoutubeDl():
             return None
         try:
             with youtube_dl.YoutubeDL(self.options) as ydl:
-                    ydl.params["outtmpl"] = str(self.get_dest_path())
-                    ydl.download([self.url])
-                    if self.file_already_exists():
-                        self.download_succeeded = True
-                    return str(self.get_dest_path())
+                ydl.params["outtmpl"] = str(self.get_dest_path())
+                ydl.download([self.url])
+                if self.file_already_exists():
+                    self.download_succeeded = True
+                return str(self.get_dest_path())
         except youtube_dl.utils.DownloadError as error:
             print(error)
             return None
@@ -144,6 +149,19 @@ class PlayRipperYoutubeDl():
                     break
         file_name += f".{ext}"
         return rename.rename_string(file_name, space_replace_char=".")
+
+    def viafree_url(self):
+        if not "avsnitt" in url:
+            return self.url
+        page_contents = urlopen(self.url).read()
+        match = re.search(
+            r"\"product[Gg]uid\"\:\"\d{1,10}\"", str(page_contents))
+        if not match:
+            print("viafree workaround -> failed to extract video id")
+            return None
+        vid_id = match.group(0).replace(r'"productGuid":"', "")
+        vid_id = vid_id.replace(r'"', "")
+        return re.sub(r"avsnitt-\d{1,2}", vid_id, self.url)
 
     class Logger(object):
         "Logger for youtube-dl"
