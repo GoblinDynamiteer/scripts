@@ -134,7 +134,7 @@ class ScheduledShow():
             file_path = None
             if not rip.file_already_exists():
                 file_path = rip.download()
-                if file_path:
+                if file_path and rip.download_succeeded:
                     pfcs(f"downloaded: i[{str(file_path)}]")
                     self.downloaded_today = True
                     write_to_log(self.name, str(file_path))
