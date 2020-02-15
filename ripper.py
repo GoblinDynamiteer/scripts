@@ -18,7 +18,9 @@ import printing
 import rename
 import run
 from printing import cstr, pfcs
-from ripper_helpers import DPlayEpisodeLister, Tv4PlayEpisodeLister
+from ripper_helpers import DPlayEpisodeLister
+from ripper_helpers import Tv4PlayEpisodeLister
+from ripper_helpers import ViafreeEpisodeLister
 
 try:
     import youtube_dl
@@ -251,6 +253,13 @@ if __name__ == "__main__":
         wanted_last = int(ARGS.get_last)
         if "dplay" in urls[0]:
             lister = DPlayEpisodeLister(urls[0])
+            if filter_dict:
+                lister.set_filter(**filter_dict)
+            urls = lister.list_episode_urls(
+                revered_order=True, limit=wanted_last
+            )
+        elif "viafree" in urls[0]:
+            lister = ViafreeEpisodeLister(urls[0])
             if filter_dict:
                 lister.set_filter(**filter_dict)
             urls = lister.list_episode_urls(
