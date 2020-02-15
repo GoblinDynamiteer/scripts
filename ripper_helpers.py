@@ -78,6 +78,7 @@ class DPlayEpisodeData():
     def url(self):
         return f"{self.URL_PREFIX}/videos/{self.episode_path}"
 
+
 class ViafreeEpisodeData():
     URL_PREFIX = r"https://www.viafree.se"
 
@@ -213,11 +214,16 @@ class ViafreeEpisodeLister():
         self.url = url
         self.session = Session()
         self.filter = {}
-        # self.check_token()
+
+    def set_filter(self, **kwargs):
+        for key, val in kwargs.items():
+            if key not in VALID_FILTER_KEYS:
+                print(f"invalid filter: {key}={val}")
+            else:
+                self.filter[key] = val
 
     def list_episode_urls(self, revered_order=False, limit=None, objects=False):
         res = self.session.get(self.url)
-        # print(res.text)
         splits = res.text.split("\"programs\":")
         candidates = []
         try:
