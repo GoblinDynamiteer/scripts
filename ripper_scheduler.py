@@ -13,7 +13,9 @@ import config
 
 from ripper import PlayRipperYoutubeDl as youtube_ripper
 from ripper import _subtitle_dl as subrip
-from ripper_helpers import Tv4PlayEpisodeLister, DPlayEpisodeLister
+from ripper_helpers import Tv4PlayEpisodeLister
+from ripper_helpers import DPlayEpisodeLister
+from ripper_helpers import ViafreeEpisodeLister
 from printing import cstr, pfcs
 
 JSON_SCHEDULE_FILE = r"ripper_schedule.json"
@@ -115,7 +117,6 @@ class ScheduledShow():
         self.filter_dict = data.get("filter", {})
         self.url = data["url"]
         self.use_title = data.get("use_title", False)
-        self.site = "TV4Play" if "tv4" in self.url else "DPlay"
         self.downloaded_today = False
         self.airtimes = []
 
@@ -171,6 +172,8 @@ class ScheduledShow():
         rev_order = True
         if "dplay" in self.url:
             lister = DPlayEpisodeLister(self.url)
+        elif "viafree" in self.url:
+            lister = ViafreeEpisodeLister(self.url)
         elif "tv4play" in self.url:
             lister = Tv4PlayEpisodeLister(self.url)
             rev_order = False
