@@ -8,6 +8,7 @@ import sys
 
 from urllib.parse import urlparse
 
+from datetime import datetime
 from requests import Session
 
 VALID_FILTER_KEYS = ["season", "episode", "title", "date"]
@@ -174,6 +175,24 @@ class DPlayEpisodeLister():
             else:
                 self.filter[key] = val
 
+    def is_episode_data_premium(self, data):
+        "Check if a free account can see/download episode"
+        has_free = False
+        free_datetime = None
+        for availability_window in data.get("availabilityWindows", []):
+            if availability_window.get("package", "None") == "Free":
+                has_free = True
+                free_datetime = availability_window.get("playableStart", None)
+                break
+        if not has_free or not free_datetime:
+            return True
+        try:
+            free_datetime = datetime.strptime(
+                free_datetime, r"%Y-%m-%dT%H:%M:%SZ")
+        except ValueError:
+            return True #TODO: might still be free?
+        return free_datetime > datetime.now()
+
     def list_episode_urls(self, revered_order=False, limit=None, objects=False):
         match = re.search(
             "/(program|programmer|videos|videoer)/([^/]+)", self.url)
@@ -197,6 +216,8 @@ class DPlayEpisodeLister():
             res = self.session.get(
                 f"{self.API_URL}/content/videos?{qyerystring}")
             for data in res.json()["data"]:
+                if self.is_episode_data_premium(data.get("attributes", {})):
+                    continue
                 ep_list.append(DPlayEpisodeData(data))
         for filter_key, filter_val in self.filter.items():
             ep_list = apply_filter(ep_list, filter_key, filter_val)
