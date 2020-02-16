@@ -94,7 +94,7 @@ class MovieDatabase(db_json.JSONDatabase):
 
     def export_last_added(self, target=os.path.join(CFG.get('path_film'), 'latest.txt')):
         ''' Exports the latest added movies to text file '''
-        last_added = self.last_added(num=100)
+        last_added = self.last_added(num=1000)
         last_added_text = [_to_text(m, last_added[m]) for m in last_added]
         try:
             with open(target, 'w') as last_added_file:
@@ -105,7 +105,7 @@ class MovieDatabase(db_json.JSONDatabase):
 
     def export_last_removed(self, target=os.path.join(CFG.get('path_film'), 'removed.txt')):
         ''' Exports the latest removed movies to text file '''
-        last_removed = self.last_removed(num=100)
+        last_removed = self.last_removed(num=1000)
         last_removed_text = [_to_text(m, last_removed[m], use_removed_date=True)
                              for m in last_removed]
         try:
