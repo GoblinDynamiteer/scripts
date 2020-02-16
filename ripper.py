@@ -22,6 +22,9 @@ from ripper_helpers import DPlayEpisodeLister
 from ripper_helpers import Tv4PlayEpisodeLister
 from ripper_helpers import ViafreeEpisodeLister
 
+
+SIM_STR = "(SIMULATE)"
+
 try:
     import youtube_dl
 except ImportError:
@@ -48,7 +51,7 @@ class YoutubeDLFormats(Enum):
 
 
 class PlayRipperYoutubeDl():
-    def __init__(self, url, dest=None, use_title=False):
+    def __init__(self, url, dest=None, use_title=False, sim=False):
         self.url = url
         self.dest_path = dest
         self.format = None
@@ -71,6 +74,7 @@ class PlayRipperYoutubeDl():
                 return
 
         self.retrieve_info()
+        self.simulate = sim
 
     def download(self, destination_path=None):
         if destination_path:
@@ -78,16 +82,21 @@ class PlayRipperYoutubeDl():
         if self.file_already_exists():
             pfcs(f"file already exists: o[{self.filename}], skipping")
             return None
-        try:
-            with youtube_dl.YoutubeDL(self.options) as ydl:
-                ydl.params["outtmpl"] = str(self.get_dest_path())
-                ydl.download([self.url])
-                if self.file_already_exists():
-                    self.download_succeeded = True
-                return str(self.get_dest_path())
-        except youtube_dl.utils.DownloadError as error:
-            print(error)
-            return None
+        if not self.simulate:
+            try:
+                with youtube_dl.YoutubeDL(self.options) as ydl:
+                    ydl.params["outtmpl"] = str(self.get_dest_path())
+                    ydl.download([self.url])
+                    if self.file_already_exists():
+                        self.download_succeeded = True
+                    return str(self.get_dest_path())
+            except youtube_dl.utils.DownloadError as error:
+                print(error)
+                return None
+        else:
+            pfcs(f"i[{SIM_STR}] downloading")
+            pfcs(f"i[{SIM_STR}] dest: {self.get_dest_path()}")
+            return str(self.get_dest_path())
         return None
 
     def file_already_exists(self):
@@ -231,13 +240,18 @@ if __name__ == "__main__":
     PARSER.add_argument("--dir", type=str, default=os.getcwd())
     PARSER.add_argument("--title-in-filename",
                         action="store_true", dest="use_title")
-    PARSER.add_argument("--sub-only", "-s", action="store_true", dest="sub_only")
+    PARSER.add_argument("--sub-only", "-s",
+                        action="store_true", dest="sub_only")
     PARSER.add_argument("--get-last", default=0, dest="get_last")
     PARSER.add_argument("--filter", "-f", type=str, default="")
+    PARSER.add_argument("--simulate", action="store_true", help="run tests")
     ARGS = PARSER.parse_args()
 
     if ARGS.sub_only:
         print("Only downloading subtitles")
+
+    if ARGS.simulate:
+        print("Running simulation, not downloading...")
 
     print(f"Saving files to: {CSTR(ARGS.dir, 'lgreen')}")
 
@@ -281,7 +295,7 @@ if __name__ == "__main__":
         for url in urls:
             print(CSTR(f"  {url}", "lblue"))
     for url in urls:
-        ripper = PlayRipperYoutubeDl(url, ARGS.dir)
+        ripper = PlayRipperYoutubeDl(url, ARGS.dir, sim=ARGS.simulate)
         ripper.print_info()
         if ARGS.sub_only:
             file_name = ripper.get_dest_path()
