@@ -12,7 +12,7 @@ from pathlib import Path
 import config
 
 from ripper import PlayRipperYoutubeDl as youtube_ripper
-from ripper import _subtitle_dl as subrip
+from ripper import PlaySubtitleRipperSvtPlayDl as subrip
 from ripper_helpers import Tv4PlayEpisodeLister
 from ripper_helpers import DPlayEpisodeLister
 from ripper_helpers import ViafreeEpisodeLister
@@ -142,7 +142,8 @@ class ScheduledShow():
             else:
                 file_path = rip.get_dest_path()
             if file_path:
-                subrip(obj.url(), str(file_path))
+                srip = subrip(obj.url(), str(file_path))
+                srip.download()
         return True
 
     def reset_downloaded_today(self):
