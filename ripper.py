@@ -129,7 +129,7 @@ class PlaySubtitleRipperSvtPlayDl():
         return sub_url.replace(r"\\u002F", "/")
 
     def download_with_svtplaydl(self):
-        command = f'svtplay-dl -S --force-subtitle -o "{self.get_dest_path()}" {url}'
+        command = f'svtplay-dl -S --force-subtitle -o "{self.get_dest_path()}" {self.url}'
         dual_srt_filename = self.get_dest_path().name + ".srt"
         dual_srt_extension_path = Path(self.dest_path) / dual_srt_filename
         if dual_srt_extension_path.exists():  # svtplay-dl might add ext.
