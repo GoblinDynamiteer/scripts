@@ -103,7 +103,8 @@ class PlaySubtitleRipperSvtPlayDl():
                 self.download_with_svtplaydl()
             if self.get_dest_path().is_file():
                 self.download_succeeded = True
-                print(f"downloaded subtitle: {CSTR(f'{self.get_dest_path()}', 'lblue')}")
+                print(
+                    f"downloaded subtitle: {CSTR(f'{self.get_dest_path()}', 'lblue')}")
                 return self.get_dest_path()
         else:
             pfcs(f"{self.SIM_STR} downloading")
@@ -289,48 +290,6 @@ class PlayRipperYoutubeDl():
 
         def error(self, msg):
             pass
-
-
-def _subtitle_dl(url: str, output_file: str):
-    if not output_file:
-        return
-    if not any(output_file.endswith(ext) for ext in [".mp4", ".flv"]):
-        return
-    sub_file_path = f"{output_file[0:-4]}"
-    if "viafree" in url.lower():
-        sub_file_path += ".vtt"
-        sub_url = _viafree_subtitle_link(url)
-        if not sub_url:
-            print(CSTR(f"Could not download subtitles!", "orange"))
-            return
-        command = f"curl {sub_url} > {sub_file_path}"
-    else:
-        sub_file_path += ".srt"
-        command = f'svtplay-dl -S --force-subtitle -o "{sub_file_path}" {url}'
-    if Path(sub_file_path).exists():
-        print(f"subtitle already exists: {sub_file_path}, skipping")
-        return
-    dual_srt_extension_path = Path(sub_file_path + ".srt")
-    if dual_srt_extension_path.exists():  # svtplay-dl adds srt extension?
-        pass
-    elif run.local_command(command, hide_output=True, print_info=False):
-        print(f"Downloaded subtitle: {CSTR(f'{sub_file_path}', 'lblue')}")
-    if dual_srt_extension_path.exists():  # svtplay-dl adds srt extension?
-        dual_srt_extension_path.rename(sub_file_path)
-
-
-def _viafree_subtitle_link(url: str):
-    page_contents = urlopen(url).read()
-    if not page_contents:
-        return None
-    match = re.search(
-        r"\"subtitlesWebvtt\"\:\"https.+[cdn\-subtitles].+\_sv\.vtt", str(
-            page_contents)
-    )
-    if not match:
-        return None
-    sub_url = match.group(0).replace(r'"subtitlesWebvtt":"', "")
-    return sub_url.replace(r"\\u002F", "/")
 
 
 CSTR = printing.to_color_str
