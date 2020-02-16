@@ -23,7 +23,7 @@ from ripper_helpers import Tv4PlayEpisodeLister
 from ripper_helpers import ViafreeEpisodeLister
 
 
-SIM_STR = "(SIMULATE)"
+SIM_STR = r"(SIMULATE)"
 
 try:
     import youtube_dl
@@ -50,11 +50,113 @@ class YoutubeDLFormats(Enum):
     WorstVideo = "worstvideo"
 
 
+class PlaySubtitleRipperSvtPlayDl():
+    SIM_STR = f"i[{SIM_STR}] o[SUBDL]"
+
+    def __init__(self, url, video_file_path, sim=False):
+        self.url = url
+        self.video_file_path = video_file_path
+        self.simulate = sim
+        if sim:
+            pfcs(f"{self.SIM_STR} init")
+        self.filename = self.determine_file_name()
+        self.dest_path = Path(self.video_file_path).parent
+        self.download_succeeded = False
+
+    def determine_file_name(self):
+        dest_path = Path(self.video_file_path)
+        file_ext = dest_path.suffix
+        if "viafree" in self.url:
+            srt_file_name = dest_path.name.replace(file_ext, r".vtt")
+        else:
+            srt_file_name = dest_path.name.replace(file_ext, r".srt")
+        return srt_file_name
+
+    def print_info(self):
+        pfcs(f"url i[{self.url}]")
+        pfcs(f"filename i[{self.filename}]")
+        pfcs(f"dest i[{self.dest_path}]")
+        pfcs(f"full_dest i[{self.get_dest_path()}]")
+        pfcs(f"file_exists i[{self.file_already_exists()}]")
+
+    def file_already_exists(self):
+        path = self.get_dest_path()
+        if not path:
+            return False
+        return path.is_file()
+
+    def get_dest_path(self):
+        if not self.filename:
+            return None
+        return Path(self.dest_path) / self.filename
+
+    def download(self, destination_path=None):
+        if destination_path:
+            self.dest_path = destination_path
+        if self.file_already_exists():
+            pfcs(f"subtitle already exists: o[{self.filename}], skipping")
+            return None
+        if not self.simulate:
+            if "viafree" in self.url:
+                self.download_viafree()
+            else:
+                self.download_with_svtplaydl()
+            if self.get_dest_path().is_file():
+                self.download_succeeded = True
+                print(f"downloaded subtitle: {CSTR(f'{self.get_dest_path()}', 'lblue')}")
+                return self.get_dest_path()
+        else:
+            pfcs(f"{self.SIM_STR} downloading")
+            pfcs(f"{self.SIM_STR} dest: {self.get_dest_path()}")
+            self.download_succeeded = True
+            pfcs(f"{self.SIM_STR} setting download succeded: "
+                 f"{self.download_succeeded}")
+            return str(self.get_dest_path())
+        return None
+
+    def get_viafree_subtitle_link(self):
+        page_contents = urlopen(self.url).read()
+        if not page_contents:
+            return None
+        match = re.search(
+            r"\"subtitlesWebvtt\"\:\"https.+[cdn\-subtitles].+\_sv\.vtt", str(
+                page_contents)
+        )
+        if not match:
+            return None
+        sub_url = match.group(0).replace(r'"subtitlesWebvtt":"', "")
+        return sub_url.replace(r"\\u002F", "/")
+
+    def download_with_svtplaydl(self):
+        command = f'svtplay-dl -S --force-subtitle -o "{self.get_dest_path()}" {url}'
+        dual_srt_filename = self.get_dest_path().name + ".srt"
+        dual_srt_extension_path = Path(self.dest_path) / dual_srt_filename
+        if dual_srt_extension_path.exists():  # svtplay-dl might add ext.
+            pass
+        elif not run.local_command(command, hide_output=True, print_info=False):
+            self.download_succeeded = False
+        if dual_srt_extension_path.exists():  # svtplay-dl adds srt extension?
+            dual_srt_extension_path.rename(self.get_dest_path())
+
+    def download_viafree(self):
+        sub_url = self.get_viafree_subtitle_link()
+        if not sub_url:
+            return
+        command = f"curl {sub_url} > {self.get_dest_path()}"
+        if not run.local_command(command, hide_output=True, print_info=False):
+            self.download_succeeded = False
+
+
 class PlayRipperYoutubeDl():
+    SIM_STR = f"i[{SIM_STR}] p[YTDL]"
+
     def __init__(self, url, dest=None, use_title=False, sim=False):
         self.url = url
         self.dest_path = dest
         self.format = None
+        self.simulate = sim
+        if sim:
+            pfcs(f"{self.SIM_STR} init")
         self.options = {
             "format": YoutubeDLFormats.Best.value,
             "logger": self.Logger(),
@@ -74,7 +176,6 @@ class PlayRipperYoutubeDl():
                 return
 
         self.retrieve_info()
-        self.simulate = sim
 
     def download(self, destination_path=None):
         if destination_path:
@@ -94,8 +195,11 @@ class PlayRipperYoutubeDl():
                 print(error)
                 return None
         else:
-            pfcs(f"i[{SIM_STR}] downloading")
-            pfcs(f"i[{SIM_STR}] dest: {self.get_dest_path()}")
+            pfcs(f"{self.SIM_STR} downloading")
+            pfcs(f"{self.SIM_STR} dest: {self.get_dest_path()}")
+            self.download_succeeded = True
+            pfcs(f"{self.SIM_STR} setting download succeded: "
+                 f"{self.download_succeeded}")
             return str(self.get_dest_path())
         return None
 
@@ -299,9 +403,15 @@ if __name__ == "__main__":
         ripper.print_info()
         if ARGS.sub_only:
             file_name = ripper.get_dest_path()
-            _subtitle_dl(url, str(file_name))
+            sub_ripper = PlaySubtitleRipperSvtPlayDl(
+                url, str(file_name), sim=ARGS.simulate)
+            sub_ripper.print_info()
+            sub_ripper.download()
         else:
             file_name = ripper.download()
             if file_name and ripper.download_succeeded:
-                _subtitle_dl(url, file_name)
+                sub_ripper = PlaySubtitleRipperSvtPlayDl(
+                    url, str(file_name), sim=ARGS.simulate)
+                sub_ripper.print_info()
+                sub_ripper.download()
         print("=" * 100)
