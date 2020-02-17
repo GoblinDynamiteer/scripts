@@ -267,7 +267,7 @@ class PlayRipperYoutubeDl():
         return rename.rename_string(file_name, space_replace_char=".")
 
     def viafree_url(self):
-        if not "avsnitt" in url:
+        if not "avsnitt" in self.url:
             return self.url
         page_contents = urlopen(self.url).read()
         match = re.search(
