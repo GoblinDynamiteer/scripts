@@ -227,7 +227,9 @@ if __name__ == "__main__":
         sys.exit(1)
     if ARGS.set_all_dl:
         for show in sheduled_shows:
-            show.downloaded_today = True
+            if show.should_download(show=False):
+                show.downloaded_today = True
+                print(f"setting {show.name} as downloaded today")
     if ARGS.force_download:
         for show in sheduled_shows:
             show.download(force=True)
