@@ -55,6 +55,12 @@ def date_to_full_str(datetime_obj: datetime):
     return datetime_obj.strftime(r"%Y-%m-%d %T")
 
 
+def date_to_full_color_str(datetime_obj: datetime):
+    date_str = datetime_obj.strftime(r"%Y-%m-%d")
+    time_str = datetime_obj.strftime(r"%T")
+    return cstr(date_str, 166) + " " + cstr(time_str, 170)
+
+
 def date_to_time_str(datetime_obj: datetime):
     return datetime_obj.strftime(r"%T")
 
@@ -66,6 +72,11 @@ def get_now():
 def get_now_str():
     dt = datetime.now(tz=TimeZoneInfo())
     return date_to_full_str(dt)
+
+
+def get_now_color_str():
+    dt = datetime.now(tz=TimeZoneInfo())
+    return date_to_full_color_str(dt)
 
 
 def write_to_log(show_str, file_str):
@@ -127,6 +138,7 @@ class ScheduledShow():
     def download(self, force=False):
         if not force and not self.should_download():
             return False
+        print(f"{get_now_color_str()}: ", end="")
         pfcs(f"trying to download i[{self.name}]")
         for obj in self.get_url_objects():
             rip = youtube_ripper(obj.url(),
@@ -134,6 +146,7 @@ class ScheduledShow():
                                  use_title=self.use_title)
             file_path = None
             if not rip.file_already_exists():
+
                 file_path = rip.download()
                 if file_path and rip.download_succeeded:
                     pfcs(f"downloaded: i[{str(file_path)}]")
@@ -242,7 +255,7 @@ if __name__ == "__main__":
                 show.reset_downloaded_today()
             weekday = today_weekday()
             pfcs(f"today is b[{Day(weekday).name}]")
-        print(f"{get_now_str()}: checking shows...")
+        print(f"{get_now_color_str()}: checking shows...")
         sleep_to_next_airdate = True
         for show in sheduled_shows:
             show.download()
@@ -251,14 +264,14 @@ if __name__ == "__main__":
         sleep_time = None
         name = None
         sleep_time_delta = None
-        pfcs(f"d[{'=' * 50}]")
+        pfcs(f"d[{'=' * 52}]")
         if sleep_to_next_airdate:
             for show in sheduled_shows:
                 airtime = show.shortest_airtime()
                 if airtime < 0:
                     if show.should_download():
                         pfcs(f"w[warning] {show.name} seems has not "
-                                f"been flagged as downloaded today..")
+                             f"been flagged as downloaded today..")
                     continue
                 elif sleep_time is None:
                     sleep_time = airtime
@@ -273,10 +286,11 @@ if __name__ == "__main__":
             wake_date_str = date_to_time_str(wake_date)
             if wake_date.weekday() != weekday:
                 wake_date_str = date_to_full_str(wake_date)
-            pfcs(f"sleeping p[{sleep_time_delta}] (to {wake_date_str}), "
-             f"next show is p[{name}]")
+            print(f"{get_now_color_str()}: ", end="")
+            pfcs(f"sleeping p[{sleep_time_delta}] (to {wake_date_str})\n"
+                 f"next show is b[{name}]")
         else:
-            sleep_time = 60 * 5 # try again in 5 minutes, show has failed dl
+            sleep_time = 60 * 5  # try again in 5 minutes, show has failed dl
             sleep_time_delta = timedelta(seconds=sleep_time)
             pfcs(f"sleeping p[{sleep_time_delta}]")
         sleep(sleep_time)
