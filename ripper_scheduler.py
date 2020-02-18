@@ -143,7 +143,8 @@ class ScheduledShow():
                 file_path = rip.get_dest_path()
             if file_path:
                 srip = subrip(obj.url(), str(file_path))
-                srip.download()
+                if not srip.file_already_exists():
+                    srip.download()
         return True
 
     def reset_downloaded_today(self):
