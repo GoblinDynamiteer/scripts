@@ -189,6 +189,7 @@ class ScheduledShow():
             lister = DPlayEpisodeLister(self.url)
         elif "viafree" in self.url:
             lister = ViafreeEpisodeLister(self.url)
+            rev_order = False
         elif "tv4play" in self.url:
             lister = Tv4PlayEpisodeLister(self.url)
             rev_order = False
