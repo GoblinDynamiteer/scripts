@@ -62,15 +62,23 @@ class Tv4PlayEpisodeData():
 class DPlayEpisodeData():
     URL_PREFIX = r"https://www.dplay.se"
 
-    def __init__(self, episode_data: dict):
+    def __init__(self, episode_data: dict, show_data: dict):
         self.raw_data = episode_data
         attr = episode_data.get("attributes", {})
         self.episode_path = attr.get("path", "")
         self.season_num = attr.get("seasonNumber", 0)
         self.episode_num = attr.get("episodeNumber", 0)
-        self.title = episode_data.get("name", "N/A")
-        self.show = "N/A"  # TODO: get from parent data...
-        self.id = 0  # TODO: available in data?
+        self.title = attr.get("name", "N/A")
+        self.show = "N/A"
+        self.id = 0
+        try:
+            self.show = show_data["data"]["attributes"]["name"]
+        except:
+            pass
+        try:
+            self.id = int(self.raw_data.get("id"), 0)
+        except:
+            pass
 
     def __str__(self):
         return f"{self.show} S{self.season_num}E{self.episode_num} " \
@@ -202,6 +210,7 @@ class DPlayEpisodeLister():
         res = self.session.get(
             f"{self.API_URL}/content/shows/{match.group(2)}")
 
+        show_data = res.json()
         show_id = res.json()["data"]["id"]
         season_numbers = res.json()["data"]["attributes"]["seasonNumbers"]
 
@@ -218,7 +227,7 @@ class DPlayEpisodeLister():
             for data in res.json()["data"]:
                 if self.is_episode_data_premium(data.get("attributes", {})):
                     continue
-                ep_list.append(DPlayEpisodeData(data))
+                ep_list.append(DPlayEpisodeData(data, show_data))
         for filter_key, filter_val in self.filter.items():
             ep_list = apply_filter(ep_list, filter_key, filter_val)
         ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
