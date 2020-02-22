@@ -53,7 +53,7 @@ class Tv4PlayEpisodeData():
 
     def __str__(self):
         return f"{self.show} S{self.season_num}E{self.episode_num} " \
-               f"\"{self.title}\" -- {self.id}"
+               f"\"{self.title}\" -- id:{self.id} -- url:{self.url()}"
 
     def url(self):
         return f"{self.URL_PREFIX}{self.show}/{self.id}"
@@ -74,7 +74,7 @@ class DPlayEpisodeData():
 
     def __str__(self):
         return f"{self.show} S{self.season_num}E{self.episode_num} " \
-               f"\"{self.title}\" -- {self.id}"
+               f"\"{self.title}\" -- id:{self.id} -- url:{self.url()}"
 
     def url(self):
         return f"{self.URL_PREFIX}/videos/{self.episode_path}"
@@ -95,7 +95,7 @@ class ViafreeEpisodeData():
 
     def __str__(self):
         return f"{self.show} S{self.season_num}E{self.episode_num} " \
-               f"\"{self.title}\" -- {self.id}"
+               f"\"{self.title}\" -- id:{self.id} -- url:{self.url()}"
 
     def url(self):
         return f"{self.URL_PREFIX}{self.episode_path}"
@@ -143,8 +143,8 @@ class Tv4PlayEpisodeLister():
             ep_list.append(Tv4PlayEpisodeData(video_data))
         for filter_key, filter_val in self.filter.items():
             ep_list = apply_filter(ep_list, filter_key, filter_val)
-        ep_list.sort(key=lambda x: x.season_num, reverse=revered_order)
-        ep_list.sort(key=lambda x: x.episode_num, reverse=revered_order)
+        ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
+                     reverse=revered_order)
         if limit:
             return [ep if objects else ep.url() for ep in ep_list[0:limit]]
         return [ep if objects else ep.url() for ep in ep_list]
@@ -190,7 +190,7 @@ class DPlayEpisodeLister():
             free_datetime = datetime.strptime(
                 free_datetime, r"%Y-%m-%dT%H:%M:%SZ")
         except ValueError:
-            return True #TODO: might still be free?
+            return True  # TODO: might still be free?
         return free_datetime > datetime.now()
 
     def list_episode_urls(self, revered_order=False, limit=None, objects=False):
@@ -221,8 +221,8 @@ class DPlayEpisodeLister():
                 ep_list.append(DPlayEpisodeData(data))
         for filter_key, filter_val in self.filter.items():
             ep_list = apply_filter(ep_list, filter_key, filter_val)
-        ep_list.sort(key=lambda x: x.season_num, reverse=revered_order)
-        ep_list.sort(key=lambda x: x.episode_num, reverse=revered_order)
+        ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
+                     reverse=revered_order)
         if limit:
             return [ep if objects else ep.url() for ep in ep_list[0:limit]]
         return [ep if objects else ep.url() for ep in ep_list]
@@ -267,8 +267,8 @@ class ViafreeEpisodeLister():
             ep_list.append(ViafreeEpisodeData(episode_data))
         for filter_key, filter_val in self.filter.items():
             ep_list = apply_filter(ep_list, filter_key, filter_val)
-        ep_list.sort(key=lambda x: x.season_num, reverse=revered_order)
-        ep_list.sort(key=lambda x: x.episode_num, reverse=revered_order)
+        ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
+                     reverse=revered_order)
         if limit:
             return [ep if objects else ep.url() for ep in ep_list[0:limit]]
         return [ep if objects else ep.url() for ep in ep_list]
@@ -305,24 +305,24 @@ def test_dplay():
     print("DPLAY")
     prog_url = "https://www.dplay.se/program/alla-mot-alla-med-filip-och-fredrik"
     dpel = DPlayEpisodeLister(prog_url)
-    eps = dpel.list_episode_urls()
+    eps = dpel.list_episode_urls(objects=True)
 
     print("ALL EPS")
     for ep in eps:
         print(ep)
 
     print("ALL EPS REVERSED")
-    eps = dpel.list_episode_urls(revered_order=True)
+    eps = dpel.list_episode_urls(revered_order=True, objects=True)
     for ep in eps:
         print(ep)
 
     print("FIRST 5 EPS")
-    eps = dpel.list_episode_urls(revered_order=False, limit=5)
+    eps = dpel.list_episode_urls(revered_order=False, limit=5, objects=True)
     for ep in eps:
         print(ep)
 
     print("LAST 5 EPS")
-    eps = dpel.list_episode_urls(revered_order=True, limit=5)
+    eps = dpel.list_episode_urls(revered_order=True, limit=5, objects=True)
     for ep in eps:
         print(ep)
 
@@ -331,35 +331,42 @@ def test_tv4play():
     print("TV4PLAY")
     prog_url = "https://www.tv4play.se/program/farmen"
     tfel = Tv4PlayEpisodeLister(prog_url)
-    eps = tfel.list_episode_urls()
+    eps = tfel.list_episode_urls(objects=True)
 
     print("ALL EPS")
     for ep in eps:
         print(ep)
 
-    print("LAST 5 EPS")  # tv4play shows last first, for last season...
-    eps = tfel.list_episode_urls(revered_order=False, limit=5)
+    print("LAST 5 EPS")
+    eps = tfel.list_episode_urls(revered_order=True, limit=5, objects=True)
     for ep in eps:
         print(ep)
 
     print("EPS, SEASON 13")
     tfel = Tv4PlayEpisodeLister(prog_url)
     tfel.set_filter(season="13")
-    eps = tfel.list_episode_urls()
+    eps = tfel.list_episode_urls(objects=True)
     for ep in eps:
         print(ep)
 
     print("EPS, TORPET")
     tfel = Tv4PlayEpisodeLister(prog_url)
     tfel.set_filter(title="torpet")
-    eps = tfel.list_episode_urls()
+    eps = tfel.list_episode_urls(objects=True)
+    for ep in eps:
+        print(ep)
+
+    print("EPS, TORPET REVERSED")
+    tfel = Tv4PlayEpisodeLister(prog_url)
+    tfel.set_filter(title="torpet")
+    eps = tfel.list_episode_urls(objects=True, revered_order=True)
     for ep in eps:
         print(ep)
 
     print("EPS, NOT TORPET, SEASON 13")
     tfel = Tv4PlayEpisodeLister(prog_url)
     tfel.set_filter(title="!torpet", season="13")
-    eps = tfel.list_episode_urls()
+    eps = tfel.list_episode_urls(objects=True)
     for ep in eps:
         print(ep)
 
@@ -368,35 +375,35 @@ def test_viafree():
     print("VIAFREE")
     prog_url = "https://www.viafree.se/program/livsstil/lyxfallan/sasong-26"
     vfel = ViafreeEpisodeLister(prog_url)
-    eps = vfel.list_episode_urls()
+    eps = vfel.list_episode_urls(objects=True)
     print("LF ALL EPS")
     for ep in eps:
         print(ep)
 
-    print("LF LAST 5 EPS")  # tv4play shows last first, for last season...
-    eps = vfel.list_episode_urls(revered_order=True, limit=5)
+    print("LF LAST 5 EPS")
+    eps = vfel.list_episode_urls(revered_order=True, limit=5, objects=True)
     for ep in eps:
         print(ep)
 
-    print("LF FIRST 5 EPS")  # tv4play shows last first, for last season...
-    eps = vfel.list_episode_urls(revered_order=False, limit=5)
+    print("LF FIRST 5 EPS")
+    eps = vfel.list_episode_urls(revered_order=False, limit=5, objects=True)
     for ep in eps:
         print(ep)
 
     prog_url = "https://www.viafree.se/program/reality/paradise-hotel/"
     vfel = ViafreeEpisodeLister(prog_url)
-    eps = vfel.list_episode_urls()
+    eps = vfel.list_episode_urls(objects=True)
     print("PH ALL EPS")
     for ep in eps:
         print(ep)
 
-    print("PH LAST 5 EPS")  # tv4play shows last first, for last season...
-    eps = vfel.list_episode_urls(revered_order=True, limit=5)
+    print("PH LAST 5 EPS")
+    eps = vfel.list_episode_urls(revered_order=True, limit=5, objects=True)
     for ep in eps:
         print(ep)
 
-    print("PH FIRST 5 EPS")  # tv4play shows last first, for last season...
-    eps = vfel.list_episode_urls(revered_order=False, limit=5)
+    print("PH FIRST 5 EPS")
+    eps = vfel.list_episode_urls(revered_order=False, limit=5, objects=True)
     for ep in eps:
         print(ep)
 
