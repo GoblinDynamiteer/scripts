@@ -347,7 +347,7 @@ if __name__ == "__main__":
             if filter_dict:
                 lister.set_filter(**filter_dict)
             urls = lister.list_episode_urls(
-                revered_order=False, limit=wanted_last
+                revered_order=True, limit=wanted_last
             )
         else:
             print("cannot list episodes..")
