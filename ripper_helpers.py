@@ -6,7 +6,7 @@ import random
 import re
 import sys
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 
 from datetime import datetime
 from requests import Session
@@ -56,7 +56,7 @@ class Tv4PlayEpisodeData():
                f"\"{self.title}\" -- id:{self.id} -- url:{self.url()}"
 
     def url(self):
-        return f"{self.URL_PREFIX}{self.show}/{self.id}"
+        return f"{self.URL_PREFIX}{quote(self.show)}/{self.id}"
 
 
 class DPlayEpisodeData():
