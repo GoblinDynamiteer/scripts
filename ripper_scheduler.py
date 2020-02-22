@@ -184,20 +184,17 @@ class ScheduledShow():
 
     def get_url_objects(self):
         lister = None
-        rev_order = True
         if "dplay" in self.url:
             lister = DPlayEpisodeLister(self.url)
         elif "viafree" in self.url:
             lister = ViafreeEpisodeLister(self.url)
-            rev_order = False
         elif "tv4play" in self.url:
             lister = Tv4PlayEpisodeLister(self.url)
-            rev_order = False
         else:
             return []
         if self.filter_dict:
             lister.set_filter(**self.filter_dict)
-        return lister.list_episode_urls(revered_order=rev_order,
+        return lister.list_episode_urls(revered_order=True,
                                         limit=2,
                                         objects=True)
 
