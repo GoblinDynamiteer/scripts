@@ -179,6 +179,9 @@ class PlayRipperYoutubeDl():
         self.retrieve_info()
 
     def download(self, destination_path=None):
+        if not self.info:
+            print("no video info available, skipping download!")
+            return None
         if destination_path:
             self.dest_path = destination_path
         if self.file_already_exists():
@@ -243,6 +246,10 @@ class PlayRipperYoutubeDl():
                 return  # succeeded
             except youtube_dl.utils.DownloadError as error:
                 pass
+            except AttributeError:
+                pass
+        # did not succeed
+        print("could not retrieve info using youtube-dl!")
 
     def generate_filename(self):
         series = self.info.get("series", None)
