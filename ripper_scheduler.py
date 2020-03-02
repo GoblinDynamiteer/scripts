@@ -128,6 +128,7 @@ class ScheduledShow():
         self.filter_dict = data.get("filter", {})
         self.url = data["url"]
         self.use_title = data.get("use_title", False)
+        self.disabled = data.get("disabled", False)
         self.downloaded_today = False
         self.airtimes = []
 
@@ -232,7 +233,11 @@ if __name__ == "__main__":
     schedule_data = parse_json_schedule()
     sheduled_shows = []
     for show_data in schedule_data:
-        sheduled_shows.append(ScheduledShow(show_data))
+        sheduled_show = ScheduledShow(show_data)
+        if not sheduled_show.disabled:
+            sheduled_shows.append(sheduled_show)
+        else:
+            pfcs(f"show o[{sheduled_show.name}] is disabled, skipping...")
     if not sheduled_shows:
         print("no shows to process.. exiting.")
         sys.exit(1)
