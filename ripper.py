@@ -365,7 +365,8 @@ if __name__ == "__main__":
         for url in urls:
             print(CSTR(f"  {url}", "lblue"))
     for url in urls:
-        ripper = PlayRipperYoutubeDl(url, ARGS.dir, sim=ARGS.simulate)
+        ripper = PlayRipperYoutubeDl(
+            url, ARGS.dir, sim=ARGS.simulate, use_title=ARGS.use_title)
         ripper.print_info()
         if ARGS.sub_only:
             file_name = ripper.get_dest_path()
