@@ -26,10 +26,10 @@ CFG = config.ConfigurationManager()
 
 class TimeZoneInfo(tzinfo):
     def utcoffset(self, dt):
-        return timedelta(hours=+1)
+        return timedelta(hours=+2)
 
     def dst(self, dt):
-        return timedelta(hours=+1)
+        return timedelta(hours=+2)
 
 
 class Day(Enum):
