@@ -40,6 +40,39 @@ def apply_filter(ep_list: list, filter_type: str, filter_val: str):
     return filtered_list
 
 
+class SVTPlayEpisodeData():
+    URL_PREFIX = r"https://www.svtplay.se"
+
+    def __init__(self):
+        self.season_num = 0
+        self.episode_num = 0
+        self.title = "N/A"
+        self.id = 0
+        self.show = "N/A"
+        self.url_suffix = ""
+
+    def __str__(self):
+        return f"{self.show} S{self.season_num}E{self.episode_num} " \
+               f"\"{self.title}\" -- id:{self.id} -- url:{self.url()}"
+
+    def set_data(self, **key_val_data):
+        if "season_num" in key_val_data:
+            self.season_num = key_val_data["season_num"]
+        if "episode_num" in key_val_data:
+            self.episode_num = key_val_data["episode_num"]
+        if "id" in key_val_data:
+            self.id = key_val_data["id"]
+        if "show" in key_val_data:
+            self.show = key_val_data["show"]
+        if "title" in key_val_data:
+            self.title = key_val_data["title"]
+        if "url" in key_val_data:
+            self.url_suffix = key_val_data["url"]
+
+    def url(self):
+        return f"{self.URL_PREFIX}{self.url_suffix}"
+
+
 class Tv4PlayEpisodeData():
     URL_PREFIX = r"https://www.tv4play.se/program/"
 
@@ -107,6 +140,110 @@ class ViafreeEpisodeData():
 
     def url(self):
         return f"{self.URL_PREFIX}{self.episode_path}"
+
+
+class SVTPlayEpisodeLister():
+    REGEX = r"application\/json\">(.*\}\})<\/script><script "
+
+    def __init__(self, url):
+        if not "svtplay.se" in url:
+            print("cannot handle non-svtplay.se urls!")
+        self.url = url
+        self.session = Session()
+        self.filter = {}
+
+    def set_filter(self, **kwargs):
+        for key, val in kwargs.items():
+            if key not in VALID_FILTER_KEYS:
+                print(f"invalid filter: {key}={val}")
+            else:
+                self.filter[key] = val
+
+    def list_episode_urls(self, revered_order=False, limit=None, objects=False):
+        res = self.session.get(f"{self.url}")
+        match = re.search(r"__svtplay_apollo'] = ({.*});", res.text)
+        if not match:
+            print("could not parse data!")
+            return []
+        json_data = json.loads(match.group(1))
+        season_slug = ""
+        show_name = ""
+        for key in json_data.keys():
+            slug = json_data[key].get("slug", "")
+            if slug and slug in self.url:
+                season_slug = slug
+                show_name = json_data[key].get("name", "")
+                break
+        episode_keys = self.find_episode_keys(json_data, season_slug)
+        ep_list = []
+        for ep_key in episode_keys:
+            obj = self.key_to_obj(json_data, ep_key)
+            if obj is not None:
+                obj.set_data(show=show_name)
+                ep_list.append(obj)
+        for filter_key, filter_val in self.filter.items():
+            ep_list = apply_filter(ep_list, filter_key, filter_val)
+        ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
+                     reverse=revered_order)
+        if limit:
+            return [ep if objects else ep.url() for ep in ep_list[0:limit]]
+        return [ep if objects else ep.url() for ep in ep_list]
+
+    def key_to_obj(self, json_data: dict, key: str):
+        re_ix = r"\d{3}$"
+        re_part = r"[dD]el+\s(?P<ep_num>\d+)\sav\s\d+"
+        re_url = r"\/(?P<ep_id>\d+).+sasong\-(?P<season_num>\d+)"
+        ep_data = json_data.get(key, {})
+        if not ep_data:
+            return None
+        determined_ep_number = None
+        determined_season_number = None
+        match = re.search(re_ix, ep_data.get("id", ""))
+        if match:
+            determined_ep_number = int(match.group(0))
+        match = re.search(re_part, ep_data.get("longDescription", ""))
+        if match:
+            part_num = int(match.groupdict().get("ep_num", None))
+            if determined_ep_number is not None:
+                if part_num != determined_ep_number:
+                    print(f"found several ep numbers for{key}!")
+            determined_ep_number = part_num
+        url_key = ep_data["urls"]["id"]
+        url_str = json_data.get(url_key, {}).get("svtplay", "")
+        if not url_str:
+            return None
+        match = re.search(re_url, url_str)
+        ep_id = None
+        if match:
+            determined_season_number = int(
+                match.groupdict().get("season_num", None))
+            ep_id = int(match.groupdict().get("ep_id", None))
+        obj = SVTPlayEpisodeData()
+        obj.set_data(id=ep_id,
+                     title=ep_data.get("name", "N/A"),
+                     url=url_str,
+                     season_num=determined_season_number,
+                     episode_num=determined_ep_number)
+        return obj
+
+    def find_episode_keys(self, json_data, show_slug):
+        found_episodes = []
+        if not show_slug:
+            return found_episodes
+        for key, val in json_data.items():
+            if key in found_episodes:
+                continue
+            if not key.lower().startswith("episode"):
+                continue
+            url_key = ""
+            try:
+                url_key = val["urls"]["id"]
+            except KeyError:
+                continue
+            url_str = json_data.get(url_key, {}).get("svtplay", "")
+            if show_slug in url_str:
+                found_episodes.append(key)
+        return found_episodes
 
 
 class Tv4PlayEpisodeLister():

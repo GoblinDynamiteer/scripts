@@ -21,6 +21,8 @@ from printing import cstr, pfcs
 from ripper_helpers import DPlayEpisodeLister
 from ripper_helpers import Tv4PlayEpisodeLister
 from ripper_helpers import ViafreeEpisodeLister
+from ripper_helpers import SVTPlayEpisodeData
+from ripper_helpers import SVTPlayEpisodeLister
 
 
 SIM_STR = r"(SIMULATE)"
@@ -152,7 +154,11 @@ class PlayRipperYoutubeDl():
     SIM_STR = f"i[{SIM_STR}] p[YTDL]"
 
     def __init__(self, url, dest=None, use_title=False, sim=False):
+        self.ep_data = None
         self.url = url
+        if isinstance(url, SVTPlayEpisodeData):
+            self.ep_data = url
+            self.url = url.url()
         self.dest_path = dest
         self.format = None
         self.simulate = sim
@@ -252,10 +258,16 @@ class PlayRipperYoutubeDl():
         print("could not retrieve info using youtube-dl!")
 
     def generate_filename(self):
-        series = self.info.get("series", None)
-        title = self.info.get("title", None)
-        season_number = self.info.get("season_number", None)
-        episode_number = self.info.get("episode_number", None)
+        if self.ep_data:
+            series = self.ep_data.show
+            title = self.ep_data.title
+            season_number = self.ep_data.season_num
+            episode_number = self.ep_data.episode_num
+        else:
+            series = self.info.get("series", None)
+            title = self.info.get("title", None)
+            season_number = self.info.get("season_number", None)
+            episode_number = self.info.get("episode_number", None)
         ext = self.info.get("ext", None)
         ident = self.info.get("id", None)
         if not ext:
@@ -356,6 +368,13 @@ if __name__ == "__main__":
             urls = lister.list_episode_urls(
                 revered_order=True, limit=wanted_last
             )
+        elif "svtplay" in urls[0]:
+            lister = SVTPlayEpisodeLister(urls[0])
+            if filter_dict:
+                lister.set_filter(**filter_dict)
+            urls = lister.list_episode_urls(objects=True,
+                                            revered_order=True, limit=wanted_last
+                                            )
         else:
             print("cannot list episodes..")
             sys.exit(1)
@@ -363,22 +382,30 @@ if __name__ == "__main__":
             urls = urls[-1 * wanted_last:]
         print(f"will download {len(urls)} links:")
         for url in urls:
-            print(CSTR(f"  {url}", "lblue"))
+            if isinstance(url, SVTPlayEpisodeData):
+                url_str = url.url()
+            else:
+                url_str = url
+            print(CSTR(f"  {url_str}", "lblue"))
     for url in urls:
         ripper = PlayRipperYoutubeDl(
             url, ARGS.dir, sim=ARGS.simulate, use_title=ARGS.use_title)
         ripper.print_info()
+        if isinstance(url, SVTPlayEpisodeData):
+            url_str = url.url()
+        else:
+            url_str = url
         if ARGS.sub_only:
             file_name = ripper.get_dest_path()
             sub_ripper = PlaySubtitleRipperSvtPlayDl(
-                url, str(file_name), sim=ARGS.simulate)
+                url_str, str(file_name), sim=ARGS.simulate)
             sub_ripper.print_info()
             sub_ripper.download()
         else:
             file_name = ripper.download()
             if file_name and ripper.download_succeeded:
                 sub_ripper = PlaySubtitleRipperSvtPlayDl(
-                    url, str(file_name), sim=ARGS.simulate)
+                    url_str, str(file_name), sim=ARGS.simulate)
                 sub_ripper.print_info()
                 sub_ripper.download()
         print("=" * 100)
