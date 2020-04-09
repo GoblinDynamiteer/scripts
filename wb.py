@@ -103,7 +103,7 @@ def _parse_get_indexes(items: list, indexes: str) -> list:
             elif "+" in ix_split:
                 start_num = int(ix_split.split("+")[0])
                 addition = int(ix_split.split("+")[1])
-                ran = [r for r in range(start_num, start_num + addition)]
+                ran = [r for r in range(start_num, start_num + addition + 1)]
                 indexes_to_dl.extend(ran)
             else:
                 indexes_to_dl.append(int(ix_split))
