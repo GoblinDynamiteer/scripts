@@ -24,6 +24,7 @@ class AllowedDuplicate(Enum):
     UltraHDVersion = "2160p"
     DirectorsCut = "Directors.Cut"
     Uncut = "UNCUT"
+    Theatrical = "THEATRICAL"
     Unrated = "UNRATED"
     JapAndSeDub = ".SE.JAP."
     EngAndSeAndJapDub = ".SE.ENG.JAP."
