@@ -2,6 +2,8 @@
 
 '''String output'''
 
+import shutil
+
 COLORS = {"black": 0,
           "red": 196,
           "dred": 88,
@@ -82,13 +84,19 @@ def pcfs(string, format_chars=('[', ']'), show=True, end='\n'):
         string, format_chars=format_chars, show=show, end=end)
 
 
-def percentage_to_cstr(percentage: str)->str:
+def percentage_to_cstr(percentage: str) -> str:
     percentage_val = int(percentage.replace('%', ''))
     for key, val in ORANGE_GREEN_GRAD.items():
         if percentage_val > key:
             continue
         return cstr(percentage, val)
     return cstr(percentage, 'lgreen')
+
+
+def print_line(color=239, adapt_to_terminal_width=True, length=100, char="="):
+    if adapt_to_terminal_width:
+        length = shutil.get_terminal_size()[0] - 1
+    pcstr(char * length, color)
 
 
 def to_color_str(
@@ -102,3 +110,6 @@ if __name__ == "__main__":
     test_colors()
     pfcs(f"Hello I am e[error] and I am b[info]")
     pfcs(f"Hello I am e.error- and I am b.info-", format_chars=('.', '-'))
+    print_line(color="blue")
+    print_line(color="red")
+    print_line()
