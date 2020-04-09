@@ -92,11 +92,18 @@ def _parse_get_indexes(items: list, indexes: str) -> list:
     if indexes.startswith("-"):  # download last x items
         return items[int(indexes):]
     indexes_to_dl = []
+    if "+" in indexes and "-" in indexes:
+        pfcs("e[indexes connot contain both '-' and '+'! aborting]")
     try:
         for ix_split in indexes.split(","):
             if "-" in ix_split:
                 ranges = ix_split.split("-")
                 ran = [r for r in range(int(ranges[0]), int(ranges[1]) + 1)]
+                indexes_to_dl.extend(ran)
+            elif "+" in ix_split:
+                start_num = int(ix_split.split("+")[0])
+                addition = int(ix_split.split("+")[1])
+                ran = [r for r in range(start_num, start_num + addition)]
                 indexes_to_dl.extend(ran)
             else:
                 indexes_to_dl.append(int(ix_split))
