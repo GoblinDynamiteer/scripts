@@ -138,6 +138,11 @@ def wb_download_items(items: list, indexes: str, dest_dir: str, extr=False):
         print(f'{CSTR("destination does not exist, aborting!", "red")}')
         return
     items_to_dl = _parse_get_indexes(items, indexes)
+    if not items_to_dl:
+        return
+    print("Will download the following:")
+    for item in items_to_dl:
+        pfcs(f" - g[{item['name']}]")
     [download(item, dest_dir, extr=extr) for item in items_to_dl]
 
 
