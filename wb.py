@@ -3,22 +3,21 @@
 """Script to interact with torrent-server"""
 
 import argparse
-import os
 from pathlib import Path
+import re
 
 import config
 import extract
 import util
-import util_tv
 from db_mov import MovieDatabase
 from db_tv import EpisodeDatabase
 from printing import pfcs
 from printing import to_color_str as CSTR
-from release import ReleaseType, determine_release_type
+from release import determine_release_type
 from run import local_command, remote_command_get_output
 
 
-def _parse_ls(line: str):
+def parse_ls_line(line: str):
     splits = line.split()
     if len(splits) < 4:
         return {}
@@ -30,32 +29,35 @@ def _parse_ls(line: str):
     return data
 
 
-def _get_items():
+def ls_remote_items(filter_re: str = ""):
     file_list = remote_command_get_output(
         r'ls -trl --time-style="+%Y-%m-%d %H:%M" ~/files', "wb"
     ).split("\n")
-    items = [_parse_ls(line) for line in file_list]
+    items = [parse_ls_line(line) for line in file_list]
     index = 1
 
     db_mov = MovieDatabase()
     db_ep = EpisodeDatabase()
 
     for item in items:
-        if item:
-            item["index"] = index
-            index += 1
-            item["downloaded"] = False
-            if item["name"].replace(".mkv", "") in db_mov:
+        if not item:
+            continue
+        item["index"] = index
+        index += 1
+        item["downloaded"] = False
+        if item["name"].replace(".mkv", "") in db_mov:
+            item["downloaded"] = True
+        if not item["downloaded"]:
+            tv_item_names = [
+                item["name"],
+                item["name"].lower(),
+                f"{item['name']}.mkv",
+                f"{item['name']}.mkv".lower(),
+            ]
+            if any(x in db_ep for x in tv_item_names):
                 item["downloaded"] = True
-            if not item["downloaded"]:
-                tv_item_names = [
-                    item["name"],
-                    item["name"].lower(),
-                    f"{item['name']}.mkv",
-                    f"{item['name']}.mkv".lower(),
-                ]
-                if any(x in db_ep for x in tv_item_names):
-                    item["downloaded"] = True
+    if filter_re:
+        return [i for i in items if i and re.search(filter_re, i["name"], re.IGNORECASE)]
     return [item for item in items if item]
 
 
@@ -88,7 +90,7 @@ def wb_list_items(items):
         item_len -= 1
 
 
-def _parse_get_indexes(items: list, indexes: str) -> list:
+def filter_using_get_arg_indexes(items: list, indexes: str) -> list:
     if indexes.startswith("-"):  # download last x items
         return items[int(indexes):]
     indexes_to_dl = []
@@ -132,7 +134,7 @@ def download(item: dict, extr: bool = False):
 
 def wb_download_items(items: list, indexes: str, extr=False):
     "Downloads the items passed, based on indexes, to dest_dir"
-    items_to_dl = _parse_get_indexes(items, indexes)
+    items_to_dl = filter_using_get_arg_indexes(items, indexes)
     if not items_to_dl:
         return
     print("Will download the following:")
@@ -175,6 +177,13 @@ if __name__ == "__main__":
         help="items to download. indexes"
     )
     PARSER.add_argument(
+        "--filter",
+        "-f",
+        type=str,
+        default="",
+        help="Filter items to be downloaded/listed, regex"
+    )
+    PARSER.add_argument(
         "--extract",
         "-e",
         action="store_true",
@@ -184,9 +193,9 @@ if __name__ == "__main__":
     ARGS = PARSER.parse_args()
 
     if ARGS.command in ["list", "new"]:
-        wb_list_items(_get_items())
+        wb_list_items(ls_remote_items(ARGS.filter))
     elif ARGS.command in ["download", "get"]:
-        wb_download_items(_get_items(), ARGS.get, ARGS.extract)
+        wb_download_items(ls_remote_items(ARGS.filter), ARGS.get, ARGS.extract)
     elif ARGS.command == "send":
         wb_scp_torrents()
     else:
