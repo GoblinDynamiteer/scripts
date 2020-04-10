@@ -114,7 +114,9 @@ def _parse_get_indexes(items: list, indexes: str) -> list:
 
 
 def download(item: dict, dest: str, extr: bool = False):
-    file_name = item["name"].replace(" ", r"\ ")
+    file_name = item["name"]
+    for char, repl in [(" ", r"\ "), ("'", "*")]:
+        file_name = file_name.replace(char, repl)
     print(f'downloading: {CSTR(file_name, "orange")}')
     if dest == "auto":
         dest = CFG.get("path_download")
