@@ -113,46 +113,32 @@ def _parse_get_indexes(items: list, indexes: str) -> list:
         return []
 
 
-def download(item: dict, dest: str, extr: bool = False):
+def download(item: dict, extr: bool = False):
     file_name = item["name"]
     for char, repl in [(" ", r"\ "), ("'", "*")]:
         file_name = file_name.replace(char, repl)
     print(f'downloading: {CSTR(file_name, "orange")}')
-    if dest == "auto":
-        dest = CFG.get("path_download")
-        if util_tv.is_episode(file_name) and file_name.endswith(".mkv"):
-            show = util_tv.determine_show_from_episode_name(file_name)
-            if show:
-                path = Path(CFG.get("path_tv")) / show
-                season = util_tv.parse_season(file_name)
-                if path.exists() and season:
-                    path = Path(path) / f"S{season:02d}"
-                    if path.exists():
-                        dest = path
-                        pfcs(f"using auto destination:\n  g[{dest}]")
-    command = f'scp -r wb:"~/files/{file_name}" "{dest}"'
+    dl_dir = CFG.get("path_download")
+    command = f'scp -r wb:"~/files/{file_name}" "{dl_dir}"'
     local_command(command, hide_output=False)
     # only run extract if dest was default dl dir
-    if dest == CFG.get("path_download") and extr:
-        path_for_extract_cmd = Path(dest) / file_name
+    if extr:
+        path_for_extract_cmd = Path(dl_dir) / file_name
         if not path_for_extract_cmd.exists():
             return
         pfcs(f"running extract command on: g[{path_for_extract_cmd}]")
         extract.extract_item(path_for_extract_cmd)
 
 
-def wb_download_items(items: list, indexes: str, dest_dir: str, extr=False):
+def wb_download_items(items: list, indexes: str, extr=False):
     "Downloads the items passed, based on indexes, to dest_dir"
-    if dest_dir != "auto" and not os.path.exists(dest_dir):
-        print(f'{CSTR("destination does not exist, aborting!", "red")}')
-        return
     items_to_dl = _parse_get_indexes(items, indexes)
     if not items_to_dl:
         return
     print("Will download the following:")
     for item in items_to_dl:
         pfcs(f" - g[{item['name']}]")
-    [download(item, dest_dir, extr=extr) for item in items_to_dl]
+    [download(item, extr=extr) for item in items_to_dl]
 
 
 def wb_scp_torrents():
@@ -178,25 +164,29 @@ def wb_scp_torrents():
 if __name__ == "__main__":
     CFG = config.ConfigurationManager()
     PARSER = argparse.ArgumentParser(description="ripper")
-    PARSER.add_argument("command", type=str, choices=[
-                        "list", "new", "download", "get", "send"])
-    PARSER.add_argument("--dest", type=str, default=CFG.get("path_download"))
     PARSER.add_argument(
-        "--get", type=str, default="-1", help="items to download. indexes"
+        "command",
+        type=str,
+        choices=["list", "new", "download", "get", "send"])
+    PARSER.add_argument(
+        "--get",
+        type=str,
+        default="-1",
+        help="items to download. indexes"
     )
     PARSER.add_argument(
         "--extract",
         "-e",
         action="store_true",
         help="Run extract after download",
-        dest="extract",
+        dest="extract"
     )
     ARGS = PARSER.parse_args()
 
     if ARGS.command in ["list", "new"]:
         wb_list_items(_get_items())
     elif ARGS.command in ["download", "get"]:
-        wb_download_items(_get_items(), ARGS.get, ARGS.dest, ARGS.extract)
+        wb_download_items(_get_items(), ARGS.get, ARGS.extract)
     elif ARGS.command == "send":
         wb_scp_torrents()
     else:
