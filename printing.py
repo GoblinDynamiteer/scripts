@@ -20,6 +20,7 @@ COLORS = {"black": 0,
           "lyellow": 229,
           "yellow": 226,
           "dyellow": 220,
+          "warning": 221,
           "brown": 130,
           "lgrey": 250,
           "grey": 244,
@@ -39,6 +40,7 @@ FORMAT_CODES = {
     'i[': 154,  # info
     'o[': 214,  # orange
     'd[': 239,  # dark /grey
+    'w[': COLORS['warning'],
     'p[': COLORS['purple']}
 
 
