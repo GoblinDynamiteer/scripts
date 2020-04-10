@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.8
 
 '''String output'''
 
@@ -31,9 +31,15 @@ ORANGE_GREEN_GRAD = {0: 196, 1: 202, 10: 208, 20: 215,
                      30: 184, 40: 148, 50: 190, 60: 118, 70: 46}
 
 
-FORMAT_CODES = {'w[': 214, 'e[': 196, 'g[': 154,
-                'b[': 74, 'i[': 154, 'o[': 214, 'd[': 239,
-                'p[': COLORS['purple']}
+FORMAT_CODES = {
+    'dg[': 70,  # dark green
+    'e[': 196,  # error
+    'g[': 154,  # green
+    'b[': 74,  # blue
+    'i[': 154,  # info
+    'o[': 214,  # orange
+    'd[': 239,  # dark /grey
+    'p[': COLORS['purple']}
 
 
 def test_colors():
@@ -108,6 +114,7 @@ def to_color_str(
 if __name__ == "__main__":
     print("colors:\n")
     test_colors()
+    pfcs(f"Hello I am dg[dark green] i am g[green]")
     pfcs(f"Hello I am e[error] and I am b[info]")
     pfcs(f"Hello I am e.error- and I am b.info-", format_chars=('.', '-'))
     print_line(color="blue")
