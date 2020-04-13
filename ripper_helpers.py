@@ -6,6 +6,7 @@ import random
 import re
 import sys
 
+from urllib.request import urlopen
 from urllib.parse import urlparse, quote
 
 from datetime import datetime
@@ -374,6 +375,51 @@ class DPlayEpisodeLister():
         return [ep if objects else ep.url() for ep in ep_list]
 
 
+class ViafreeUrlHandler():
+    APU_URL_VID = r"http://playapi.mtgx.tv/v3/videos/"
+    APU_URL_STREAM = r"https://viafree.mtg-api.com/stream-links/viafree/web" \
+                     r"/se/clear-media-guids/{}/streams"
+
+    def __init__(self, url):
+        if not "viafree" in url:
+            print("cannot handle non-viafree.se urls!")
+        self.url = url
+        self.session = Session()
+        self.id = self.parse_id()
+        self.mpx_guid = None
+        self.stream_url = self.determine_stream_url()
+
+    def parse_id(self):
+        if not "avsnitt" in self.url:
+            return None
+        page_contents = urlopen(self.url).read()
+        match = re.search(
+            r"\"product[Gg]uid\"\:\"\d{1,10}\"", str(page_contents))
+        if not match:
+            print("viafree workaround -> failed to extract video id")
+            return None
+        vid_id = match.group(0).replace(r'"productGuid":"', "")
+        vid_id = vid_id.replace(r'"', "")
+        try:
+            return int(vid_id)
+        except:
+            return None
+
+    def determine_stream_url(self):
+        if self.id is None:
+            return ""
+        res = self.session.get(f"{self.APU_URL_VID}{self.id}")
+        json_data = res.json()
+        self.mpx_guid = json_data.get("mpx_guid", None)
+        res = self.session.get(self.APU_URL_STREAM.format(self.mpx_guid))
+        try:
+            stream_url = res.json()[
+                "embedded"]["prioritizedStreams"][0]["links"]["stream"]["href"]
+        except:
+            stream_url = ""
+        return stream_url
+
+
 class ViafreeEpisodeLister():
     def __init__(self, url):
         if not "viafree" in url:
@@ -549,9 +595,18 @@ def test_viafree():
         print(ep)
 
     print("PH FIRST 5 EPS")
-    eps = vfel.list_episode_urls(revered_order=False, limit=5, objects=True)
+    eps = vfel.list_episode_urls(
+        revered_order=False, limit=5, objects=True)
     for ep in eps:
         print(ep)
+
+
+def test_viafree_url_handler():
+    vfurl = ViafreeUrlHandler(
+        "https://www.viafree.se/program/reality/paradise-hotel/sasong-12/avsnitt-25")
+    print("PH URL ID")
+    print(vfurl.id)
+    print(vfurl.stream_url)
 
 
 if __name__ == "__main__":
@@ -559,3 +614,4 @@ if __name__ == "__main__":
     test_tv4play()
     test_dplay()
     test_viafree()
+    test_viafree_url_handler()
