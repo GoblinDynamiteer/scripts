@@ -23,6 +23,7 @@ from ripper_helpers import Tv4PlayEpisodeLister
 from ripper_helpers import ViafreeEpisodeLister
 from ripper_helpers import SVTPlayEpisodeData
 from ripper_helpers import SVTPlayEpisodeLister
+from ripper_helpers import ViafreeUrlHandler
 
 
 SIM_STR = r"(SIMULATE)"
@@ -177,15 +178,15 @@ class PlayRipperYoutubeDl():
         self.filename = ""
         self.download_succeeded = False
 
-        if "viafree" in self.url:
-            self.url = self.viafree_url()
-            if not self.url:
-                return
+        # if "viafree" in self.url:
+        #    self.url = self.viafree_url()
+        #    if not self.url:
+        #        return
 
         self.retrieve_info()
 
     def download(self, destination_path=None):
-        if not self.info:
+        if not self.info and not "viafree" in self.url:
             print("no video info available, skipping download!")
             return None
         if destination_path:
@@ -193,11 +194,15 @@ class PlayRipperYoutubeDl():
         if self.file_already_exists():
             pfcs(f"file already exists: o[{self.filename}], skipping")
             return None
+        if "viafree" in self.url:
+            url = ViafreeUrlHandler(self.url).stream_url
+        else:
+            url = self.url
         if not self.simulate:
             try:
                 with youtube_dl.YoutubeDL(self.options) as ydl:
                     ydl.params["outtmpl"] = str(self.get_dest_path())
-                    ydl.download([self.url])
+                    ydl.download([url])
                     if self.file_already_exists():
                         self.download_succeeded = True
                     return str(self.get_dest_path())
@@ -242,6 +247,10 @@ class PlayRipperYoutubeDl():
                   f"- {event['_eta_str']})    ", end="")
 
     def retrieve_info(self):
+        if "viafree" in self.url:
+            self.filename = "viafree_test"  # TODO retrieve data from api
+            self.format = YoutubeDLFormats.Best
+            return
         for vid_format in YoutubeDLFormats:
             self.options["format"] = vid_format.value
             self.format = vid_format
