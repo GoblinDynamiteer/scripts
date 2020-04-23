@@ -10,7 +10,7 @@ from pathlib import Path
 
 from config import ConfigurationManager as cfg
 from util_tv import parse_season_episode
-from printing import pfcs
+from printing import pfcs, cstr
 
 
 class RegexStr(Enum):
@@ -25,17 +25,45 @@ class ListType(Enum):
     TVShowSeason = 3
     TVSHowEpisode = 4
 
+class SubtitleLang(Enum):
+    English = "en"
+    Swedish = "sv"
+    Unknown = "unkown"
 
 class ListerItemTVShowEpisode():
     def __init__(self, path):
         self.path = path
         self.filename = path.name
         self.season, self.episode = parse_season_episode(path.name)
+        self.subs = self.determine_subs()
+        self.row_len = len(self.filename)
         # TODO determine subtitles, db info
 
     def show_list(self):
         se_str = f"S{self.season:02d}E{self.episode:02d}"
-        pfcs(f"  i[{self.filename}] d[{se_str}]")
+        subs_str = "subs: "
+        for sub in SubtitleLang:
+            has = sub in self.subs
+            if sub == SubtitleLang.Unknown:
+                if has:
+                    subs_str += cstr(sub.value + " ", "lyellow")
+                continue
+            subs_str += cstr(sub.value + " ",
+                            "lgreen" if has else "dgrey")
+        pfcs(f"  i[{self.filename: <{self.row_len}}] b[{se_str}] {subs_str}")
+
+    def determine_subs(self):
+        path_en_srt = self.path.with_suffix(".en.srt")
+        path_sv_srt = self.path.with_suffix(".sv.srt")
+        path_unknown_srt = self.path.with_suffix(".srt")
+        subs = []
+        if path_en_srt.is_file():
+            subs.append(SubtitleLang.English)
+        if path_sv_srt.is_file():
+            subs.append(SubtitleLang.Swedish)
+        if path_unknown_srt.is_file():
+            subs.append(SubtitleLang.Unknown)
+        return subs
 
 
 class ListerItemTVShowSeason():
@@ -49,12 +77,17 @@ class ListerItemTVShowSeason():
         for sub_path in self.path.iterdir():
             if sub_path.is_dir():
                 continue  # should not be present, but just in case
-            if sub_path.suffix in [".mkv"]:  # TODO match more extensions
+            if sub_path.suffix in [".mkv", ".mp4", ".flv"]:  # TODO all relevant exts?
                 if self.episode:
                     if f"E{self.episode:02d}" in sub_path.name.upper():
                         ep_list.append(ListerItemTVShowEpisode(sub_path))
                 else:
                     ep_list.append(ListerItemTVShowEpisode(sub_path))
+        max_len = 0
+        for ep in ep_list:
+            max_len = max(max_len, ep.row_len)
+        for ep in ep_list:
+            ep.row_len = max_len
         return ep_list
 
     def show_list(self):
