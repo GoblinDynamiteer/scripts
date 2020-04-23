@@ -3,18 +3,19 @@
 "Unit tests"
 
 import os
-import string
-import unittest
 import platform
+import string
 import tempfile
+import unittest
+from pathlib import Path
 
 import db_json
+import lister
 import printing
 import tvmaze
 import util
 import util_movie
 import util_tv
-from pathlib import Path
 
 
 class TestUtilMovie(unittest.TestCase):
@@ -183,7 +184,8 @@ class TestUtilPaths(unittest.TestCase):
         else:
             return
         self.assertEqual(util.dirname_of_file(path_to_file_str), correct_path)
-        self.assertEqual(util.dirname_of_file(Path(path_to_file_str)), correct_path)
+        self.assertEqual(util.dirname_of_file(
+            Path(path_to_file_str)), correct_path)
 
     def test_filename_of_path(self):
         if platform.system() == "Linux":
@@ -195,7 +197,8 @@ class TestUtilPaths(unittest.TestCase):
         else:
             return
         self.assertEqual(util.filename_of_path(path_to_file_str), correct_path)
-        self.assertEqual(util.filename_of_path(Path(path_to_file_str)), correct_path)
+        self.assertEqual(util.filename_of_path(
+            Path(path_to_file_str)), correct_path)
 
     def test_get_file_contents(self):
         contents = "HellOWWOOORLD12344$£@"
@@ -205,6 +208,54 @@ class TestUtilPaths(unittest.TestCase):
         self.assertEqual(util.get_file_contents(fp.name), [contents])
         self.assertEqual(util.get_file_contents(Path(fp.name)), [contents])
         os.remove(fp.name)
+
+
+class TestLister(unittest.TestCase):
+    def setUp(self):
+        self.det_type = lister.determine_type
+        self.type = lister.ListType
+
+    def test_args_type_tv_season(self):
+        arg = "tv better call saul s01".split(" ")
+        self.assertEqual(self.det_type(arg), self.type.TVShowSeason)
+        arg = "show firefly s01".split(" ")
+        self.assertEqual(self.det_type(arg), self.type.TVShowSeason)
+        arg = "show the walking dead s08".split(" ")
+        self.assertEqual(self.det_type(arg), self.type.TVShowSeason)
+
+    def test_args_type_movie(self):
+        arg = "movie star wars return of the jedi".split(" ")
+        self.assertEqual(self.det_type(arg), self.type.Movie)
+        arg = "mov kill bill".split(" ")
+        self.assertEqual(self.det_type(arg), self.type.Movie)
+        arg = "film mad max fury road".split(" ")
+        self.assertEqual(self.det_type(arg), self.type.Movie)
+
+    def test_args_type_unknown(self):
+        arg = "donald duck".split(" ")
+        self.assertEqual(self.det_type(arg), self.type.Unknown)
+        arg = []
+        self.assertEqual(self.det_type(arg), self.type.Unknown)
+
+    def test_obj_show(self):
+        arg = "tv breaking bad s01e05".split(" ")
+        lister_type = self.type.TVSHowEpisode
+        obj = lister.ListerItemTVShow(arg, lister_type)
+        self.assertEqual(obj.season, 1)
+        self.assertEqual(obj.episode, 5)
+
+        arg = "tv firefly s04".split(" ") # wishful thinking...
+        lister_type = self.type.TVShowSeason
+        obj = lister.ListerItemTVShow(arg, lister_type)
+        self.assertEqual(obj.season, 4)
+        self.assertEqual(obj.episode, None)
+
+        arg = "tv Game of Throned".split(" ")
+        lister_type = self.type.TVShow
+        obj = lister.ListerItemTVShow(arg, lister_type)
+        self.assertEqual(obj.season, None)
+        self.assertEqual(obj.episode, None)
+
 
 if __name__ == '__main__':
     unittest.main()
