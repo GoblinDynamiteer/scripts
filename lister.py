@@ -9,7 +9,7 @@ from enum import Enum
 from pathlib import Path
 
 from config import ConfigurationManager as cfg
-from util_tv import parse_season_episode
+from util_tv import parse_season_episode, parse_season
 from printing import pfcs, cstr
 from db_tv import EpisodeDatabase
 from util import Singleton
@@ -86,6 +86,7 @@ class ListerItemTVShowEpisode():
 
 class ListerItemTVShowSeason():
     def __init__(self, path, episode_num):
+        self.season_num = parse_season(path.name)
         self.path = path
         self.episode = episode_num
         self.episode_list = self.init_episode_list()
@@ -156,7 +157,7 @@ class ListerItemTVShow():
         return matches
 
     def show_list(self):
-        for season in self.season_lists:
+        for season in sorted(self.season_lists, key=operator.attrgetter("season_num")):
             season.show_list()
 
 
