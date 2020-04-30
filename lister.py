@@ -12,7 +12,7 @@ from config import ConfigurationManager as cfg
 from util_tv import parse_season_episode, parse_season
 from printing import pfcs, cstr
 from db_tv import EpisodeDatabase, ShowDatabase
-from util import Singleton
+from util import Singleton, date_str_to_timestamp, now_timestamp
 from tvmaze import TvMazeData
 
 
@@ -47,6 +47,23 @@ class ShowDbSingleton(metaclass=Singleton):
 
     def get_id(self, show_name: str) -> int:
         return self.show_db.get(show_name, "tvmaze")
+
+
+class ListerItemTVMissingShowEpisode():
+    def __init__(self, show_name, tvmaze_data):
+        self.data = tvmaze_data
+        self.season = tvmaze_data.get("season", 0)
+        self.episode = tvmaze_data.get("number", 0)
+        se_str = f"S{self.season:02d}E{self.episode:02d}"
+        self.name = f"{show_name.replace(' ', '.')}.{se_str}"
+        self.row_len = len(self.name)
+
+    def show_list(self):
+        pfcs(f"  o[<< {self.name} >> MISSING]")
+        id_str = "id: " + cstr(f"{self.data.get('id', 0)}", "lblue")
+        aired_str = "aired: " + cstr(self.data.get("airdate"), "lblue")
+        name_str = "\"" + cstr(self.data.get("name"), "lblue") + "\""
+        print(f"      {name_str} {id_str} {aired_str}")
 
 
 class ListerItemTVShowEpisode():
@@ -109,6 +126,7 @@ class ListerItemTVShowSeason():
         self.path = path
         self.episode = episode_num
         self.extras = show_extras
+        self.show_name = path.parents[0].name
         self.episode_list = self.init_episode_list()
 
     def init_episode_list(self):
@@ -124,6 +142,19 @@ class ListerItemTVShowSeason():
                 else:
                     ep_list.append(ListerItemTVShowEpisode(
                         sub_path, self.extras))
+        if self.extras and not self.episode:
+            existing_nums = sorted([en.episode for en in ep_list])
+            show_maze_id = ShowDbSingleton().get_id(self.show_name)
+            for entry in TvMazeData().get_json_all_episodes(show_maze_id):
+                if entry.get("season", 0) != self.season_num:
+                    continue
+                if entry.get("number", 0) not in existing_nums:
+                    timestamp = date_str_to_timestamp(
+                        entry["airdate"], r'%Y-%m-%d')
+                    has_aired = timestamp < now_timestamp()
+                    if has_aired:
+                        ep_list.append(ListerItemTVMissingShowEpisode(
+                            self.show_name, entry))
         max_len = 0
         for ep in ep_list:
             max_len = max(max_len, ep.row_len)
