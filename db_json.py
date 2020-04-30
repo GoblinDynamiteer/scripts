@@ -118,8 +118,9 @@ class JSONDatabase(object):
         try:
             return self.json[primary_key][data]
         except KeyError:
-            print(
-                f'could not retrieve data [{data}] for {cstr(primary_key, "red")}')
+            if self.debug:
+                print(
+                    f'could not retrieve data [{data}] for {cstr(primary_key, "red")}')
             return None
 
     def exists(self, primary_key):
