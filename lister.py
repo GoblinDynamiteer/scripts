@@ -42,14 +42,13 @@ class EpDbSingleton(metaclass=Singleton):
 
 
 class ListerItemTVShowEpisode():
-    def __init__(self, path):
+    def __init__(self, path, show_extras=False):
         self.path = path
         self.filename = path.name
+        self.extras = show_extras
         self.season, self.episode = parse_season_episode(path.name)
         self.subs = self.determine_subs()
         self.row_len = len(self.filename)
-        self.maze_id = None
-        self.get_db_info()
 
     def show_list(self):
         se_str = f"S{self.season:02d}E{self.episode:02d}"
@@ -62,10 +61,10 @@ class ListerItemTVShowEpisode():
                 continue
             subs_str += cstr(sub.value + " ",
                              "lgreen" if has else "dgrey")
-        id_str = "id: " + cstr(f"{self.maze_id}",
-                               "lblue") if self.maze_id is not None else ""
         pfcs(
-            f"  i[{self.filename: <{self.row_len}}] b[{se_str}] {subs_str} {id_str}")
+            f"  i[{self.filename: <{self.row_len}}] b[{se_str}] {subs_str}")
+        if self.extras:
+            self.print_extras()
 
     def determine_subs(self):
         path_en_srt = self.path.with_suffix(".en.srt")
@@ -80,15 +79,19 @@ class ListerItemTVShowEpisode():
             subs.append(SubtitleLang.Unknown)
         return subs
 
-    def get_db_info(self):
-        self.maze_id = EpDbSingleton().get_id(self.filename)
+    def print_extras(self):
+        maze_id = EpDbSingleton().get_id(self.filename)
+        id_str = "id: " + cstr(f"{maze_id}",
+                               "lblue") if maze_id is not None else ""
+        print("   " + id_str)
 
 
 class ListerItemTVShowSeason():
-    def __init__(self, path, episode_num):
+    def __init__(self, path, episode_num, show_extras=False):
         self.season_num = parse_season(path.name)
         self.path = path
         self.episode = episode_num
+        self.extras = show_extras
         self.episode_list = self.init_episode_list()
 
     def init_episode_list(self):
@@ -99,9 +102,11 @@ class ListerItemTVShowSeason():
             if sub_path.suffix in [".mkv", ".mp4", ".flv"]:  # TODO all relevant exts?
                 if self.episode:
                     if f"E{self.episode:02d}" in sub_path.name.upper():
-                        ep_list.append(ListerItemTVShowEpisode(sub_path))
+                        ep_list.append(ListerItemTVShowEpisode(
+                            sub_path, self.extras))
                 else:
-                    ep_list.append(ListerItemTVShowEpisode(sub_path))
+                    ep_list.append(ListerItemTVShowEpisode(
+                        sub_path, self.extras))
         max_len = 0
         for ep in ep_list:
             max_len = max(max_len, ep.row_len)
@@ -117,9 +122,10 @@ class ListerItemTVShowSeason():
 
 
 class ListerItemTVShow():
-    def __init__(self, args: list, list_type: ListType):
+    def __init__(self, args: list, list_type: ListType, show_extras=False):
         self.show_path = None
         self.type = list_type
+        self.extras = show_extras
         if list_type == ListType.TVShow:
             self.args = args
             self.season = None
@@ -139,10 +145,10 @@ class ListerItemTVShow():
                 if self.season:
                     if f"S{self.season:02d}" == sub_path.name.upper():
                         season_lists.append(
-                            ListerItemTVShowSeason(sub_path, self.episode))
+                            ListerItemTVShowSeason(sub_path, self.episode, self.extras))
                 else:
                     season_lists.append(
-                        ListerItemTVShowSeason(sub_path, self.episode))
+                        ListerItemTVShowSeason(sub_path, self.episode, self.extras))
         return season_lists
 
     def determine_paths(self):
@@ -184,19 +190,24 @@ def determine_type(arguments: list):
 
 def main():
     parser = argparse.ArgumentParser(description="Multipurpouse lister")
-    parser.add_argument("keywords", metavar="N", type=str, nargs="+")
+    parser.add_argument("keywords",
+                        metavar="N",
+                        type=str,
+                        nargs="+")
+    parser.add_argument("--extras",
+                        "-e",
+                        action="store_true",
+                        help="show extra info",
+                        dest="show_extras")
     args = parser.parse_args()
 
     args_type = determine_type(args.keywords)
     if args_type == ListType.Unknown:
         return
     if args_type in [ListType.TVShow, ListType.TVShowSeason, ListType.TVSHowEpisode]:
-        lister_show = ListerItemTVShow(args.keywords[1:], args_type)
+        lister_show = ListerItemTVShow(
+            args.keywords[1:], args_type, args.show_extras)
         lister_show.show_list()
-
-    #DB_MOV = MovieDatabase()
-    #DB_SHOW = ShowDatabase()
-    #CFG = ConfigurationManager()
 
 
 if __name__ == "__main__":
