@@ -11,6 +11,8 @@ from pathlib import Path
 from config import ConfigurationManager as cfg
 from util_tv import parse_season_episode
 from printing import pfcs, cstr
+from db_tv import EpisodeDatabase
+from util import Singleton
 
 
 class RegexStr(Enum):
@@ -25,10 +27,19 @@ class ListType(Enum):
     TVShowSeason = 3
     TVSHowEpisode = 4
 
+
 class SubtitleLang(Enum):
     English = "en"
     Swedish = "sv"
     Unknown = "unkown"
+
+
+class EpDbSingleton(metaclass=Singleton):
+    ep_db = EpisodeDatabase()
+
+    def get_id(self, filename: str) -> int:
+        return self.ep_db.get(filename, "tvmaze")
+
 
 class ListerItemTVShowEpisode():
     def __init__(self, path):
@@ -37,7 +48,8 @@ class ListerItemTVShowEpisode():
         self.season, self.episode = parse_season_episode(path.name)
         self.subs = self.determine_subs()
         self.row_len = len(self.filename)
-        # TODO determine subtitles, db info
+        self.maze_id = None
+        self.get_db_info()
 
     def show_list(self):
         se_str = f"S{self.season:02d}E{self.episode:02d}"
@@ -49,8 +61,11 @@ class ListerItemTVShowEpisode():
                     subs_str += cstr(sub.value + " ", "lyellow")
                 continue
             subs_str += cstr(sub.value + " ",
-                            "lgreen" if has else "dgrey")
-        pfcs(f"  i[{self.filename: <{self.row_len}}] b[{se_str}] {subs_str}")
+                             "lgreen" if has else "dgrey")
+        id_str = "id: " + cstr(f"{self.maze_id}",
+                               "lblue") if self.maze_id is not None else ""
+        pfcs(
+            f"  i[{self.filename: <{self.row_len}}] b[{se_str}] {subs_str} {id_str}")
 
     def determine_subs(self):
         path_en_srt = self.path.with_suffix(".en.srt")
@@ -64,6 +79,9 @@ class ListerItemTVShowEpisode():
         if path_unknown_srt.is_file():
             subs.append(SubtitleLang.Unknown)
         return subs
+
+    def get_db_info(self):
+        self.maze_id = EpDbSingleton().get_id(self.filename)
 
 
 class ListerItemTVShowSeason():
@@ -176,7 +194,6 @@ def main():
         lister_show.show_list()
 
     #DB_MOV = MovieDatabase()
-    #DB_EP = EpisodeDatabase()
     #DB_SHOW = ShowDatabase()
     #CFG = ConfigurationManager()
 
