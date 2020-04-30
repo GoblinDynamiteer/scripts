@@ -75,4 +75,4 @@ class TvMazeData(metaclass=util.Singleton):
         url = f"http://api.tvmaze.com/shows/{show_id}/episodes"
         if url not in self.DATA:
             self.DATA[url] = _tvmaze_search(url)
-        return self.DATA[show_id]
+        return self.DATA[url]
