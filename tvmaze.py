@@ -10,6 +10,8 @@ import util
 
 URL = "http://api.tvmaze.com"
 
+# TODO: refactor / move all methods into TvMazeData class
+
 
 def _tvmaze_search(url):
     json_response = {}
@@ -63,3 +65,14 @@ def episode_search(show_name: str, season: int, episode: int, show_maze_id: int 
             return None
     url = f'{URL}/shows/{show_maze_id}/episodebynumber?{urllib.parse.urlencode(url_args)}'
     return _tvmaze_search(url)
+
+
+class TvMazeData(metaclass=util.Singleton):
+    "TVMaze data holder, only executes a new search if needed"
+    DATA = {}
+
+    def get_json_all_episodes(self, show_id: int) -> dict:
+        url = f"http://api.tvmaze.com/shows/{show_id}/episodes"
+        if url not in self.DATA:
+            self.DATA[url] = _tvmaze_search(url)
+        return self.DATA[show_id]
