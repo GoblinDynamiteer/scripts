@@ -11,8 +11,9 @@ from pathlib import Path
 from config import ConfigurationManager as cfg
 from util_tv import parse_season_episode, parse_season
 from printing import pfcs, cstr
-from db_tv import EpisodeDatabase
+from db_tv import EpisodeDatabase, ShowDatabase
 from util import Singleton
+from tvmaze import TvMazeData
 
 
 class RegexStr(Enum):
@@ -41,8 +42,16 @@ class EpDbSingleton(metaclass=Singleton):
         return self.ep_db.get(filename, "tvmaze")
 
 
+class ShowDbSingleton(metaclass=Singleton):
+    show_db = ShowDatabase()
+
+    def get_id(self, show_name: str) -> int:
+        return self.show_db.get(show_name, "tvmaze")
+
+
 class ListerItemTVShowEpisode():
     def __init__(self, path, show_extras=False):
+        self.show_name = path.parents[1].name
         self.path = path
         self.filename = path.name
         self.extras = show_extras
@@ -62,7 +71,7 @@ class ListerItemTVShowEpisode():
             subs_str += cstr(sub.value + " ",
                              "lgreen" if has else "dgrey")
         pfcs(
-            f"  i[{self.filename: <{self.row_len}}] b[{se_str}] {subs_str}")
+            f"  i[{self.filename: <{self.row_len}}]\n      b[{se_str}] {subs_str}")
         if self.extras:
             self.print_extras()
 
@@ -81,9 +90,17 @@ class ListerItemTVShowEpisode():
 
     def print_extras(self):
         maze_id = EpDbSingleton().get_id(self.filename)
+        show_maze_id = ShowDbSingleton().get_id(self.show_name)
+        ep_maze_data = {}
+        for entry in TvMazeData().get_json_all_episodes(show_maze_id):
+            if entry.get("season", 0) == self.season and entry.get("number", 0) == self.episode:
+                ep_maze_data = entry
+                break
         id_str = "id: " + cstr(f"{maze_id}",
                                "lblue") if maze_id is not None else ""
-        print("   " + id_str)
+        aired_str = "aired: " + cstr(ep_maze_data.get("airdate"), "lblue")
+        name_str = "\"" + cstr(ep_maze_data.get("name"), "lblue") + "\""
+        print(f"      {name_str} {id_str} {aired_str}")
 
 
 class ListerItemTVShowSeason():
