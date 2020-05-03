@@ -388,6 +388,8 @@ class ViafreeUrlHandler():
         self.id = self.parse_id()
         self.mpx_guid = None
         self.stream_url = self.determine_stream_url()
+        self.m3u8_data = {}
+        self.get_m3u8_data()
 
     def parse_id(self):
         if not "avsnitt" in self.url:
@@ -418,6 +420,22 @@ class ViafreeUrlHandler():
         except:
             stream_url = ""
         return stream_url
+
+    def get_m3u8_data(self):
+        if not self.stream_url:
+            return
+        url_prefix = self.stream_url.split(".ism")[0] + ".ism/"
+        master_content = urlopen(self.stream_url).read().decode().split("\n")
+        self.m3u8_data["master"] = master_content
+        for index, line in enumerate(master_content):
+            if line.startswith("#EXT-X-MEDIA:TYPE=AUDIO"):
+                uri = url_prefix + line.split(r'URI="')[1][:-1]
+                content = urlopen(uri).read().decode().split("\n")
+                self.m3u8_data["audio"] = content
+            if "1920x1080" in line.lower() and not "keyframes" in line.lower():
+                uri = url_prefix + master_content[index+1]
+                content = urlopen(uri).read().decode().split("\n")
+                self.m3u8_data["video"] = content
 
 
 class ViafreeEpisodeLister():
