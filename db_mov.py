@@ -12,7 +12,6 @@ import printing
 import util
 import util_movie
 from printing import pfcs
-from scan import process_new_movie
 
 CFG = config.ConfigurationManager()
 MOVIE_DATABASE_PATH = CFG.get('path_movdb')
@@ -150,6 +149,7 @@ if __name__ == "__main__":
             ARGS.movie, ARGS.setimdb, debug_print=True)
     NEED_SAVE = False
     if ARGS.rescan:
+        from scan import process_new_movie  # prevents circular import...
         pfcs(f"rescanning omdb-data for g[{ARGS.movie}]")
         DATA = process_new_movie(ARGS.movie)
         for key in ['title', 'year', 'imdb']:

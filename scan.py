@@ -17,6 +17,9 @@ from omdb import movie_search
 from printing import to_color_str as CSTR
 from printing import pfcs
 
+from db_mov import MovieDatabaseSingleton
+from db_tv import ShowDatabaseSingleton, EpisodeDatabaseSingleton
+
 
 class AllowedDuplicate(Enum):
     SwedishDub = "SWEDiSH"
@@ -35,25 +38,29 @@ class AllowedDuplicate(Enum):
     EncoreEdition = ".Encore.Edition."  # Special cut for one movie
     BlackAndChromeEdition = ".Black.and.Chrome.Edition."  # Special cut for one movie
     NoirEdition = ".NOIR.EDITION."  # Special cut for one movie
-    JapDVD = ".DVD.JP" # Special case for one movie
+    JapDVD = ".DVD.JP"  # Special case for one movie
 
 
 def process_new_movie(movie_folder: str) -> dict:
     pfcs(f"processing o[{movie_folder}]")
-    data = {"folder": movie_folder, "scanned": util.now_timestamp(), "removed": False}
+    data = {"folder": movie_folder, "scanned": util.now_timestamp(),
+            "removed": False}
     guessed_title = util_movie.determine_title(movie_folder)
     guessed_year = util_movie.parse_year(movie_folder)
     imdb_id_from_nfo = util_movie.get_movie_nfo_imdb_id(movie_folder)
     json_data = {}
     if imdb_id_from_nfo:
-        pfcs(f"searching OMDb for i[{movie_folder}] using b[{imdb_id_from_nfo}]")
+        pfcs(
+            f"searching OMDb for i[{movie_folder}] using b[{imdb_id_from_nfo}]")
         json_data = movie_search(imdb_id_from_nfo)
     elif guessed_title:
         year_str = f" and b[{str(guessed_year)}]" if guessed_year else ""
-        pfcs(f"searching OMDb for i[{movie_folder}] using b[{guessed_title}]{year_str}")
+        pfcs(
+            f"searching OMDb for i[{movie_folder}] using b[{guessed_title}]{year_str}")
         json_data = movie_search(guessed_title, year=guessed_year)
     else:
-        pfcs(f"failed to determine title or id from w[{movie_folder}] for OMDb query")
+        pfcs(
+            f"failed to determine title or id from w[{movie_folder}] for OMDb query")
         return {}
     if "Title" in json_data:
         data["title"] = json_data["Title"]
@@ -82,7 +89,8 @@ def process_new_show(show_folder: str) -> dict:
     if not maze_data:
         pfcs(f"searching TVMaze for i[{show_folder}] using b[{show_folder}]")
         maze_data = tvmaze.show_search(show_folder)
-    data = {"folder": show_folder, "scanned": util.now_timestamp(), "removed": False}
+    data = {"folder": show_folder, "scanned": util.now_timestamp(),
+            "removed": False}
     if maze_data:
         if "id" in maze_data:
             data["tvmaze"] = maze_data["id"]
@@ -110,13 +118,15 @@ def process_new_episode(episode_filename: str, show_folder: str) -> dict:
         "scanned": util.now_timestamp(),
         "removed": False,
     }
-    season_number, episode_number = util_tv.parse_season_episode(episode_filename)
+    season_number, episode_number = util_tv.parse_season_episode(
+        episode_filename)
     data["season_number"] = season_number
     data["episode_number"] = episode_number
     tvmaze_data = {}
-    if show_folder in DB_SHOW:
+    database = ShowDatabaseSingleton().db()
+    if show_folder in database:
         data["tvshow"] = show_folder
-        show_id = DB_SHOW.get(show_folder, "tvmaze")
+        show_id = database.get(show_folder, "tvmaze")
         pfcs(
             f"searching TVMaze for i[{episode_filename}]\n -> using b[{show_folder}]"
             f" season: b[{season_number}] episode: b[{episode_number}] show-id: b[{show_id}]"
@@ -139,8 +149,9 @@ def process_new_episode(episode_filename: str, show_folder: str) -> dict:
 
 def scan_movies():
     print("searching movie location for new movies...")
+    database = MovieDatabaseSingleton().db()
     movies_not_in_db = [
-        movie for movie in util_movie.list_all() if not DB_MOV.exists(movie)
+        movie for movie in util_movie.list_all() if not database.exists(movie)
     ]
     new = False
     for new_movie in movies_not_in_db:
@@ -149,34 +160,35 @@ def scan_movies():
         data = process_new_movie(new_movie)
         if not data:
             continue
-        DB_MOV.insert(data)
+        database.insert(data)
         new = True
         pfcs(f"added g[{new_movie}] to database!")
         pfcs(f"d[{'-' * util.terminal_width()}]")
     if new:
-        DB_MOV.save()
-        DB_MOV.export_last_added()
+        database.save()
+        database.export_last_added()
     else:
         print("found no new movies")
 
 
 def scan_new_shows():
     print("searching tv location for new shows...")
+    database = ShowDatabaseSingleton().db()
     shows_not_in_db = [
         show
         for show in util_tv.list_all_shows()
-        if show not in DB_SHOW and not is_ds_special_dir(show)
+        if show not in database and not is_ds_special_dir(show)
     ]
     new = len(shows_not_in_db) > 0
     for new_show in shows_not_in_db:
         if is_ds_special_dir(new_show):
             continue
         data = process_new_show(new_show)
-        DB_SHOW.insert(data)
+        database.insert(data)
         pfcs(f"added g[{new_show}] to database!")
         pfcs(f"d[{'-' * util.terminal_width()}]")
     if new:
-        DB_SHOW.save()
+        database.save()
     else:
         print("found no new shows")
 
@@ -184,20 +196,21 @@ def scan_new_shows():
 def scan_episodes():
     print("searching tv location for new episodes...")
     new = False
+    database = EpisodeDatabaseSingleton().db()
     for full_path_season_dir, episode_filename in util_tv.list_all_episodes(
         use_cache=False
     ):
-        if episode_filename in DB_EP or is_ds_special_dir(episode_filename):
+        if episode_filename in database or is_ds_special_dir(episode_filename):
             continue
         new = True
         full_path_to_show = Path(full_path_season_dir).parents[0]
         data = process_new_episode(episode_filename, full_path_to_show.name)
-        DB_EP.insert(data)
+        database.insert(data)
         pfcs(f"added g[{episode_filename}] to database!")
         pfcs(f"d[{'-' * util.terminal_width()}]")
     if new:
-        DB_EP.save()
-        DB_EP.export_last_added()
+        database.save()
+        database.export_last_added()
     else:
         print("found no new episodes")
 
@@ -205,65 +218,71 @@ def scan_episodes():
 def tv_diagnostics_find_removed(filter_show=None):
     # TODO: use filter
     print("finding removed shows and episodes")
+    database_ep = EpisodeDatabaseSingleton().db()
+    database_show = ShowDatabaseSingleton().db()
     episode_files = [
         episode_filename
         for _, episode_filename in util_tv.list_all_episodes(use_cache=False)
     ]
     removed_episodes = [
         episode
-        for episode in DB_EP
-        if episode not in episode_files and not DB_EP.is_removed(episode)
+        for episode in database_ep
+        if episode not in episode_files and not database_ep.is_removed(episode)
     ]
     found_removed = False
     for episode in removed_episodes:
         pfcs(f"found removed episode: w[{episode}]")
-        DB_EP.mark_removed(episode)
+        database_ep.mark_removed(episode)
         found_removed = True
     removed_shows = [
         show
-        for show in DB_SHOW
-        if show not in util_tv.list_all_shows() and not DB_SHOW.is_removed(show)
+        for show in database_show
+        if show not in util_tv.list_all_shows() and not database_show.is_removed(show)
     ]
     for show_dir in removed_shows:
         pfcs(f"found removed show: w[{show_dir}]")
-        DB_SHOW.mark_removed(show_dir)
+        database_show.mark_removed(show_dir)
         found_removed = True
     return found_removed
 
 
 def tv_diagnostics(filter_show=None):
     print("tv diagnostics running")
+    database_ep = EpisodeDatabaseSingleton().db()
+    database_show = ShowDatabaseSingleton().db()
     if filter_show:
         print(f"only processing shows matching: {filter_show}")
         # TODO: find episode gaps
     if tv_diagnostics_find_removed(filter_show):
-        DB_EP.save()
-        DB_SHOW.save()
-        DB_EP.export_last_removed()
+        database_ep.save()
+        database_show.save()
+        database_ep.export_last_removed()
 
 
 def movie_diagnostics_find_removed(filter_mov=None):
     found_removed = False
     mov_disk_list = util_movie.list_all()
+    database = MovieDatabaseSingleton().db()
     print("scanning for removed movies")
-    for db_mov in DB_MOV:
-        if DB_MOV.is_removed(db_mov):
+    for db_mov in database:
+        if database.is_removed(db_mov):
             continue
         if filter_mov and filter_mov.lower() not in db_mov.lower():
             continue
         if db_mov not in mov_disk_list:
             found_removed = True
             print("missing on disk: " + db_mov)
-            DB_MOV.mark_removed(db_mov)
+            database.mark_removed(db_mov)
     if found_removed:
-        DB_MOV.save()
-        DB_MOV.export_last_removed()
+        database.save()
+        database.export_last_removed()
     else:
         print("found no removed movies")
 
 
 def movie_diagnostics_list_duplicates(filter_mov=None):
-    duplicate_imdb = DB_MOV.find_duplicates("imdb")
+    database = MovieDatabaseSingleton().db()
+    duplicate_imdb = database.find_duplicates("imdb")
     print("scanning for duplicate movies")
     if not duplicate_imdb:
         print("found no duplicate movies")
@@ -274,7 +293,7 @@ def movie_diagnostics_list_duplicates(filter_mov=None):
         for mov in duplicate_imdb[imdb_id]:
             if filter_mov and filter_mov.lower() not in mov.lower():
                 continue
-            if DB_MOV.is_removed(mov):
+            if database.is_removed(mov):
                 continue
             if any([x.value.lower() in mov.lower() for x in AllowedDuplicate]):
                 continue
@@ -300,9 +319,6 @@ def movie_diagnostics(filter_mov=None):
 
 
 if __name__ == "__main__":
-    from db_mov import MovieDatabase  # enables db_mov to import this file
-    from db_tv import EpisodeDatabase, ShowDatabase
-
     SCAN_ARGS_MOV = ["movies", "m", "film", "f", "mov", "movie"]
     SCAN_ARGS_TV = ["tv", "eps", "t", "shows", "episodes"]
     SCAN_ARGS_DIAG = ["diagnostics", "diag", "d"]
@@ -327,11 +343,6 @@ if __name__ == "__main__":
         help="only process items matching string",
     )
     ARGS = ARG_PARSER.parse_args()
-
-    DB_MOV = MovieDatabase()
-    DB_EP = EpisodeDatabase()
-    DB_SHOW = ShowDatabase()
-    CFG = ConfigurationManager()
 
     if ARGS.type in SCAN_ARGS_MOV:
         if ARGS.filter:
