@@ -11,7 +11,7 @@ from pathlib import Path
 from config import ConfigurationManager as cfg
 from util_tv import parse_season_episode, parse_season
 from printing import pfcs, cstr
-from db_tv import EpisodeDatabase, ShowDatabase
+from db_tv import EpisodeDatabaseSingleton, ShowDatabaseSingleton
 from util import Singleton, date_str_to_timestamp, now_timestamp
 from tvmaze import TvMazeData
 
@@ -33,20 +33,6 @@ class SubtitleLang(Enum):
     English = "en"
     Swedish = "sv"
     Unknown = "unkown"
-
-
-class EpDbSingleton(metaclass=Singleton):
-    ep_db = EpisodeDatabase()
-
-    def get_id(self, filename: str) -> int:
-        return self.ep_db.get(filename, "tvmaze")
-
-
-class ShowDbSingleton(metaclass=Singleton):
-    show_db = ShowDatabase()
-
-    def get_id(self, show_name: str) -> int:
-        return self.show_db.get(show_name, "tvmaze")
 
 
 class ListerItemTVMissingShowEpisode():
@@ -106,8 +92,8 @@ class ListerItemTVShowEpisode():
         return subs
 
     def print_extras(self):
-        maze_id = EpDbSingleton().get_id(self.filename)
-        show_maze_id = ShowDbSingleton().get_id(self.show_name)
+        maze_id = EpisodeDatabaseSingleton().get_id(self.filename)
+        show_maze_id = ShowDatabaseSingleton().get_id(self.show_name)
         ep_maze_data = {}
         for entry in TvMazeData().get_json_all_episodes(show_maze_id):
             if entry.get("season", 0) == self.season and entry.get("number", 0) == self.episode:
@@ -144,7 +130,7 @@ class ListerItemTVShowSeason():
                         sub_path, self.extras))
         if self.extras and not self.episode:
             existing_nums = sorted([en.episode for en in ep_list])
-            show_maze_id = ShowDbSingleton().get_id(self.show_name)
+            show_maze_id = ShowDatabaseSingleton().get_id(self.show_name)
             for entry in TvMazeData().get_json_all_episodes(show_maze_id):
                 if entry.get("season", 0) != self.season_num:
                     continue
