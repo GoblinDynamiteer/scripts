@@ -3,7 +3,6 @@
 """Scan for media"""
 
 import argparse
-import os
 from pathlib import Path
 from enum import Enum
 
@@ -11,10 +10,8 @@ import tvmaze
 import util
 import util_movie
 import util_tv
-from config import ConfigurationManager
 from diskstation import is_ds_special_dir
 from omdb import movie_search
-from printing import to_color_str as CSTR
 from printing import pfcs
 
 from db_mov import MovieDatabaseSingleton
