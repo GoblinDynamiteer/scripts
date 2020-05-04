@@ -135,3 +135,23 @@ class EpisodeDatabase(db_json.JSONDatabase):
                 f'wrote {len(last_removed)} lines to {CSTR(target, "green")}')
         except:
             print(CSTR('could not save removed.txt', 'red'))
+
+
+class ShowDatabaseSingleton(metaclass=util.Singleton):
+    _db = ShowDatabase()
+
+    def db(self):
+        return self._db
+
+    def get_id(self, show_name: str) -> int:
+        return self._db.get(show_name, "tvmaze")
+
+
+class EpisodeDatabaseSingleton(metaclass=util.Singleton):
+    _db = EpisodeDatabase()
+
+    def db(self):
+        return self._db
+
+    def get_id(self, filename: str) -> int:
+        return self._db.get(filename, "tvmaze")

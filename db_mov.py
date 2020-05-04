@@ -121,6 +121,13 @@ class MovieDatabase(db_json.JSONDatabase):
                 yield item
 
 
+class MovieDatabaseSingleton(metaclass=util.Singleton):
+    _db = MovieDatabase()
+
+    def db(self):
+        return self._db
+
+
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     PARSER.add_argument('movie', type=str)
