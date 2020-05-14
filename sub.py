@@ -96,7 +96,7 @@ def find_srt_filenames_in_zip(zip_file_path):
     return srt_files
 
 
-def handle_srt(srt_file):
+def handle_srt(srt_file, auto_move = False):
     subtitle = Subtitle(srt_file)
     print(f"processed file: {cstr(subtitle.filename, 154)}")
     print(f" - guessed match: {cstr(subtitle.best_match(), 'lgreen')}")
@@ -117,8 +117,9 @@ def handle_srt(srt_file):
         pcstr("could not determine destination!", "red")
         return
     print(f" - destination:\n   {cstr(subtitle_dest, 'purple')}")
-    if input("move file to destination?: ").lower() not in ['y', 'yes']:
-        return
+    if not auto_move:
+        if input("move file to destination?: ").lower() not in ['y', 'yes']:
+            return
     if not run.rename_file(srt_file, subtitle_dest):
         pcstr("failed to move file", 'red')
         return
@@ -130,6 +131,10 @@ if __name__ == "__main__":
     PARSER.add_argument("file",
                         nargs="?",
                         default="*.srt")
+    PARSER.add_argument("--yes",
+                        "-y",
+                        action="store_true",
+                        dest="auto_move")
     ARGS = PARSER.parse_args()
     srt_filenames = []
     if "*" in ARGS.file:
@@ -140,7 +145,7 @@ if __name__ == "__main__":
             if len(items) > 1:
                 pfcs(f"processing item i[{num}] of {len(items)}")
             if item.suffix.endswith("srt"):
-                handle_srt(item.name)
+                handle_srt(item.name, auto_move=ARGS.auto_move)
             else:
                 pfcs(f"skipping item w[{item.name}], not srt")
             print_line()
@@ -164,4 +169,4 @@ if __name__ == "__main__":
     else:
         print("no subtitle file to process..")
         exit()
-    [handle_srt(srt) for srt in srt_filenames]
+    [handle_srt(srt, auto_move=ARGS.auto_move) for srt in srt_filenames]
