@@ -153,7 +153,7 @@ def rename_file(source_file, destination):
         print(
             f'source {CSTR(source_file, "orange")} does not exist!')
         return False
-    command = f'mv {source_file} \"{destination}\"'
+    command = f'mv \"{source_file}\" \"{destination}\"'
     return local_command(command, hide_output=True, print_info=False)
 
 
