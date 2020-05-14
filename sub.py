@@ -3,12 +3,13 @@
 import argparse
 from enum import IntEnum
 from pathlib import Path
+import sys
 
 import run
 import util_movie
 import util_tv
 import util
-from printing import cstr, pcstr
+from printing import cstr, pcstr, print_line, pfcs
 import config
 
 
@@ -126,13 +127,29 @@ def handle_srt(srt_file):
 
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
-    PARSER.add_argument("file")
+    PARSER.add_argument("file",
+                        nargs="?",
+                        default="*.srt")
     ARGS = PARSER.parse_args()
+    srt_filenames = []
+    if "*" in ARGS.file:
+        items = list(Path().glob(ARGS.file))
+        if items:
+            pfcs(f"found i[{len(items)}] item matching i[{ARGS.file}]")
+        for num, item in enumerate(items, 1):
+            if len(items) > 1:
+                pfcs(f"processing item i[{num}] of {len(items)}")
+            if item.suffix.endswith("srt"):
+                handle_srt(item.name)
+            else:
+                pfcs(f"skipping item w[{item.name}], not srt")
+            print_line()
+        print("done!")
+        sys.exit(0)
     file_path = Path(ARGS.file)
     if not file_path.exists():
         print("passed file does not exists")
         exit()
-    srt_filenames = []
     if file_path.suffix.endswith('zip'):
         srt_filenames = find_srt_filenames_in_zip(file_path)
         if not srt_filenames:
