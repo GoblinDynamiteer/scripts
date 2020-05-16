@@ -14,6 +14,7 @@ from printing import pfcs, cstr
 from db_tv import EpisodeDatabaseSingleton, ShowDatabaseSingleton
 from util import Singleton, date_str_to_timestamp, now_timestamp
 from tvmaze import TvMazeData
+from util_movie import valid_letters as mov_letters
 
 
 class RegexStr(Enum):
@@ -201,6 +202,52 @@ class ListerItemTVShow():
             season.show_list()
 
 
+class ListerItemMovieDir():
+    def __init__(self, args: list, show_extras=False):
+        self.args = args
+        self.filter = None
+        self.letter = self.determine_letter()
+        self.paths = self.determine_paths()
+
+    def determine_letter(self):
+        try:
+            if self.args[0].upper() in mov_letters():
+                if len(self.args) > 1:
+                    self.filter = self.args[1:]
+                return self.args[0].upper()
+        except IndexError:
+            return None
+        if self.args:
+            self.filter = self.args
+        return None
+
+    def determine_paths(self):
+        mov_path = Path(cfg().path("film"))
+        if self.letter:
+            paths = [mov_path / self.letter]
+        else:
+            paths = mov_path.iterdir()
+        matches = []
+        for path in paths:
+            if path.is_file():
+                continue
+            for sub_path in path.iterdir():
+                if not sub_path.is_dir():
+                    continue
+                path_parts = sub_path.name.lower().split(".")
+                if self.filter:
+                    if all([x.lower() in path_parts for x in self.filter]):
+                        matches.append(sub_path)
+                else:
+                    matches.append(sub_path)
+        return matches
+
+    def show_list(self):
+        # TODO: make class for each mov...
+        for p in self.paths:
+            print(p.name)
+
+
 def re_list(re_str: RegexStr, str_list: list):
     matches = [re.search(re_str.value, x) for x in str_list]
     if not any(matches):
@@ -242,6 +289,9 @@ def main():
         lister_show = ListerItemTVShow(
             args.keywords[1:], args_type, args.show_extras)
         lister_show.show_list()
+    elif args_type == ListType.Movie:
+        lister_mov = ListerItemMovieDir(args.keywords[1:], args.show_extras)
+        lister_mov.show_list()
 
 
 if __name__ == "__main__":
