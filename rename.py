@@ -7,7 +7,7 @@ import argparse
 import re
 from pathlib import Path
 
-from printing import to_color_str
+from printing import to_color_str, print_line
 
 UNIDECODE_LIB_AVAILABLE = False
 try:
@@ -92,14 +92,17 @@ def rename_operation(file_path, operations, dont_rename=False, space_replace_cha
                 new_file_name, replace_char=space_replace_char)
         else:
             new_file_name = operation(new_file_name)
-    old = to_color_str(file_path, 'orange')
-    new = to_color_str(file_path.parent / new_file_name, 'green')
+    renamed_file_path = file_path.parent / new_file_name
+    old = to_color_str(file_path.relative_to(Path.cwd()), 'orange')
+    new = to_color_str(renamed_file_path.relative_to(Path.cwd()), 'green')
     if new_file_name == file_path.name:
         print(f'kept filename: {to_color_str(file_path.name, "green")}')
     else:
-        print(f'renamed {old} --> {new}')
         if not dont_rename:
-            os.rename(file_path, file_path.parent / new_file_name)
+            os.rename(file_path, renamed_file_path)
+        print(f"renamed {old}\n"
+              f" -->    {new}")
+    print_line()
 
 
 def rename_string(string_to_rename, space_replace_char: str = '_'):
@@ -126,17 +129,28 @@ if UNIDECODE_LIB_AVAILABLE:
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
     PARSER.add_argument(
-        "location", help="directory or file to process", type=str)
-    PARSER.add_argument("--rename-dirs", "-d",
-                        help="also rename directories", action="store_true", dest="renamedirs")
+        "location",
+        help="directory or file to process",
+        type=str)
     PARSER.add_argument(
-        "--simulate", "-s", help="only show new filenames, dont actually rename", action="store_true")
+        "--rename-dirs",
+        "-d",
+        help="also rename directories",
+        action="store_true",
+        dest="renamedirs")
     PARSER.add_argument(
-        "--spaces-to-dots", help="only replace spaces with dots", action="store_true", dest="space_op")
+        "--simulate",
+        "-s",
+        help="only show new filenames, dont actually rename",
+        action="store_true")
+    PARSER.add_argument(
+        "--spaces-to-dots",
+        help="only replace spaces with dots",
+        action="store_true",
+        dest="space_op")
     ARGS = PARSER.parse_args()
     FILES = []
     DIRECTORIES = []
-    CURRENT_WORK_DIR = Path.cwd()
     ROOT_ITEM_FULL_PATH = Path(ARGS.location).resolve()
     REP_CHAR = "_"
     if ROOT_ITEM_FULL_PATH.is_dir():
