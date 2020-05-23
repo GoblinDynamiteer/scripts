@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.8
 
 """ pre search """
 
@@ -9,10 +9,10 @@ import re
 import sys
 from pathlib import Path
 
+
 import requests
-
 import config
-
+from vid import VideoFileMetadata
 
 CFG = config.ConfigurationManager()
 
@@ -42,12 +42,17 @@ def pre_search(query: str) -> list:
     return [row['name'] for row in rows]
 
 
-def pre_search_from_file(file_name: str, use_replacement_list=True) -> str:
+def pre_search_from_file(file_path: Path, use_replacement_list=True, use_metadata=False) -> str:
     """ runs a pre search, return best match if possible """
     file_name = run_replace_list_on_query(
-        file_name) if use_replacement_list else file_name
+        file_path.name) if use_replacement_list else file_path.name
     split_filename = file_name.split('.')
     query = f'{" ".join(split_filename)}'
+    if use_metadata:
+        metadata = VideoFileMetadata(file_path)
+        if metadata.title:
+            if " - " in metadata.title:
+                query = metadata.title.split(" - ")[1]
     results = pre_search(query)
     if results:
         for result in results:
@@ -65,6 +70,10 @@ if __name__ == "__main__":
         '-f', '--file', help='use file search mode', action='store_true')
     PARSER.add_argument(
         '-r', '--rename', help='rename file', action='store_true')
+    PARSER.add_argument("-p", "--use-parent",
+                        action="store_true", dest="use_parent")
+    PARSER.add_argument("--use-metadata", "-m",
+                        action="store_true", dest="use_metadata")
     ARGS = PARSER.parse_args()
 
     suffix = ARGS.suffix if ARGS.suffix else ""
@@ -72,10 +81,15 @@ if __name__ == "__main__":
     if ARGS.file:
         if '*' in ARGS.query:
             ITEMS = glob.glob(ARGS.query)
+        elif "," in ARGS.query:
+            ITEMS = ARGS.query.split(",")
         else:
             ITEMS = [ARGS.query]
         for item in ITEMS:
-            RET = pre_search_from_file(item)
+            FILE_NAME = Path(item).resolve()
+            if ARGS.use_parent:
+                sys.exit()
+            RET = pre_search_from_file(FILE_NAME, use_metadata=ARGS.use_metadata)
             if not RET:
                 if ARGS.rename:
                     print(
@@ -86,7 +100,6 @@ if __name__ == "__main__":
                     sys.exit(1)
             print(RET + suffix)
             if ARGS.rename:
-                FILE_NAME = Path(item)
                 if not FILE_NAME.exists():
                     print(
                         f'found release but {FILE_NAME} does not exist, will not rename...')
