@@ -117,7 +117,11 @@ def filter_using_get_arg_indexes(items: list, indexes: str) -> list:
 
 def download(item: dict, extr: bool = False):
     file_name = item["name"]
-    for char, repl in [(" ", r"\ "), ("'", "*")]:
+    repl_list = [(" ", r"\ "), # TODO: use escaped for all?
+                 ("'", "*"),
+                 ("(", "*"),
+                 (")", "*")]
+    for char, repl in repl_list:
         file_name = file_name.replace(char, repl)
     print(f'downloading: {CSTR(file_name, "orange")}')
     dl_dir = CFG.get("path_download")
