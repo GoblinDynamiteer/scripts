@@ -23,6 +23,11 @@ class Beer():
     def __str__(self):
         return fcs(f"dg[{self.brewery}] - i[{self.name}] ({self.type}, {self.alc} %)")
 
+    def filename(self, extension=".jpg"):
+        brew_fn = self.brewery.lower().replace(" ", "_")
+        name_fn = self.name.lower().replace(" ", "_")
+        return f"{brew_fn}-{name_fn}{extension}"
+
 
 class CheckIn():
     def __init__(self, date):
@@ -49,24 +54,23 @@ class BeerList():
             self.add_beer(beer)
         self.list[beer.hash]["checkins"].append(checkin)
 
-    def print_all(self, sort_by=None, reversed_order=False, limit=None):
+    def print_list(self, sort_by=None, reversed_order=False, limit=None, filter_name=None, gen_filename=False):
         count = 0
-        if sort_by:
-            for item in self.get_sorted_list(sort_by, reverse=reversed_order):
-                self.print_beer(item)
+        for item in self.get_sorted_list(sort_by, reverse=reversed_order):
+            if self.print_beer(item, filter_name, gen_filename):
                 count += 1
-                if isinstance(limit, int) and count >= limit:
-                    return
-        else:
-            for _hash in self.list:
-                self.print_beer(self.list[_hash])
-                count += 1
-                if isinstance(limit, int) and count >= limit:
-                    return
+            if isinstance(limit, int) and count >= limit:
+                return
 
-    def print_beer(self, data):
-        print(data["beer"])
+    def print_beer(self, data, filter_name=None, print_filename=False):
+        beer_obj = data["beer"]
+        if filter_name and filter_name.lower() not in beer_obj.name.lower():
+            return False
+        print(beer_obj)
         print(f"  check ins: {len(data['checkins'])}")
+        if print_filename:
+            print(f"  {beer_obj.filename()}")
+        return True
 
     def get_sorted_list(self, sort_by, reverse=False):
         hashes = {}
@@ -82,11 +86,15 @@ class BeerList():
         elif sort_by == self.Sorting.BreweryName:
             hashes = {_hash: data["beer"].brewery
                       for (_hash, data) in self.list.items()}
-        for _hash, _ in sorted(
-                hashes.items(),
-                reverse=reverse,
-                key=lambda item: item[1]):
-            yield self.list[_hash]
+        if not hashes:
+            for _hash in self.list:
+                yield self.list[_hash]
+        else:
+            for _hash, _ in sorted(
+                    hashes.items(),
+                    reverse=reverse,
+                    key=lambda item: item[1]):
+                yield self.list[_hash]
 
 
 def init_list(untappd_data):
@@ -133,6 +141,13 @@ def generate_cli_args():
     parser.add_argument("--reverse",
                         action="store_true",
                         dest="reverse")
+    parser.add_argument("--filter",
+                        type=str,
+                        help="Only show beers where filter matches name. "
+                             "Case-Insensitive",
+                        default=None)
+    parser.add_argument("--filenameify",
+                        action="store_true")
     return parser.parse_args()
 
 
@@ -143,9 +158,12 @@ def main():
         return
     beer_list = init_list(data)
     # Top 10 most checked in
-    beer_list.print_all(sort_by=BeerList.Sorting(args.sort_by),
-                        reversed_order=args.reverse,
-                        limit=args.limit)
+    sorting = BeerList.Sorting(args.sort_by) if args.sort_by else None
+    beer_list.print_list(sort_by=sorting,
+                         reversed_order=args.reverse,
+                         limit=args.limit,
+                         filter_name=args.filter,
+                         gen_filename=args.filenameify)
 
 
 if __name__ == "__main__":
