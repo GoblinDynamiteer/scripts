@@ -36,10 +36,11 @@ FORMAT_CODES = {
     'dg[': 70,  # dark green
     'e[': 196,  # error
     'g[': 154,  # green
-    'b[': 74,  # blue
+    'b[': 74,   # blue
     'i[': 154,  # info
     'o[': 214,  # orange
     'd[': 239,  # dark /grey
+    'y[' : 229,  # yellow
     'w[': COLORS['warning'],
     'p[': COLORS['purple']}
 
