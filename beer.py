@@ -31,10 +31,10 @@ class CheckIn():
 
 class BeerList():
     class Sorting(Enum):
-        Checkins = 0
-        BreweryName = 1
-        BeerName = 2
-        ABV = 3
+        Checkins = "checkins"
+        BreweryName = "brewery"
+        BeerName = "beername"
+        ABV = "abv"
 
     def __init__(self):
         self.list = {}
@@ -52,16 +52,16 @@ class BeerList():
     def print_all(self, sort_by=None, reversed_order=False, limit=None):
         count = 0
         if sort_by:
-            for x in self.get_sorted_list(sort_by, reverse=reversed_order):
-                self.print_beer(x)
+            for item in self.get_sorted_list(sort_by, reverse=reversed_order):
+                self.print_beer(item)
                 count += 1
-                if count >= limit:
+                if isinstance(limit, int) and count >= limit:
                     return
         else:
             for _hash in self.list:
                 self.print_beer(self.list[_hash])
                 count += 1
-                if count >= limit:
+                if isinstance(limit, int) and count >= limit:
                     return
 
     def print_beer(self, data):
@@ -80,7 +80,7 @@ class BeerList():
             hashes = {_hash: data["beer"].name
                       for (_hash, data) in self.list.items()}
         elif sort_by == self.Sorting.BreweryName:
-            hashes = {_hash: data["beer"].brewery_name
+            hashes = {_hash: data["beer"].brewery
                       for (_hash, data) in self.list.items()}
         for _hash, _ in sorted(
                 hashes.items(),
@@ -122,6 +122,17 @@ def generate_cli_args():
                         help="Path to Untappd checkin list JSON export file.",
                         default="untappd.json",
                         dest="json_export_file")
+    parser.add_argument("--sortby",
+                        default=None,
+                        choices=[s.value for s in BeerList.Sorting],
+                        dest="sort_by")
+    parser.add_argument("--limit",
+                        default=None,
+                        type=int,
+                        dest="limit")
+    parser.add_argument("--reverse",
+                        action="store_true",
+                        dest="reverse")
     return parser.parse_args()
 
 
@@ -132,8 +143,9 @@ def main():
         return
     beer_list = init_list(data)
     # Top 10 most checked in
-    beer_list.print_all(sort_by=BeerList.Sorting.Checkins,
-                        reversed_order=True, limit=10)
+    beer_list.print_all(sort_by=BeerList.Sorting(args.sort_by),
+                        reversed_order=args.reverse,
+                        limit=args.limit)
 
 
 if __name__ == "__main__":
