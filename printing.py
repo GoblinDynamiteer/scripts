@@ -69,7 +69,7 @@ def pcstr(string, foreground, background=None, bold=False):
     print(cstr(string, foreground, background, bold))
 
 
-def print_color_format_string(string, format_chars=('[', ']'), show=True, end='\n'):
+def print_color_format_string(string, format_chars=('[', ']'), show=True, end='\n', get_str=False):
     "Prints with color, based on a special format in the passed string"
     if len(format_chars) != 2 or not show:
         return
@@ -77,6 +77,9 @@ def print_color_format_string(string, format_chars=('[', ']'), show=True, end='\
         begin_code = code.replace('[', format_chars[0])
         string = string.replace(
             begin_code, "\033[38;5;" + str(color_val) + "m")
+    colored_str = string.replace(format_chars[1], "\033[0m")
+    if get_str:
+        return colored_str
     print(string.replace(format_chars[1], "\033[0m"), end=end)
 
 
@@ -91,6 +94,8 @@ def pcfs(string, format_chars=('[', ']'), show=True, end='\n'):
     print_color_format_string(
         string, format_chars=format_chars, show=show, end=end)
 
+def fcs(string, format_chars=('[', ']')):
+    return print_color_format_string(string, format_chars, get_str=True)
 
 def percentage_to_cstr(percentage: str) -> str:
     percentage_val = int(percentage.replace('%', ''))
