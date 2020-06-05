@@ -21,9 +21,14 @@ def filenameify(string):
         ("å", "a"),
         ("ä", "a"),
         ("ö", "o"),
-        ("é", "e")
+        ("/", "-"),
+        ("(", " "),
+        (")", " "),
+        ("é", "e"),
+        ("  ", " ") # must be last
         ]:
             string = string.replace(search, rep)
+    string = string.strip()
     return string.replace(" ", "_")
 
 
