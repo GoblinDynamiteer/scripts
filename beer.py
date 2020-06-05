@@ -21,6 +21,7 @@ def filenameify(string):
         ("å", "a"),
         ("ä", "a"),
         ("ö", "o"),
+        ("é", "e")
         ]:
             string = string.replace(search, rep)
     return string.replace(" ", "_")
@@ -35,7 +36,8 @@ class Beer():
         self.hash = sha1(f"{brewery} {name}".encode("utf-8")).hexdigest()
 
     def __str__(self):
-        return fcs(f"dg[{self.brewery}] - i[{self.name}] ({self.type}, {self.alc} %)")
+        return fcs(f"dg[{self.brewery}] - i[{self.name}]"
+                   f" ({self.type}, o[{self.alc} %])")
 
     def filename(self, extension=".jpg"):
         return f"{filenameify(self.brewery)}-{filenameify(self.name)}{extension}"
@@ -96,13 +98,15 @@ class BeerList():
                 return False
         print(beer_obj)
         num_checkins = len(data["checkins"])
-        print(f"  Number of CheckIns: {num_checkins}", end="")
+        pfcs(f"  Number of CheckIns: p[{num_checkins}]", end="")
         if num_checkins == 1:
             print(f" ({data['checkins'][0]})")
+        elif num_checkins > 1:
+            print(f" (most recent at {data['checkins'][-1]})")
         else:
             print()
         if print_filename:
-            print(f"  {beer_obj.filename()}")
+            pfcs(f"  y[{beer_obj.filename()}]")
         return True
 
     def get_sorted_list(self, sort_by, reverse=False):
