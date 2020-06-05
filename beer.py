@@ -93,7 +93,12 @@ class BeerList():
 
     def print_beer(self, data, filter_name=None, print_filename=False, date_filter=None):
         beer_obj = data["beer"]
-        if filter_name and filter_name.lower() not in beer_obj.name.lower():
+        matched = False
+        if filter_name and filter_name.lower() in beer_obj.name.lower():
+            matched = True
+        if filter_name and filter_name.lower() in beer_obj.brewery.lower():
+            matched = True
+        if filter_name and not matched:
             return False
         if date_filter:
             found_match = False
