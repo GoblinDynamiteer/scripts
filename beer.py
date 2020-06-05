@@ -10,6 +10,14 @@ from enum import Enum
 from printing import pfcs, fcs
 
 UNTAPPD_DATETIME_FMT = r"%Y-%m-%d %H:%M:%S"
+ARG_DATE_FMT = r"%Y-%m-%d"
+
+
+def filenameify(string):
+    string = string.lower()
+    for search, rep in [(".", ""), ("&", "and")]:
+        string = string.replace(search, rep)
+    return string.replace(" ", "_")
 
 
 class Beer():
@@ -24,14 +32,15 @@ class Beer():
         return fcs(f"dg[{self.brewery}] - i[{self.name}] ({self.type}, {self.alc} %)")
 
     def filename(self, extension=".jpg"):
-        brew_fn = self.brewery.lower().replace(" ", "_")
-        name_fn = self.name.lower().replace(" ", "_")
-        return f"{brew_fn}-{name_fn}{extension}"
+        return f"{filenameify(self.brewery)}-{filenameify(self.name)}{extension}"
 
 
 class CheckIn():
     def __init__(self, date):
         self.date = date
+
+    def __str__(self):
+        return fcs(f"dg[{self.date}]")
 
 
 class BeerList():
@@ -54,20 +63,38 @@ class BeerList():
             self.add_beer(beer)
         self.list[beer.hash]["checkins"].append(checkin)
 
-    def print_list(self, sort_by=None, reversed_order=False, limit=None, filter_name=None, gen_filename=False):
+    def print_list(self,
+                   sort_by=None,
+                   reversed_order=False,
+                   limit=None,
+                   filter_name=None,
+                   gen_filename=False,
+                   find_date=None):
         count = 0
         for item in self.get_sorted_list(sort_by, reverse=reversed_order):
-            if self.print_beer(item, filter_name, gen_filename):
+            if self.print_beer(item, filter_name, gen_filename, find_date):
                 count += 1
             if isinstance(limit, int) and count >= limit:
                 return
 
-    def print_beer(self, data, filter_name=None, print_filename=False):
+    def print_beer(self, data, filter_name=None, print_filename=False, date_filter=None):
         beer_obj = data["beer"]
         if filter_name and filter_name.lower() not in beer_obj.name.lower():
             return False
+        if date_filter:
+            found_match = False
+            for checkin_obj in data["checkins"]:
+                if checkin_obj.date.date() == date_filter.date():
+                    found_match = True
+            if not found_match:
+                return False
         print(beer_obj)
-        print(f"  check ins: {len(data['checkins'])}")
+        num_checkins = len(data["checkins"])
+        print(f"  Number of CheckIns: {num_checkins}", end="")
+        if num_checkins == 1:
+            print(f" ({data['checkins'][0]})")
+        else:
+            print()
         if print_filename:
             print(f"  {beer_obj.filename()}")
         return True
@@ -146,6 +173,11 @@ def generate_cli_args():
                         help="Only show beers where filter matches name. "
                              "Case-Insensitive",
                         default=None)
+    parser.add_argument("--date",
+                        type=str,
+                        default=None,
+                        help="List beers had at date",
+                        dest="date")
     parser.add_argument("--filenameify",
                         action="store_true")
     return parser.parse_args()
@@ -159,10 +191,26 @@ def main():
     beer_list = init_list(data)
     # Top 10 most checked in
     sorting = BeerList.Sorting(args.sort_by) if args.sort_by else None
+    if args.date:
+        success = True
+        try:
+            date_filter = datetime.strptime(args.date, ARG_DATE_FMT)
+        except TypeError:
+            pfcs(f"could not parse --date filter: e[{args.date}]")
+            success = False
+        except ValueError:
+            pfcs(f"wrong format for --date filter: e[{args.date}]")
+            success = False
+        if not success:
+            print("stopping...")
+            return 1
+    else:
+        date_filter = None
     beer_list.print_list(sort_by=sorting,
                          reversed_order=args.reverse,
                          limit=args.limit,
                          filter_name=args.filter,
+                         find_date=date_filter,
                          gen_filename=args.filenameify)
 
 
