@@ -11,8 +11,15 @@ from urllib.parse import urlparse, quote
 
 from datetime import datetime
 from requests import Session
+from http.cookiejar import MozillaCookieJar
 
 VALID_FILTER_KEYS = ["season", "episode", "title", "date"]
+
+
+def get_cookies_from_file(file_path="cookies.txt") -> MozillaCookieJar:
+    cj = MozillaCookieJar(file_path)
+    cj.load(ignore_discard=True, ignore_expires=True)
+    return cj
 
 
 def apply_filter(ep_list: list, filter_type: str, filter_val: str):
@@ -105,6 +112,7 @@ class DPlayEpisodeData():
         self.title = attr.get("name", "N/A")
         self.show = "N/A"
         self.id = 0
+        self.sub_url = ""
         try:
             self.show = show_data["data"]["attributes"]["name"]
         except:
@@ -115,8 +123,11 @@ class DPlayEpisodeData():
             pass
 
     def __str__(self):
-        return f"{self.show} S{self.season_num}E{self.episode_num} " \
-               f"\"{self.title}\" -- id:{self.id} -- url:{self.url()}"
+        string = f"{self.show} S{self.season_num}E{self.episode_num} " \
+                 f"\"{self.title}\" -- id:{self.id} -- url:{self.url()}"
+        if self.sub_url:
+            return string + f" -- sub_url: {self.sub_url}"
+        return string
 
     def url(self):
         return f"{self.URL_PREFIX}/videos/{self.episode_path}"
@@ -305,12 +316,12 @@ class DPlayEpisodeLister():
         self.url = url
         self.filter = {}
         self.session = Session()
-        self.check_token()
+        self.session.cookies.update(get_cookies_from_file())
+        if not self.check_token():
+            print("failed to get session for dplay")
 
     def check_token(self) -> bool:
-        deviceid = hashlib.sha256(
-            bytes(int(random.random() * 1000))).hexdigest()
-        url = f"{self.API_URL}/token?realm=dplayse&deviceId={deviceid}&shortlived=true"
+        url = f"{self.API_URL}/users/me/favorites?include=default"
         res = self.session.get(url)
         return res.status_code < 400
 
@@ -326,7 +337,7 @@ class DPlayEpisodeLister():
         has_free = False
         free_datetime = None
         for availability_window in data.get("availabilityWindows", []):
-            if availability_window.get("package", "None") == "Free":
+            if availability_window.get("package", "None") == "Registered":
                 has_free = True
                 free_datetime = availability_window.get("playableStart", None)
                 break
@@ -338,6 +349,35 @@ class DPlayEpisodeLister():
         except ValueError:
             return True  # TODO: might still be free?
         return free_datetime > datetime.now()
+
+    def update_hls_data(self, epdata: DPlayEpisodeData):
+        if epdata.id == 0:
+            return
+        res = self.session.get(
+            f"https://disco-api.dplay.se/playback/videoPlaybackInfo/{epdata.id}")
+        try:
+            hls_url = res.json()[
+                "data"]["attributes"]["streaming"]["hls"]["url"]
+        except KeyError as key_error:
+            # TODO: print error when --verbose arg has been impl.
+            return
+        hls_data = self.session.get(hls_url)
+        sub_m3u_url = None
+        for line in hls_data.text.splitlines():
+            if all([x in line for x in ["TYPE=SUBTITLES", "URI=", 'LANGUAGE="sv"']]):
+                sub_url_suffix = line.split('URI="')[1]
+                sub_url_suffix = sub_url_suffix[:-1]
+                sub_m3u_url = hls_url.replace(
+                    "playlist.m3u8", "") + sub_url_suffix
+                break
+        if not sub_m3u_url:
+            return
+        res = self.session.get(sub_m3u_url)
+        for line in res.text.splitlines():
+            if ".vtt" in line:
+                sub_url = hls_url.replace(
+                    "playlist.m3u8", "") + line
+                epdata.sub_url = sub_url
 
     def list_episode_urls(self, revered_order=False, limit=None, objects=False):
         match = re.search(
@@ -365,7 +405,9 @@ class DPlayEpisodeLister():
             for data in res.json()["data"]:
                 if self.is_episode_data_premium(data.get("attributes", {})):
                     continue
-                ep_list.append(DPlayEpisodeData(data, show_data))
+                dplay_epdata = DPlayEpisodeData(data, show_data)
+                # self.update_hls_data(dplay_epdata) #SLOW
+                ep_list.append(dplay_epdata)
         for filter_key, filter_val in self.filter.items():
             ep_list = apply_filter(ep_list, filter_key, filter_val)
         ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
