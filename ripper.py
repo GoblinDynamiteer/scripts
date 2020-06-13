@@ -411,7 +411,7 @@ if __name__ == "__main__":
                 sys.exit(1)
         wanted_last = int(ARGS.get_last)
         if "dplay" in urls[0]:
-            lister = DPlayEpisodeLister(urls[0])
+            lister = DPlayEpisodeLister(urls[0], verbose=ARGS.verb)
             if filter_dict:
                 lister.set_filter(**filter_dict)
             urls = lister.list_episode_urls(objects=True,

@@ -135,6 +135,7 @@ class DPlayEpisodeData():
         self.sub_url = ""
         self.sub_m3u_url = ""
         self.print_log = False
+        self.is_premium = premium
         try:
             self.show = show_data["data"]["attributes"]["name"]
         except:
@@ -402,6 +403,8 @@ class DPlayEpisodeLister():
         self.print_log = verbose
         if not self.check_token():
             print("failed to get session for dplay")
+        else:
+            self.log("successfully got session")
 
     def log(self, info_str, info_str_line2=""):
         if not self.print_log:
@@ -470,15 +473,16 @@ class DPlayEpisodeLister():
                     data.get("attributes", {}))
                 obj = DPlayEpisodeData(data, show_data, premium=is_premium)
                 ep_list.append(obj)
-                if is_premium: # TODO: add check/arg to determine if prem. is dlable
-                    self.log(fcs(f"w[warning] w['{obj.name()}'] is premium"))
         for filter_key, filter_val in self.filter.items():
             ep_list = apply_filter(ep_list, filter_key, filter_val)
         ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
                      reverse=revered_order)
         if limit:
-            return [ep if objects else ep.url() for ep in ep_list[0:limit]]
-        return [ep if objects else ep.url() for ep in ep_list]
+            ep_list = ep_list[0:limit]
+        for obj in ep_list:
+            if obj.is_premium:  # TODO: add check/arg to determine if prem. is dlable
+                self.log(fcs(f"w[warning] w['{obj.name()}'] is premium"))
+        return [obj if objects else obj.url() for obj in ep_list]
 
 
 class ViafreeUrlHandler():
