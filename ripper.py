@@ -458,6 +458,7 @@ if __name__ == "__main__":
         if isinstance(url, SVTPlayEpisodeData):
             subtitle_url = url.url()
         elif isinstance(url, DPlayEpisodeData):
+            url.set_logging(ARGS.verb)
             subtitle_url = "dplay_placeholder_url"
         else:
             subtitle_url = url

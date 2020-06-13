@@ -11,6 +11,7 @@ from requests import Session
 from http.cookiejar import MozillaCookieJar
 
 from util import Singleton
+from printing import fcs
 from config import ConfigurationManager
 
 VALID_FILTER_KEYS = ["season", "episode", "title", "date"]
@@ -120,6 +121,7 @@ class Tv4PlayEpisodeData():
 
 class DPlayEpisodeData():
     URL_PREFIX = r"https://www.dplay.se"
+    LOG_PREFIX = fcs("i[(DPLAY_DATA)]")
 
     def __init__(self, episode_data: dict, show_data: dict):
         self.raw_data = episode_data
@@ -131,6 +133,8 @@ class DPlayEpisodeData():
         self.show = "N/A"
         self.id = 0
         self.sub_url = ""
+        self.sub_m3u_url = ""
+        self.print_log = False
         try:
             self.show = show_data["data"]["attributes"]["name"]
         except:
@@ -139,6 +143,19 @@ class DPlayEpisodeData():
             self.id = int(self.raw_data.get("id"), 0)
         except:
             pass
+
+    def set_logging(self, state=True):
+        self.print_log = state
+        if state:
+            self.log("enabling verbose logging")
+
+    def log(self, info_str, info_str_line2=""):
+        if not self.print_log:
+            return
+        print(self.LOG_PREFIX, info_str)
+        if info_str_line2:
+            spaces = " " * len("(DPLAY_DATA) ")
+            print(f"{spaces}{info_str_line2}")
 
     def __str__(self):
         string = f"{self.show} S{self.season_num}E{self.episode_num} " \
@@ -149,36 +166,48 @@ class DPlayEpisodeData():
 
     def retrieve_sub_url(self):
         if self.sub_url:
+            self.log("already retrieved/gotten subtitle url")
             return self.sub_url
         if self.id == 0:
+            self.log("show id is 0, cannot retrive subtitle url")
             return None
         SessionSingleton().load_cookies_txt()
-        res = SessionSingleton().get(
-            f"https://disco-api.dplay.se/playback/videoPlaybackInfo/{self.id}")
-        try:
-            hls_url = res.json()[
-                "data"]["attributes"]["streaming"]["hls"]["url"]
-        except KeyError as key_error:
-            # TODO: print error when --verbose arg has been impl.
-            return None
-        hls_data = SessionSingleton().get(hls_url)
-        sub_m3u_url = None
-        for line in hls_data.text.splitlines():
-            if all([x in line for x in ["TYPE=SUBTITLES", "URI=", 'LANGUAGE="sv"']]):
-                sub_url_suffix = line.split('URI="')[1]
-                sub_url_suffix = sub_url_suffix[:-1]
-                sub_m3u_url = hls_url.replace(
-                    "playlist.m3u8", "") + sub_url_suffix
-                break
-        if not sub_m3u_url:
-            return
-        res = SessionSingleton().get(sub_m3u_url)
+        if self.sub_m3u_url:
+            self.log("have already retrieved subtitle m3u url",
+                     info_str_line2=fcs(f"p[{self.sub_m3u_url}]"))
+        else:
+            res = SessionSingleton().get(
+                f"https://disco-api.dplay.se/playback/videoPlaybackInfo/{self.id}")
+            try:
+                hls_url = res.json()[
+                    "data"]["attributes"]["streaming"]["hls"]["url"]
+                self.log("got HLS url:",
+                         info_str_line2=fcs(f"p[{hls_url}]"))
+            except KeyError as key_error:
+                self.log("failed to retrieve HLS url from videoPlaybackInfo")
+                return ""
+            hls_data = SessionSingleton().get(hls_url)
+            hls_url_prefix = hls_url.split("playlist.m3u8")[0]
+            for line in hls_data.text.splitlines():
+                if all([x in line for x in ["TYPE=SUBTITLES", "URI=", 'LANGUAGE="sv"']]):
+                    sub_url_suffix = line.split('URI="')[1]
+                    sub_url_suffix = sub_url_suffix[:-1]
+                    self.sub_m3u_url = hls_url_prefix + "/" + sub_url_suffix
+                    break
+        if not self.sub_m3u_url:
+            self.log("could not retrieve subtitle m3u url")
+            return ""
+        self.log("using subtitle m3u url:",
+                 info_str_line2=fcs(f"p[{self.sub_m3u_url}]"))
+        res = SessionSingleton().get(self.sub_m3u_url)
         for line in res.text.splitlines():
             if ".vtt" in line:
                 sub_url = hls_url.replace(
                     "playlist.m3u8", "") + line
                 self.sub_url = sub_url
                 return self.sub_url
+        self.log(fcs("w[WARNING] could not find vtt link in subtitle m3u!"))
+        self.sub_m3u_url = ""
         return ""
 
     def url(self):
