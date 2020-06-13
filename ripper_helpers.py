@@ -11,6 +11,7 @@ from requests import Session
 from http.cookiejar import MozillaCookieJar
 
 from util import Singleton
+from config import ConfigurationManager
 
 VALID_FILTER_KEYS = ["season", "episode", "title", "date"]
 
@@ -23,8 +24,10 @@ class SessionSingleton(metaclass=Singleton):
         if self.SESSION is None:
             self.SESSION = Session()
 
-    def load_cookies_txt(self, file_path="cookies.txt"):
+    def load_cookies_txt(self, file_path=None):
         self.init_session()
+        if not file_path:
+            file_path = ConfigurationManager().path("cookies_txt")
         jar = MozillaCookieJar(file_path)
         jar.load(ignore_discard=True, ignore_expires=True)
         self.SESSION.cookies.update(jar)

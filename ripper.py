@@ -9,6 +9,7 @@ import queue
 import re
 import shlex
 import subprocess
+import time
 import sys
 from enum import Enum
 from pathlib import Path
@@ -17,13 +18,11 @@ from urllib.request import urlopen
 import printing
 import rename
 import run
-from printing import cstr, pfcs
-from ripper_helpers import DPlayEpisodeLister
-from ripper_helpers import Tv4PlayEpisodeLister
-from ripper_helpers import ViafreeEpisodeLister
-from ripper_helpers import SVTPlayEpisodeData
-from ripper_helpers import SVTPlayEpisodeLister
-
+from config import ConfigurationManager
+from printing import cstr, pfcs, fcs
+from ripper_helpers import (DPlayEpisodeData, DPlayEpisodeLister,
+                            SVTPlayEpisodeData, SVTPlayEpisodeLister,
+                            Tv4PlayEpisodeLister, ViafreeEpisodeLister)
 
 SIM_STR = r"(SIMULATE)"
 
@@ -54,9 +53,11 @@ class YoutubeDLFormats(Enum):
 
 class PlaySubtitleRipperSvtPlayDl():
     SIM_STR = f"i[{SIM_STR}] o[SUBDL]"
+    LOG_PREFIX = fcs("i[(SUBDL)]")
 
-    def __init__(self, url, video_file_path, sim=False):
-        self.url = url
+    def __init__(self, sub_url, video_file_path, sim=False, verbose=False):
+        self.url = sub_url
+        self.print_log = verbose
         self.video_file_path = video_file_path
         self.simulate = sim
         if sim:
@@ -68,7 +69,7 @@ class PlaySubtitleRipperSvtPlayDl():
     def determine_file_name(self):
         dest_path = Path(self.video_file_path)
         file_ext = dest_path.suffix
-        if "viafree" in self.url:
+        if "viafree" or "dplay" in self.url:
             srt_file_name = dest_path.name.replace(file_ext, r".vtt")
         else:
             srt_file_name = dest_path.name.replace(file_ext, r".srt")
@@ -100,7 +101,11 @@ class PlaySubtitleRipperSvtPlayDl():
             return None
         if not self.simulate:
             if "viafree" in self.url:
+                self.log("using viafree workaround")
                 self.download_viafree()
+            elif "dplay" in self.url:
+                self.log("using dplay workaround")
+                self.download_dplay()
             else:
                 self.download_with_svtplaydl()
             if self.get_dest_path().is_file():
@@ -108,6 +113,8 @@ class PlaySubtitleRipperSvtPlayDl():
                 print(
                     f"downloaded subtitle: {CSTR(f'{self.get_dest_path()}', 'lblue')}")
                 return self.get_dest_path()
+            else:
+                self.log(fcs("subtitle download e[failed]!"))
         else:
             pfcs(f"{self.SIM_STR} downloading")
             pfcs(f"{self.SIM_STR} dest: {self.get_dest_path()}")
@@ -145,24 +152,39 @@ class PlaySubtitleRipperSvtPlayDl():
         sub_url = self.get_viafree_subtitle_link()
         if not sub_url:
             return
+        self.curl(sub_url)
+
+    def download_dplay(self):
+        if self.url:
+            self.curl(self.url)
+
+    def curl(self, sub_url):
         command = f"curl {sub_url} > {self.get_dest_path()}"
         if not run.local_command(command, hide_output=True, print_info=False):
             self.download_succeeded = False
 
+    def log(self, info_str):
+        if not self.print_log:
+            return
+        print(self.LOG_PREFIX, info_str)
+
 
 class PlayRipperYoutubeDl():
     SIM_STR = f"i[{SIM_STR}] p[YTDL]"
+    LOG_PREFIX = fcs("i[(YTDL)]")
 
-    def __init__(self, url, dest=None, use_title=False, sim=False):
+    def __init__(self, url, dest=None, use_title=False, sim=False, verbose=False):
         self.ep_data = None
+        self.print_log = verbose
         self.url = url
-        if isinstance(url, SVTPlayEpisodeData):
+        if isinstance(url, SVTPlayEpisodeData) or isinstance(url, DPlayEpisodeData):
             self.ep_data = url
             self.url = url.url()
         self.dest_path = dest
         self.format = None
         self.simulate = sim
         if sim:
+            self.log("using simulation (not downloading)")
             pfcs(f"{self.SIM_STR} init")
         self.options = {
             "format": YoutubeDLFormats.Best.value,
@@ -182,7 +204,17 @@ class PlayRipperYoutubeDl():
             if not self.url:
                 return
 
+        if "dplay" in self.url:
+            self.log(fcs("loading o[cookie.txt] for dplay"))
+            self.options["cookiefile"] = ConfigurationManager().path(
+                "cookies_txt")
+
         self.retrieve_info()
+
+    def log(self, info_str):
+        if not self.print_log:
+            return
+        print(self.LOG_PREFIX, info_str)
 
     def download(self, destination_path=None):
         if not self.info:
@@ -312,6 +344,36 @@ class PlayRipperYoutubeDl():
 
 
 CSTR = printing.to_color_str
+MAIN_LOG_PREFIX = fcs("i[(MAIN)]")
+
+
+def log_main(info_str):
+    print(MAIN_LOG_PREFIX, info_str)
+
+
+def retrive_dplay_sub_url(dplay_data_obj):
+    count = 0
+    dplay_sub_url = ""
+    while not dplay_sub_url:
+        dplay_sub_url = dplay_data_obj.retrieve_sub_url()
+        if dplay_sub_url:
+            if ARGS.verb:
+                log_main("successfully retrieved dplay subtitle url")
+            return dplay_sub_url
+        else:
+            if ARGS.verb:
+                log_main("failed to retrieve dplay subtitle url")
+            count += 1
+            if count > 5:
+                if ARGS.verb:
+                    log_main(
+                        "could retrieve dplay subtitle url, skipping sub download")
+                return ""
+            if ARGS.verb:
+                # Could be done in bg when processing others?
+                log_main("sleeping 10 seconds...")
+            time.sleep(10)
+
 
 if __name__ == "__main__":
     print(CSTR("======= ripper =======".upper(), "purple"))
@@ -327,6 +389,7 @@ if __name__ == "__main__":
     PARSER.add_argument("--get-last", default=0, dest="get_last")
     PARSER.add_argument("--filter", "-f", type=str, default="")
     PARSER.add_argument("--simulate", action="store_true", help="run tests")
+    PARSER.add_argument("--verbose", "-v", action="store_true", dest="verb")
     ARGS = PARSER.parse_args()
 
     if ARGS.sub_only:
@@ -351,9 +414,9 @@ if __name__ == "__main__":
             lister = DPlayEpisodeLister(urls[0])
             if filter_dict:
                 lister.set_filter(**filter_dict)
-            urls = lister.list_episode_urls(
-                revered_order=True, limit=wanted_last
-            )
+            urls = lister.list_episode_urls(objects=True,
+                                            revered_order=True, limit=wanted_last
+                                            )
         elif "viafree" in urls[0]:
             lister = ViafreeEpisodeLister(urls[0])
             if filter_dict:
@@ -382,30 +445,49 @@ if __name__ == "__main__":
             urls = urls[-1 * wanted_last:]
         print(f"will download {len(urls)} links:")
         for url in urls:
-            if isinstance(url, SVTPlayEpisodeData):
+            if isinstance(url, SVTPlayEpisodeData) or isinstance(url, DPlayEpisodeData):
                 url_str = url.url()
             else:
                 url_str = url
             print(CSTR(f"  {url_str}", "lblue"))
+    # TODO: refactor, probably always get objects instead of url strings....
     for url in urls:
         ripper = PlayRipperYoutubeDl(
-            url, ARGS.dir, sim=ARGS.simulate, use_title=ARGS.use_title)
+            url, ARGS.dir, sim=ARGS.simulate, use_title=ARGS.use_title, verbose=ARGS.verb)
         ripper.print_info()
         if isinstance(url, SVTPlayEpisodeData):
-            url_str = url.url()
+            subtitle_url = url.url()
+        elif isinstance(url, DPlayEpisodeData):
+            subtitle_url = "dplay_placeholder_url"
         else:
-            url_str = url
+            subtitle_url = url
+        if ARGS.verb:
+            log_main(fcs(f"using url for subtitles: o[{subtitle_url}]"))
         if ARGS.sub_only:
             file_name = ripper.get_dest_path()
             sub_ripper = PlaySubtitleRipperSvtPlayDl(
-                url_str, str(file_name), sim=ARGS.simulate)
+                subtitle_url, str(file_name), sim=ARGS.simulate, verbose=ARGS.verb)
             sub_ripper.print_info()
             sub_ripper.download()
         else:
+            get_subs = False
             file_name = ripper.download()
             if file_name and ripper.download_succeeded:
+                get_subs = True
+            elif not file_name and ripper.file_already_exists():
+                file_name = ripper.get_dest_path()
+                get_subs = True
+            if get_subs:
+                if ARGS.verb:
+                    log_main("attempting to download subtitles")
                 sub_ripper = PlaySubtitleRipperSvtPlayDl(
-                    url_str, str(file_name), sim=ARGS.simulate)
+                    subtitle_url, str(file_name), sim=ARGS.simulate, verbose=ARGS.verb)
                 sub_ripper.print_info()
-                sub_ripper.download()
+                if not sub_ripper.file_already_exists():
+                    if isinstance(url, DPlayEpisodeData):
+                        retrieved_url = retrive_dplay_sub_url(url)
+                        if retrieved_url:
+                            sub_ripper.url = retrieved_url
+                    if "placeholder" not in sub_ripper.url:
+                        sub_ripper.download()
         print("=" * 100)
