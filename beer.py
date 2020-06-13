@@ -15,20 +15,22 @@ ARG_DATE_FMT = r"%Y-%m-%d"
 
 def filenameify(string):
     string = string.lower()
-    for search, rep in [
+    rep_list = [
         (".", ""),
         ("&", "and"),
         ("å", "a"),
         ("ä", "a"),
         ("ö", "o"),
         ("/", "-"),
+        ("--", "-"),
         ("(", " "),
         (" - ", "-"),
         (")", " "),
         ("é", "e"),
-        ("  ", " ") # must be last
-        ]:
-            string = string.replace(search, rep)
+        ("  ", " ")  # must be last
+    ]
+    for search, rep in rep_list:
+        string = string.replace(search, rep)
     string = string.strip()
     return string.replace(" ", "_")
 
