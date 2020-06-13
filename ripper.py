@@ -63,6 +63,7 @@ class PlaySubtitleRipperSvtPlayDl():
         if sim:
             pfcs(f"{self.SIM_STR} init")
         self.filename = self.determine_file_name()
+        self.log(fcs(f"using filename p[{self.filename}]"))
         self.dest_path = Path(self.video_file_path).parent
         self.download_succeeded = False
 
@@ -76,11 +77,7 @@ class PlaySubtitleRipperSvtPlayDl():
         return srt_file_name
 
     def print_info(self):
-        pfcs(f"url i[{self.url}]")
-        pfcs(f"filename i[{self.filename}]")
-        pfcs(f"dest i[{self.dest_path}]")
-        pfcs(f"full_dest i[{self.get_dest_path()}]")
-        pfcs(f"file_exists i[{self.file_already_exists()}]")
+        pass
 
     def file_already_exists(self):
         path = self.get_dest_path()
@@ -209,6 +206,7 @@ class PlayRipperYoutubeDl():
             self.options["cookiefile"] = ConfigurationManager().path(
                 "cookies_txt")
 
+        self.log(fcs(f"using url p[{self.url}]"))
         self.retrieve_info()
 
     def log(self, info_str):
@@ -226,6 +224,7 @@ class PlayRipperYoutubeDl():
             pfcs(f"file already exists: o[{self.filename}], skipping")
             return None
         if not self.simulate:
+            self.log(fcs(f"downloading to: p[{self.dest_path}]"))
             try:
                 with youtube_dl.YoutubeDL(self.options) as ydl:
                     ydl.params["outtmpl"] = str(self.get_dest_path())
@@ -257,12 +256,7 @@ class PlayRipperYoutubeDl():
         return Path(self.dest_path) / self.filename
 
     def print_info(self):
-        pfcs(f"url i[{self.url}]")
-        pfcs(f"format i[{self.format.value}]")
-        pfcs(f"filename i[{self.filename}]")
-        pfcs(f"dest i[{self.dest_path}]")
-        pfcs(f"full_dest i[{self.get_dest_path()}]")
-        pfcs(f"file_exists i[{self.file_already_exists()}]")
+        pass
 
     def hooks(self, event):
         if event["status"] == "finished":
@@ -274,6 +268,7 @@ class PlayRipperYoutubeDl():
                   f"- {event['_eta_str']})    ", end="")
 
     def retrieve_info(self):
+        self.log("attempting to retrieve video info using youtube-dl...")
         for vid_format in YoutubeDLFormats:
             self.options["format"] = vid_format.value
             self.format = vid_format
@@ -281,13 +276,18 @@ class PlayRipperYoutubeDl():
                 with youtube_dl.YoutubeDL(self.options) as ydl:
                     self.info = ydl.extract_info(self.url, download=False)
                     self.filename = self.generate_filename()
+                self.log(
+                    fcs(f"i[success!] generated filename: p[{self.filename}]"))
+                self.log(
+                    fcs(f"i<success!> using format: p<{self.format.value}>",
+                        format_chars=["<", ">"]))
                 return  # succeeded
             except youtube_dl.utils.DownloadError as error:
                 pass
             except AttributeError:
                 pass
         # did not succeed
-        print("could not retrieve info using youtube-dl!")
+        pfcs("e[error] could not retrieve info using youtube-dl!")
 
     def generate_filename(self):
         if self.ep_data:
@@ -443,7 +443,7 @@ if __name__ == "__main__":
             sys.exit(1)
         if len(urls) >= wanted_last:
             urls = urls[-1 * wanted_last:]
-        print(f"will download {len(urls)} links:")
+        print(f"will download {len(urls)} link(s):")
         for url in urls:
             if isinstance(url, SVTPlayEpisodeData) or isinstance(url, DPlayEpisodeData):
                 url_str = url.url()
@@ -480,7 +480,7 @@ if __name__ == "__main__":
                 get_subs = True
             if get_subs:
                 if ARGS.verb:
-                    log_main("attempting to download subtitles")
+                    log_main("preparing to download subtitles if needed")
                 sub_ripper = PlaySubtitleRipperSvtPlayDl(
                     subtitle_url, str(file_name), sim=ARGS.simulate, verbose=ARGS.verb)
                 sub_ripper.print_info()
@@ -491,4 +491,7 @@ if __name__ == "__main__":
                             sub_ripper.url = retrieved_url
                     if "placeholder" not in sub_ripper.url:
                         sub_ripper.download()
+                elif ARGS.verb:
+                    log_main("subtitle file already exists, skipping")
+
         print("=" * 100)
