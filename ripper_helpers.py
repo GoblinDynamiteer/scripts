@@ -123,7 +123,7 @@ class DPlayEpisodeData():
     URL_PREFIX = r"https://www.dplay.se"
     LOG_PREFIX = fcs("i[(DPLAY_DATA)]")
 
-    def __init__(self, episode_data: dict, show_data: dict):
+    def __init__(self, episode_data: dict, show_data: dict, premium=False):
         self.raw_data = episode_data
         attr = episode_data.get("attributes", {})
         self.episode_path = attr.get("path", "")
@@ -163,6 +163,9 @@ class DPlayEpisodeData():
         if self.sub_url:
             return string + f" -- sub_url: {self.sub_url}"
         return string
+
+    def name(self):
+        return f"{self.show} S{self.season_num}E{self.episode_num}"
 
     def retrieve_sub_url(self):
         if self.sub_url:
@@ -389,14 +392,24 @@ class Tv4PlayEpisodeLister():
 
 class DPlayEpisodeLister():
     API_URL = "https://disco-api.dplay.se"
+    LOG_PREFIX = fcs("i[(DPLAY_LISTER)]")
 
-    def __init__(self, url):
+    def __init__(self, url, verbose=False):
         if not "dplay.se" in url:
             print("cannot handle non-dplay.se urls!")
         self.url = url
         self.filter = {}
+        self.print_log = verbose
         if not self.check_token():
             print("failed to get session for dplay")
+
+    def log(self, info_str, info_str_line2=""):
+        if not self.print_log:
+            return
+        print(self.LOG_PREFIX, info_str)
+        if info_str_line2:
+            spaces = " " * len("(DPLAY_LISTER) ")
+            print(f"{spaces}{info_str_line2}")
 
     def check_token(self) -> bool:
         url = f"{self.API_URL}/users/me/favorites?include=default"
@@ -453,9 +466,12 @@ class DPlayEpisodeLister():
             res = SessionSingleton().get(
                 f"{self.API_URL}/content/videos?{qyerystring}")
             for data in res.json()["data"]:
-                if self.is_episode_data_premium(data.get("attributes", {})):
-                    continue
-                ep_list.append(DPlayEpisodeData(data, show_data))
+                is_premium = self.is_episode_data_premium(
+                    data.get("attributes", {}))
+                obj = DPlayEpisodeData(data, show_data, premium=is_premium)
+                ep_list.append(obj)
+                if is_premium: # TODO: add check/arg to determine if prem. is dlable
+                    self.log(fcs(f"w[warning] w['{obj.name()}'] is premium"))
         for filter_key, filter_val in self.filter.items():
             ep_list = apply_filter(ep_list, filter_key, filter_val)
         ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
