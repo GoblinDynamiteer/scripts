@@ -1,10 +1,7 @@
 #!/usr/bin/python3.8
 
-import hashlib
 import json
-import random
 import re
-import sys
 
 from urllib.request import urlopen
 from urllib.parse import urlparse, quote
@@ -13,13 +10,31 @@ from datetime import datetime
 from requests import Session
 from http.cookiejar import MozillaCookieJar
 
+from util import Singleton
+
 VALID_FILTER_KEYS = ["season", "episode", "title", "date"]
 
 
-def get_cookies_from_file(file_path="cookies.txt") -> MozillaCookieJar:
-    cj = MozillaCookieJar(file_path)
-    cj.load(ignore_discard=True, ignore_expires=True)
-    return cj
+class SessionSingleton(metaclass=Singleton):
+    SESSION = None
+    GETS = {}
+
+    def init_session(self):
+        if self.SESSION is None:
+            self.SESSION = Session()
+
+    def load_cookies_txt(self, file_path="cookies.txt"):
+        self.init_session()
+        jar = MozillaCookieJar(file_path)
+        jar.load(ignore_discard=True, ignore_expires=True)
+        self.SESSION.cookies.update(jar)
+
+    def get(self, url):
+        self.init_session()
+        if url in self.GETS:
+            return self.GETS[url]
+        self.GETS[url] = self.SESSION.get(url)
+        return self.GETS[url]
 
 
 def apply_filter(ep_list: list, filter_type: str, filter_val: str):
@@ -129,6 +144,40 @@ class DPlayEpisodeData():
             return string + f" -- sub_url: {self.sub_url}"
         return string
 
+    def retrieve_sub_url(self):
+        if self.sub_url:
+            return self.sub_url
+        if self.id == 0:
+            return None
+        SessionSingleton().load_cookies_txt()
+        res = SessionSingleton().get(
+            f"https://disco-api.dplay.se/playback/videoPlaybackInfo/{self.id}")
+        try:
+            hls_url = res.json()[
+                "data"]["attributes"]["streaming"]["hls"]["url"]
+        except KeyError as key_error:
+            # TODO: print error when --verbose arg has been impl.
+            return None
+        hls_data = SessionSingleton().get(hls_url)
+        sub_m3u_url = None
+        for line in hls_data.text.splitlines():
+            if all([x in line for x in ["TYPE=SUBTITLES", "URI=", 'LANGUAGE="sv"']]):
+                sub_url_suffix = line.split('URI="')[1]
+                sub_url_suffix = sub_url_suffix[:-1]
+                sub_m3u_url = hls_url.replace(
+                    "playlist.m3u8", "") + sub_url_suffix
+                break
+        if not sub_m3u_url:
+            return
+        res = SessionSingleton().get(sub_m3u_url)
+        for line in res.text.splitlines():
+            if ".vtt" in line:
+                sub_url = hls_url.replace(
+                    "playlist.m3u8", "") + line
+                self.sub_url = sub_url
+                return self.sub_url
+        return ""
+
     def url(self):
         return f"{self.URL_PREFIX}/videos/{self.episode_path}"
 
@@ -161,7 +210,6 @@ class SVTPlayEpisodeLister():
         if not "svtplay.se" in url:
             print("cannot handle non-svtplay.se urls!")
         self.url = url
-        self.session = Session()
         self.filter = {}
 
     def set_filter(self, **kwargs):
@@ -172,7 +220,7 @@ class SVTPlayEpisodeLister():
                 self.filter[key] = val
 
     def list_episode_urls(self, revered_order=False, limit=None, objects=False):
-        res = self.session.get(f"{self.url}")
+        res = SessionSingleton().get(f"{self.url}")
         match = re.search(r"__svtplay_apollo'] = ({.*});", res.text)
         if not match:
             print("could not parse data!")
@@ -315,14 +363,13 @@ class DPlayEpisodeLister():
             print("cannot handle non-dplay.se urls!")
         self.url = url
         self.filter = {}
-        self.session = Session()
-        self.session.cookies.update(get_cookies_from_file())
         if not self.check_token():
             print("failed to get session for dplay")
 
     def check_token(self) -> bool:
         url = f"{self.API_URL}/users/me/favorites?include=default"
-        res = self.session.get(url)
+        SessionSingleton().load_cookies_txt()
+        res = SessionSingleton().get(url)
         return res.status_code < 400
 
     def set_filter(self, **kwargs):
@@ -350,42 +397,13 @@ class DPlayEpisodeLister():
             return True  # TODO: might still be free?
         return free_datetime > datetime.now()
 
-    def update_hls_data(self, epdata: DPlayEpisodeData):
-        if epdata.id == 0:
-            return
-        res = self.session.get(
-            f"https://disco-api.dplay.se/playback/videoPlaybackInfo/{epdata.id}")
-        try:
-            hls_url = res.json()[
-                "data"]["attributes"]["streaming"]["hls"]["url"]
-        except KeyError as key_error:
-            # TODO: print error when --verbose arg has been impl.
-            return
-        hls_data = self.session.get(hls_url)
-        sub_m3u_url = None
-        for line in hls_data.text.splitlines():
-            if all([x in line for x in ["TYPE=SUBTITLES", "URI=", 'LANGUAGE="sv"']]):
-                sub_url_suffix = line.split('URI="')[1]
-                sub_url_suffix = sub_url_suffix[:-1]
-                sub_m3u_url = hls_url.replace(
-                    "playlist.m3u8", "") + sub_url_suffix
-                break
-        if not sub_m3u_url:
-            return
-        res = self.session.get(sub_m3u_url)
-        for line in res.text.splitlines():
-            if ".vtt" in line:
-                sub_url = hls_url.replace(
-                    "playlist.m3u8", "") + line
-                epdata.sub_url = sub_url
-
     def list_episode_urls(self, revered_order=False, limit=None, objects=False):
         match = re.search(
             "/(program|programmer|videos|videoer)/([^/]+)", self.url)
         if not match:
             print("failed to determine show path!")
             return
-        res = self.session.get(
+        res = SessionSingleton().get(
             f"{self.API_URL}/content/shows/{match.group(2)}")
 
         show_data = res.json()
@@ -400,14 +418,12 @@ class DPlayEpisodeLister():
                 f"&filter[show.id]={show_id}&filter[seasonNumber]={season_number}"
                 "&page[size]=100&sort=seasonNumber,episodeNumber,-earliestPlayableStart"
             )
-            res = self.session.get(
+            res = SessionSingleton().get(
                 f"{self.API_URL}/content/videos?{qyerystring}")
             for data in res.json()["data"]:
                 if self.is_episode_data_premium(data.get("attributes", {})):
                     continue
-                dplay_epdata = DPlayEpisodeData(data, show_data)
-                # self.update_hls_data(dplay_epdata) #SLOW
-                ep_list.append(dplay_epdata)
+                ep_list.append(DPlayEpisodeData(data, show_data))
         for filter_key, filter_val in self.filter.items():
             ep_list = apply_filter(ep_list, filter_key, filter_val)
         ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
@@ -579,6 +595,19 @@ def test_dplay():
         print(ep)
 
 
+def test_dplay_sub_url():
+    print("DPLAY SUB URL")
+    prog_url = "https://www.dplay.se/program/eotb"
+    dpel = DPlayEpisodeLister(prog_url)
+    eps = dpel.list_episode_urls(objects=True)
+
+    print("LAST 2 EPS")
+    eps = dpel.list_episode_urls(revered_order=True, limit=2, objects=True)
+    for ep in eps:
+        url = ep.retrieve_sub_url()
+        print(ep.title, url)
+
+
 def test_tv4play():
     print("TV4PLAY")
     prog_url = "https://www.tv4play.se/program/farmen"
@@ -661,6 +690,17 @@ def test_viafree():
         print(ep)
 
 
+def test_svtplaydl():
+    print("SVTPLAYDL")
+    # Might be removed from svtplay
+    prog_url = "https://www.svtplay.se/video/27031429/sommarlov"
+    spel = SVTPlayEpisodeLister(prog_url)
+    eps = spel.list_episode_urls(objects=True)
+    print("LF ALL EPS")
+    for ep in eps:
+        print(ep)
+
+
 def test_viafree_url_handler():
     vfurl = ViafreeUrlHandler(
         "https://www.viafree.se/program/reality/paradise-hotel/sasong-12/avsnitt-25")
@@ -672,6 +712,8 @@ def test_viafree_url_handler():
 if __name__ == "__main__":
     # For Testing....
     test_tv4play()
+    test_svtplaydl()
     test_dplay()
+    test_dplay_sub_url()
     test_viafree()
     test_viafree_url_handler()
