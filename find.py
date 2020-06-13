@@ -51,7 +51,7 @@ class FileInfo():
 
     def subp(self, command):
         command = command.replace("{}", self.filename)
-        print(command)
+        local_command(command, hide_output=False, print_info=True)
 
 
 def main():
