@@ -306,6 +306,7 @@ class PlayRipperYoutubeDl():
             ext = "mp4"
         file_name = ""
         if series and season_number and episode_number:
+            series = series.replace("é", "e") #TODO: replace umlauts in series...
             file_name = f"{series}.s{season_number:02d}e{episode_number:02d}"
             if self.use_title and title:
                 file_name = f"{file_name}.{title}"
