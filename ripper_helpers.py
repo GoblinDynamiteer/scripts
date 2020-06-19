@@ -206,8 +206,8 @@ class DPlayEpisodeData():
         res = SessionSingleton().get(self.sub_m3u_url)
         for line in res.text.splitlines():
             if ".vtt" in line:
-                sub_url = hls_url.replace(
-                    "playlist.m3u8", "") + line
+                hls_url_prefix = hls_url.split("playlist.m3u8")[0]
+                sub_url = hls_url_prefix + "/" + line
                 self.sub_url = sub_url
                 return self.sub_url
         self.log(fcs("w[WARNING] could not find vtt link in subtitle m3u!"))

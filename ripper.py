@@ -468,8 +468,13 @@ if __name__ == "__main__":
             file_name = ripper.get_dest_path()
             sub_ripper = PlaySubtitleRipperSvtPlayDl(
                 subtitle_url, str(file_name), sim=ARGS.simulate, verbose=ARGS.verb)
-            sub_ripper.print_info()
-            sub_ripper.download()
+            if not sub_ripper.file_already_exists():
+                if isinstance(url, DPlayEpisodeData):
+                    retrieved_url = retrive_dplay_sub_url(url)
+                    if retrieved_url:
+                        sub_ripper.url = retrieved_url
+                if "placeholder" not in sub_ripper.url:
+                    sub_ripper.download()
         else:
             get_subs = False
             file_name = ripper.download()
