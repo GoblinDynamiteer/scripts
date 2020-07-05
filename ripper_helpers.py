@@ -283,11 +283,17 @@ class SVTPlayEpisodeLister(EpisodeLister):
         json_data = json.loads(match.group(1))
         season_slug = ""
         show_name = ""
+        self.log("processing json data...")
         for key in json_data.keys():
             slug = json_data[key].get("slug", "")
             if slug and slug in self.url:
                 season_slug = slug
+                self.log(f"got slug: {season_slug}")
                 show_name = json_data[key].get("name", "")
+                if show_name:
+                    self.log(f"got show name: \"{show_name}\"")
+                else:
+                    self.log(fcs(f"w[warning] failed to get show name!"))
                 break
         episode_keys = self.find_episode_keys(json_data, season_slug)
         ep_list = []
@@ -323,9 +329,12 @@ class SVTPlayEpisodeLister(EpisodeLister):
                 if part_num != determined_ep_number:
                     print(f"found several ep numbers for{key}!")
             determined_ep_number = part_num
+        if determined_ep_number is None:
+            self.log(fcs(f"w[warning] failed to get ep_num for key {key}!"))
         url_key = ep_data["urls"]["id"]
         url_str = json_data.get(url_key, {}).get("svtplay", "")
         if not url_str:
+            self.log(fcs(f"w[warning] failed to get url for ep key {key}!"))
             return None
         match = re.search(re_url, url_str)
         ep_id = None
@@ -333,6 +342,12 @@ class SVTPlayEpisodeLister(EpisodeLister):
             determined_season_number = int(
                 match.groupdict().get("season_num", None))
             ep_id = int(match.groupdict().get("ep_id", None))
+        if determined_season_number is None:
+            self.log(
+                fcs(
+                    f"w[warning] failed to get season_num for url w[{url_str}]!"),
+                "--> setting to \"S01\"")
+            determined_season_number = 1
         obj = SVTPlayEpisodeData()
         obj.set_data(id=ep_id,
                      title=ep_data.get("name", "N/A"),
@@ -358,6 +373,8 @@ class SVTPlayEpisodeLister(EpisodeLister):
             url_str = json_data.get(url_key, {}).get("svtplay", "")
             if show_slug in url_str:
                 found_episodes.append(key)
+        if not found_episodes:
+            self.log("failed to find any episode keys!")
         return found_episodes
 
 
