@@ -419,21 +419,21 @@ if __name__ == "__main__":
                                             revered_order=True, limit=wanted_last
                                             )
         elif "viafree" in urls[0]:
-            lister = ViafreeEpisodeLister(urls[0])
+            lister = ViafreeEpisodeLister(urls[0], verbose=ARGS.verb)
             if filter_dict:
                 lister.set_filter(**filter_dict)
             urls = lister.list_episode_urls(
                 revered_order=True, limit=wanted_last
             )
         elif "tv4play" in urls[0]:
-            lister = Tv4PlayEpisodeLister(urls[0])
+            lister = Tv4PlayEpisodeLister(urls[0], verbose=ARGS.verb)
             if filter_dict:
                 lister.set_filter(**filter_dict)
             urls = lister.list_episode_urls(
                 revered_order=True, limit=wanted_last
             )
         elif "svtplay" in urls[0]:
-            lister = SVTPlayEpisodeLister(urls[0])
+            lister = SVTPlayEpisodeLister(urls[0], verbose=ARGS.verb)
             if filter_dict:
                 lister.set_filter(**filter_dict)
             urls = lister.list_episode_urls(objects=True,
