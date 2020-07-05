@@ -239,14 +239,12 @@ class ViafreeEpisodeData():
         return f"{self.URL_PREFIX}{self.episode_path}"
 
 
-class SVTPlayEpisodeLister():
-    REGEX = r"application\/json\">(.*\}\})<\/script><script "
-
-    def __init__(self, url):
-        if not "svtplay.se" in url:
-            print("cannot handle non-svtplay.se urls!")
+class EpisodeLister():
+    def __init__(self, url, verbose=False):
         self.url = url
         self.filter = {}
+        self.print_log = verbose
+        self.log_prefix = "EPISODE_LISTER"
 
     def set_filter(self, **kwargs):
         for key, val in kwargs.items():
@@ -254,6 +252,27 @@ class SVTPlayEpisodeLister():
                 print(f"invalid filter: {key}={val}")
             else:
                 self.filter[key] = val
+
+    def set_log_prefix(self, log_prefix: str):
+        self.log_prefix = log_prefix.upper()
+
+    def log(self, info_str, info_str_line2=""):
+        if not self.print_log:
+            return
+        print(fcs(f"i[({self.log_prefix})]"), info_str)
+        if info_str_line2:
+            spaces = " " * len(f"({self.log_prefix}) ")
+            print(f"{spaces}{info_str_line2}")
+
+
+class SVTPlayEpisodeLister(EpisodeLister):
+    REGEX = r"application\/json\">(.*\}\})<\/script><script "
+
+    def __init__(self, url, verbose=False):
+        super().__init__(url, verbose)
+        self.set_log_prefix("SVTPLAY_LISTER")
+        if not "svtplay.se" in url:
+            print("cannot handle non-svtplay.se urls!")
 
     def list_episode_urls(self, revered_order=False, limit=None, objects=False):
         res = SessionSingleton().get(f"{self.url}")
@@ -342,23 +361,17 @@ class SVTPlayEpisodeLister():
         return found_episodes
 
 
-class Tv4PlayEpisodeLister():
+class Tv4PlayEpisodeLister(EpisodeLister):
     REGEX = r"application\/json\">(.*\}\})<\/script><script "
 
-    def __init__(self, url):
+    def __init__(self, url, verbose=False):
+        super().__init__(url, verbose)
+        self.set_log_prefix("TV4PLAY_LISTER")
         if not "tv4play.se" in url:
             print("cannot handle non-tv4play.se urls!")
         self.url = url
         self.session = Session()
         self.filter = {}
-        # self.check_token()
-
-    def set_filter(self, **kwargs):
-        for key, val in kwargs.items():
-            if key not in VALID_FILTER_KEYS:
-                print(f"invalid filter: {key}={val}")
-            else:
-                self.filter[key] = val
 
     def list_episode_urls(self, revered_order=False, limit=None, objects=False):
         res = self.session.get(f"{self.url}")
@@ -391,41 +404,24 @@ class Tv4PlayEpisodeLister():
         return [ep if objects else ep.url() for ep in ep_list]
 
 
-class DPlayEpisodeLister():
+class DPlayEpisodeLister(EpisodeLister):
     API_URL = "https://disco-api.dplay.se"
-    LOG_PREFIX = fcs("i[(DPLAY_LISTER)]")
 
     def __init__(self, url, verbose=False):
+        super().__init__(url, verbose)
+        self.set_log_prefix("DPLAY_LISTER")
         if not "dplay.se" in url:
             print("cannot handle non-dplay.se urls!")
-        self.url = url
-        self.filter = {}
-        self.print_log = verbose
         if not self.check_token():
             print("failed to get session for dplay")
         else:
             self.log("successfully got session")
-
-    def log(self, info_str, info_str_line2=""):
-        if not self.print_log:
-            return
-        print(self.LOG_PREFIX, info_str)
-        if info_str_line2:
-            spaces = " " * len("(DPLAY_LISTER) ")
-            print(f"{spaces}{info_str_line2}")
 
     def check_token(self) -> bool:
         url = f"{self.API_URL}/users/me/favorites?include=default"
         SessionSingleton().load_cookies_txt()
         res = SessionSingleton().get(url)
         return res.status_code < 400
-
-    def set_filter(self, **kwargs):
-        for key, val in kwargs.items():
-            if key not in VALID_FILTER_KEYS:
-                print(f"invalid filter: {key}={val}")
-            else:
-                self.filter[key] = val
 
     def is_episode_data_premium(self, data):
         "Check if a free account can see/download episode"
@@ -548,20 +544,15 @@ class ViafreeUrlHandler():
                 self.m3u8_data["video"] = content
 
 
-class ViafreeEpisodeLister():
-    def __init__(self, url):
+class ViafreeEpisodeLister(EpisodeLister):
+    def __init__(self, url, verbose=False):
+        super().__init__(url, verbose)
+        self.set_log_prefix("VIAFREE_LISTER")
         if not "viafree" in url:
             print("cannot handle non-viafree.se urls!")
         self.url = url
         self.session = Session()
         self.filter = {}
-
-    def set_filter(self, **kwargs):
-        for key, val in kwargs.items():
-            if key not in VALID_FILTER_KEYS:
-                print(f"invalid filter: {key}={val}")
-            else:
-                self.filter[key] = val
 
     def list_episode_urls(self, revered_order=False, limit=None, objects=False):
         res = self.session.get(self.url)
