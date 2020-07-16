@@ -119,6 +119,8 @@ def download(item: dict, extr: bool = False):
     file_name = item["name"]
     repl_list = [(" ", r"\ "), # TODO: use escaped for all?
                  ("'", "*"),
+                 ("[", "*"),
+                 ("]", "*"),
                  ("(", "*"),
                  (")", "*")]
     for char, repl in repl_list:
