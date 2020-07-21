@@ -110,7 +110,7 @@ def determine_show_from_episode_name(episode_filename: str):
     try:
         return matched_shows[0]
     except IndexError:
-        for string, replace in [("!", ""), (".and.", ".&.")]:
+        for string, replace in [("!", ""), (".and.", ".&."), (".And.", ".&.")]:
             if string in episode_filename:
                 return determine_show_from_episode_name(
                     episode_filename.replace(string, replace))
