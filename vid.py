@@ -15,6 +15,7 @@ class MissingExternalApplication(Exception):
 class VideoFileMetadata():
     def __init__(self, file_path):
         self.title = ""
+        self.res = 0
         self.path = file_path
         self._extract_metadata()
 
@@ -37,6 +38,13 @@ class VideoFileMetadata():
                 try:
                     self.title = line.split(":")[1].strip()
                     print(f"extracted name/title: {self.title}")
+                except Exception as error:
+                    print(error)
+            if "Height" in line:
+                try:
+                    self.res = int(line.split(
+                        ":")[1].strip().replace(" pixels", ""))
+                    print(f"extracted height/res: {self.res}")
                 except Exception as error:
                     print(error)
 
