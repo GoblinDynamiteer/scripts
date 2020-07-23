@@ -388,6 +388,7 @@ if __name__ == "__main__":
     PARSER.add_argument("--sub-only", "-s",
                         action="store_true", dest="sub_only")
     PARSER.add_argument("--get-last", default=0, dest="get_last")
+    PARSER.add_argument("--download-last-first", "-u", action="store_false", dest="use_ep_order")
     PARSER.add_argument("--filter", "-f", type=str, default="")
     PARSER.add_argument("--simulate", action="store_true", help="run tests")
     PARSER.add_argument("--verbose", "-v", action="store_true", dest="verb")
@@ -444,6 +445,8 @@ if __name__ == "__main__":
             sys.exit(1)
         if len(urls) >= wanted_last:
             urls = urls[-1 * wanted_last:]
+        if ARGS.use_ep_order:
+            urls.reverse()
         print(f"will download {len(urls)} link(s):")
         for url in urls:
             if isinstance(url, SVTPlayEpisodeData) or isinstance(url, DPlayEpisodeData):
