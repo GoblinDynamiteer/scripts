@@ -50,15 +50,21 @@ def get_full_path_of_episode_filename(file_name: str, use_cache=True):
     return None
 
 
-def parse_season_episode(episode_filename: str):
-    match = re.search(r'[Ss]\d{1,2}[Ee]\d{1,2}', episode_filename)
+def parse_season_episode(episode_filename: str, season_as_year=False):
+    re_str = r"[Ss]\d{1,2}[Ee]\d{1,2}"
+    if season_as_year:
+        re_str = r"[Ss]\d{4}[Ee]\d{1,2}"
+    match = re.search(re_str, episode_filename)
     if match:
         se_string = match.group().lower()
         se_list = se_string.replace('s', '').split('e')
         season = int(se_list[0])
         episode = int(se_list[1])
         return (season, episode)
-    match = re.search(r'[Ss]\d{1,2}', episode_filename)
+    re_str = r"[Ss]\d{1,2}"
+    if season_as_year:
+        re_str = r"[Ss]\d{4}"
+    match = re.search(re_str, episode_filename)
     if match:
         s_string = match.group().lower().replace('s', '')
         return (int(s_string), None)

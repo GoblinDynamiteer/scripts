@@ -116,8 +116,12 @@ def process_new_episode(episode_filename: str, show_folder: str) -> dict:
         "scanned": util.now_timestamp(),
         "removed": False,
     }
-    season_number, episode_number = util_tv.parse_season_episode(
-        episode_filename)
+    if "mythbusters" in show_folder.lower():
+        season_number, episode_number = util_tv.parse_season_episode(
+        episode_filename, season_as_year=True)
+    else:
+        season_number, episode_number = util_tv.parse_season_episode(
+            episode_filename)
     data["season_number"] = season_number
     data["episode_number"] = episode_number
     tvmaze_data = {}
