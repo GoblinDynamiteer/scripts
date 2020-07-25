@@ -32,6 +32,7 @@ def show_notification(message, title=None, time_ms=1200):
 
 DMENU_COLORS = {"sf": "red", "sb": "orange", "nb": "black"}
 SOURCE_PENV_CMD = r"source ~/scripts/python-venv/bin/activate.fish"
+GNOME_CTRL_CENTR_CMD = "env XDG_CURRENT_DESKTOP=GNOME gnome-control-center"
 
 
 def i3_exec(command, workspace_name=None, layout=None, sleep_time=1, notify=False):
@@ -84,7 +85,8 @@ if __name__ == "__main__":
                 "PDF Viewer": "okular",
                 "Nautilus": "nautilus",
                 "arandr": "arandr",
-                "Weather": None
+                "Weather": None,
+                "Settings UI": None,
                 }
     RET = dmenu_show(sorted(COMMANDS.keys(), key=str.casefold))
     if "Weather" in RET:
@@ -98,6 +100,8 @@ if __name__ == "__main__":
     elif "google " in RET:
         QUERY = RET.replace('google ', '')
         open_web(f"https://www.google.com/search?q={QUERY.replace(' ', '+')}")
+    elif "Settings" in RET:
+        i3_exec(GNOME_CTRL_CENTR_CMD, workspace_name=f"settings")
     else:
         RET_OP = COMMANDS.get(RET, None)
         if RET_OP:
