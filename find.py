@@ -10,12 +10,16 @@ from pathlib import Path
 def gen_args():
     parser = ArgumentParser("finder script")
     parser.add_argument("--full-paths",
-                        "-f",
+                        "-p",
                         action="store_true",
                         dest="full_paths")
     parser.add_argument("--highlight",
                         "-c",
                         dest="highlight",
+                        default="")
+    parser.add_argument("--filter",
+                        "-f",
+                        dest="filter",
                         default="")
     parser.add_argument("--first",
                         action="store_true",
@@ -53,6 +57,16 @@ class FileInfo():
         command = command.replace("{}", self.filename)
         local_command(command, hide_output=False, print_info=True)
 
+    def matches_filter(self) -> bool:
+        if not self.args.filter:
+            return True
+        if not "*" in self.args.filter:
+            return self.args.filter.lower() in self.filename.lower()
+        if self.args.filter == "*":
+            return True
+        strs = self.args.filter.lower().split("*")
+        return all(st in self.filename.lower() for st in strs)
+
 
 def main():
     args = gen_args()
@@ -60,6 +74,8 @@ def main():
     files = current_path.glob("*.*")
     for file_path in sorted(files):
         file_info = FileInfo(file_path, args)
+        if not file_info.matches_filter():
+            continue
         file_info.print()
         if args.subprocess:
             file_info.subp(args.subprocess)
