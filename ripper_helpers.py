@@ -214,6 +214,12 @@ class DPlayEpisodeData():
         self.sub_m3u_url = ""
         return ""
 
+    def download_sub(self, filename, url):
+        sub_contents = SessionSingleton().get(url).text
+        sub_contents = sub_contents.encode("latin-1").decode("utf-8")
+        with open(filename, "wb") as sub_output_file:
+            sub_output_file.write(sub_contents.encode("utf-8"))
+
     def url(self):
         return f"{self.URL_PREFIX}/videos/{self.episode_path}"
 
@@ -238,6 +244,8 @@ class ViafreeEpisodeData():
     def url(self):
         return f"{self.URL_PREFIX}{self.episode_path}"
 
+class EpisodeLister():
+    pass
 
 class EpisodeLister():
     def __init__(self, url, verbose=False):

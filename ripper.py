@@ -51,7 +51,7 @@ class YoutubeDLFormats(Enum):
     WorstVideo = "worstvideo"
 
 
-class PlaySubtitleRipperSvtPlayDl():
+class SubRipper():
     SIM_STR = f"i[{SIM_STR}] o[SUBDL]"
     LOG_PREFIX = fcs("i[(SUBDL)]")
 
@@ -66,6 +66,7 @@ class PlaySubtitleRipperSvtPlayDl():
         self.log(fcs(f"using filename p[{self.filename}]"))
         self.dest_path = Path(self.video_file_path).parent
         self.download_succeeded = False
+        self.dplay_data_obj = None
 
     def determine_file_name(self):
         dest_path = Path(self.video_file_path)
@@ -152,8 +153,12 @@ class PlaySubtitleRipperSvtPlayDl():
         self.curl(sub_url)
 
     def download_dplay(self):
-        if self.url:
-            self.curl(self.url)
+        if not self.dplay_data_obj:
+            self.log("mising dplay data object!")
+            return
+        self.dplay_data_obj.download_sub(self.filename, self.url)
+        print("OK?")
+
 
     def curl(self, sub_url):
         command = f"curl {sub_url} > {self.get_dest_path()}"
@@ -470,13 +475,14 @@ if __name__ == "__main__":
             log_main(fcs(f"using url for subtitles: o[{subtitle_url}]"))
         if ARGS.sub_only:
             file_name = ripper.get_dest_path()
-            sub_ripper = PlaySubtitleRipperSvtPlayDl(
+            sub_ripper = SubRipper(
                 subtitle_url, str(file_name), sim=ARGS.simulate, verbose=ARGS.verb)
             if not sub_ripper.file_already_exists():
                 if isinstance(url, DPlayEpisodeData):
                     retrieved_url = retrive_dplay_sub_url(url)
                     if retrieved_url:
                         sub_ripper.url = retrieved_url
+                        sub_ripper.dplay_data_obj = url
                 if "placeholder" not in sub_ripper.url:
                     sub_ripper.download()
         else:
@@ -490,7 +496,7 @@ if __name__ == "__main__":
             if get_subs:
                 if ARGS.verb:
                     log_main("preparing to download subtitles if needed")
-                sub_ripper = PlaySubtitleRipperSvtPlayDl(
+                sub_ripper = SubRipper(
                     subtitle_url, str(file_name), sim=ARGS.simulate, verbose=ARGS.verb)
                 sub_ripper.print_info()
                 if not sub_ripper.file_already_exists():
@@ -498,6 +504,7 @@ if __name__ == "__main__":
                         retrieved_url = retrive_dplay_sub_url(url)
                         if retrieved_url:
                             sub_ripper.url = retrieved_url
+                            sub_ripper.dplay_data_obj = url
                     if "placeholder" not in sub_ripper.url:
                         sub_ripper.download()
                 elif ARGS.verb:
