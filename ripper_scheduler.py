@@ -12,7 +12,7 @@ from pathlib import Path
 import config
 
 from ripper import PlayRipperYoutubeDl as youtube_ripper
-from ripper import PlaySubtitleRipperSvtPlayDl as subrip
+from ripper import SubRipper as subrip
 from ripper_helpers import Tv4PlayEpisodeLister
 from ripper_helpers import DPlayEpisodeLister
 from ripper_helpers import ViafreeEpisodeLister
