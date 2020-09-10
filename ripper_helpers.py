@@ -387,7 +387,9 @@ class SVTPlayEpisodeLister(EpisodeLister):
 
 
 class Tv4PlayEpisodeLister(EpisodeLister):
-    REGEX = r"application\/json\">(.*\}\})<\/script><script "
+    REGEXES = [r"application\/json\">(.*\})<\/script><script ",
+               r"application\/json\">(.*\}\})<\/script><script "]
+
 
     def __init__(self, url, verbose=False):
         super().__init__(url, verbose)
@@ -400,14 +402,28 @@ class Tv4PlayEpisodeLister(EpisodeLister):
 
     def list_episode_urls(self, revered_order=False, limit=None, objects=False):
         res = self.session.get(f"{self.url}")
-        match = re.search(self.REGEX, res.text)
-        if not match:
+        for regex_str in self.REGEXES:
+            match = re.search(regex_str, res.text)
+            if match:
+                break
+            else:
+                self.log(f"failed regex match using: {regex_str}")
+        else:
             print(f"can't find episodes @ {self.url}")
             return []
         json_data = json.loads(match.group(1))
+        program_data = None
         try:
-            program_data = json_data["props"]["apolloState"]
+            program_data = json_data["props"]["pageProps"]["initialApolloState"]
         except KeyError:
+            program_data = None
+            self.log("[props][pageProps][initialApolloState] not present in json")
+            try:
+                program_data = json_data["props"]["apolloState"]
+            except KeyError:
+                self.log("[props][apolloState] not present in json")
+                program_data = None
+        if program_data is None:
             print(f"can't parse episodes data @ {self.url}")
             return []
         ep_list = []
