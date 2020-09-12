@@ -14,6 +14,14 @@ CFG = ConfigurationManager()
 SHOW_DIR = CFG.get('path_tv')
 
 
+def parse_year(string):
+    re_year = re.compile(r'(19|20)\d{2}')
+    year = re_year.search(string)
+    if year:
+        return year.group()
+    return None
+
+
 def list_all_shows() -> list:
     '''Returns a list of all current tv show folders'''
     return [show for show in os.listdir(SHOW_DIR)
@@ -120,6 +128,10 @@ def determine_show_from_episode_name(episode_filename: str):
             if string in episode_filename:
                 return determine_show_from_episode_name(
                     episode_filename.replace(string, replace))
+        year = parse_year(episode_filename)
+        if year:
+            return determine_show_from_episode_name(
+                episode_filename.replace(f".{year}.", "."))
         return None
 
 
