@@ -3,8 +3,8 @@
 """Script to interact with torrent-server"""
 
 import argparse
-from pathlib import Path
 import re
+from pathlib import Path
 
 import config
 import extract
@@ -15,6 +15,8 @@ from printing import pfcs
 from printing import to_color_str as CSTR
 from release import determine_release_type
 from run import local_command, remote_command_get_output
+
+CACHED_WB_LIST_FILENAME = "cached_wb_list.txt"
 
 
 def parse_ls_line(line: str):
@@ -29,10 +31,23 @@ def parse_ls_line(line: str):
     return data
 
 
-def ls_remote_items(filter_re: str = ""):
-    file_list = remote_command_get_output(
-        r'ls -trl --time-style="+%Y-%m-%d %H:%M" ~/files', "wb"
-    ).split("\n")
+def ls_remote_items(filter_re: str = "", use_cached_if_new=False):
+    file_name = Path(__file__).resolve().parent / CACHED_WB_LIST_FILENAME
+    file_list = []
+    if use_cached_if_new:
+        saved_stamp = 0
+        with open(file_name, "r") as list_file:
+            saved_stamp = int(list_file.readline())
+            if abs(saved_stamp - util.now_timestamp() < (60 * 5)):
+                file_list = [l.replace("\n", "")
+                             for l in list_file.readlines()]
+    if not file_list:
+        file_list = remote_command_get_output(
+            r'ls -trl --time-style="+%Y-%m-%d %H:%M" ~/files', "wb"
+        ).split("\n")
+        with open(file_name, "w") as list_file:
+            list_file.write(str(util.now_timestamp()) + "\n")
+            list_file.writelines(f"{s}\n" for s in file_list)
     items = [parse_ls_line(line) for line in file_list]
     index = 1
 
@@ -201,7 +216,8 @@ if __name__ == "__main__":
     if ARGS.command in ["list", "new"]:
         wb_list_items(ls_remote_items(ARGS.filter))
     elif ARGS.command in ["download", "get"]:
-        wb_download_items(ls_remote_items(ARGS.filter), ARGS.get, ARGS.extract)
+        wb_download_items(ls_remote_items(
+            ARGS.filter, use_cached_if_new=True), ARGS.get, ARGS.extract)
     elif ARGS.command == "send":
         wb_scp_torrents()
     else:
