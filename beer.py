@@ -72,10 +72,31 @@ class Beer():
 
 
 class CheckIn():
-    def __init__(self, date):
+    class Location():
+        def __init__(self, venue=None, city=None):
+            self.venue = venue
+            self.city = city
+
+        def __str__(self):
+            ret_str = ""
+            if self.venue is not None:
+                ret_str = self.venue
+            if self.city is not None:
+                ret_str += f" / {self.city}"
+            return ret_str
+
+        def valid(self):
+            if self.venue is None and self.city is None:
+                return False
+            return True
+
+    def __init__(self, date, venue=None, city=None):
         self.date = date
+        self.location = self.Location(venue, city)
 
     def __str__(self):
+        if self.location.valid():
+            return fcs(f"dg[{self.date}] @ {self.location}")
         return fcs(f"dg[{self.date}]")
 
 
@@ -176,10 +197,16 @@ def init_list(untappd_data):
         brewery = check_in.get("brewery_name", "")
         alc = float(check_in.get(("beer_abv"), 0.0))
         beer_type = check_in.get("beer_type")
+        city = check_in.get("venue_city", "")
+        if city == "":
+            city = None
+        venue = check_in.get("venue_name", "")
+        if venue == "":
+            venue = None
         beer = Beer(beer_name, brewery, alc, beer_type)
         date = datetime.strptime(check_in.get(
             "created_at", ""), UNTAPPD_DATETIME_FMT)
-        beer_list.add_checkin(beer, CheckIn(date))
+        beer_list.add_checkin(beer, CheckIn(date, venue, city))
     return beer_list
 
 
