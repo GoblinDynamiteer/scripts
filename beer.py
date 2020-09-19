@@ -35,6 +35,26 @@ def filenameify(string):
     return string.replace(" ", "_")
 
 
+def parse_arg_date(arg_date):
+    if arg_date:
+        try:
+            return datetime.strptime(arg_date, ARG_DATE_FMT)
+        except TypeError:
+            pfcs(f"could not parse --date filter: e[{arg_date}]")
+            return None
+        except ValueError:
+            pfcs(f"wrong format for --date filter: e[{arg_date}]")
+            return None
+    return None
+
+
+def parse_arg_sorting(arg_sort):
+    try:
+        return BeerList.Sorting(arg_sort) if arg_sort else None
+    except Exception:
+        return None
+
+
 class Beer():
     def __init__(self, name, brewery="Unknown", alc=0.0, beer_type="Unknown"):
         self.name = name
@@ -79,22 +99,17 @@ class BeerList():
             self.add_beer(beer)
         self.list[beer.hash]["checkins"].append(checkin)
 
-    def print_list(self,
-                   sort_by=None,
-                   reversed_order=False,
-                   limit=None,
-                   filter_name=None,
-                   gen_filename=False,
-                   find_date=None):
+    def print_list(self, cli_args, sort_by):
         count = 0
-        for item in self.get_sorted_list(sort_by, reverse=reversed_order):
-            if self.print_beer(item, filter_name, gen_filename, find_date):
+        for item in self.get_sorted_list(sort_by, reverse=cli_args.reverse):
+            if self.print_beer(item, cli_args):
                 count += 1
-            if isinstance(limit, int) and count >= limit:
+            if isinstance(cli_args.limit, int) and count >= cli_args.limit:
                 return
 
-    def print_beer(self, data, filter_name=None, print_filename=False, date_filter=None):
+    def print_beer(self, data, cli_args):
         beer_obj = data["beer"]
+        filter_name = cli_args.filter
         matched = False
         if filter_name and filter_name.lower() in beer_obj.name.lower():
             matched = True
@@ -102,6 +117,7 @@ class BeerList():
             matched = True
         if filter_name and not matched:
             return False
+        date_filter = parse_arg_date(cli_args.date)
         if date_filter:
             found_match = False
             for checkin_obj in data["checkins"]:
@@ -111,14 +127,20 @@ class BeerList():
                 return False
         print(beer_obj)
         num_checkins = len(data["checkins"])
-        pfcs(f"  Number of CheckIns: p[{num_checkins}]", end="")
-        if num_checkins == 1:
+        if not cli_args.show_all_checkins:
+            pfcs(f"  Number of CheckIns: p[{num_checkins}]", end="")
+        else:
+            pfcs(f"  CheckIns:")
+        if cli_args.show_all_checkins:
+            for num, chin in enumerate(data["checkins"], 1):
+                pfcs(f"   o[#{num:02d}] {chin}")
+        elif num_checkins == 1:
             print(f" ({data['checkins'][0]})")
         elif num_checkins > 1:
             print(f" (most recent at {data['checkins'][-1]})")
         else:
             print()
-        if print_filename:
+        if cli_args.filenameify:
             pfcs(f"  y[{beer_obj.filename()}]")
         return True
 
@@ -191,6 +213,10 @@ def generate_cli_args():
     parser.add_argument("--reverse",
                         action="store_true",
                         dest="reverse")
+    parser.add_argument("--show-all-checkins",
+                        "-a",
+                        action="store_true",
+                        dest="show_all_checkins")
     parser.add_argument("--filter",
                         type=str,
                         help="Only show beers where filter matches name. "
@@ -214,27 +240,7 @@ def main():
     beer_list = init_list(data)
     # Top 10 most checked in
     sorting = BeerList.Sorting(args.sort_by) if args.sort_by else None
-    if args.date:
-        success = True
-        try:
-            date_filter = datetime.strptime(args.date, ARG_DATE_FMT)
-        except TypeError:
-            pfcs(f"could not parse --date filter: e[{args.date}]")
-            success = False
-        except ValueError:
-            pfcs(f"wrong format for --date filter: e[{args.date}]")
-            success = False
-        if not success:
-            print("stopping...")
-            return 1
-    else:
-        date_filter = None
-    beer_list.print_list(sort_by=sorting,
-                         reversed_order=args.reverse,
-                         limit=args.limit,
-                         filter_name=args.filter,
-                         find_date=date_filter,
-                         gen_filename=args.filenameify)
+    beer_list.print_list(args, sort_by=sorting)
 
 
 if __name__ == "__main__":
