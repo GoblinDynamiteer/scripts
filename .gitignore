@@ -8,3 +8,7 @@ mariadb_test.py
 .vscode/
 __pycache__/
 mov_cache.json
+cached_wb_list.txt
+*.dbm
+*.lock
+*.log
