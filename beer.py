@@ -163,6 +163,7 @@ class BeerList():
             print()
         if cli_args.filenameify:
             pfcs(f"  y[{beer_obj.filename()}]")
+        print()
         return True
 
     def get_sorted_list(self, sort_by, reverse=False):
