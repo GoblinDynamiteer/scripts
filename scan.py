@@ -109,6 +109,18 @@ def process_new_show(show_folder: str) -> dict:
     return data
 
 
+def handle_special_episode(show_id, filename):
+    pfcs(f"determined as i[SPECIAL EP]")
+    tv_maze_singleton = tvmaze.TvMazeData()
+    specials = tv_maze_singleton.get_json_all_special_episodes(show_id)
+    for spep in specials:
+        name = spep.get("name", "").split(" ")
+        # TODO: match season...
+        if all(x.lower() in filename.lower() for x in name):
+            return spep
+    return {}
+
+
 def process_new_episode(episode_filename: str, show_folder: str) -> dict:
     pfcs(f"processing o[{episode_filename}]")
     data = {
@@ -133,9 +145,15 @@ def process_new_episode(episode_filename: str, show_folder: str) -> dict:
             f"searching TVMaze for i[{episode_filename}]\n -> using b[{show_folder}]"
             f" season: b[{season_number}] episode: b[{episode_number}] show-id: b[{show_id}]"
         )
-        tvmaze_data = tvmaze.episode_search(
-            show_folder, season_number, episode_number, show_maze_id=show_id
-        )
+        if episode_number == 0:  # specials
+            tvmaze_data = handle_special_episode(show_id, episode_filename)
+        else:
+            tvmaze_data = tvmaze.episode_search(
+                show_folder,
+                season_number,
+                episode_number,
+                show_maze_id=show_id
+            )
     if tvmaze_data:
         if "id" in tvmaze_data:
             data["tvmaze"] = tvmaze_data["id"]
