@@ -72,7 +72,39 @@ class TvMazeData(metaclass=util.Singleton):
     DATA = {}
 
     def get_json_all_episodes(self, show_id: int) -> dict:
-        url = f"http://api.tvmaze.com/shows/{show_id}/episodes"
+        url = self.url(show_id)
         if url not in self.DATA:
             self.DATA[url] = _tvmaze_search(url)
         return self.DATA[url]
+
+    def get_json_all_special_episodes(self, show_id: int) -> dict:
+        url = self.url(show_id) + "?specials=1"
+        if url not in self.DATA:
+            special_list = [ep for ep in _tvmaze_search(
+                url) if ep["number"] is None]
+            self.DATA[url] = special_list
+        return self.DATA[url]
+
+    def url(self, show_id: int):
+        return f"http://api.tvmaze.com/shows/{show_id}/episodes"
+
+
+def main():
+    # pylint: disable=import-outside-toplevel
+    import argparse
+    # pylint: enable=import-outside-toplevel
+    parser = argparse.ArgumentParser("tvmaze searcher")
+    parser.add_argument("id", type=int)
+    parser.add_argument("--specials", action="store_true")
+    args = parser.parse_args()
+    tvmaze_data = TvMazeData()
+    if args.specials:
+        data = tvmaze_data.get_json_all_special_episodes(args.id)
+    else:
+        data = tvmaze_data.get_json_all_episodes(args.id)
+    print("data for", tvmaze_data.url(args.id))
+    print(json.dumps(data, indent=4))
+
+
+if __name__ == "__main__":
+    main()
