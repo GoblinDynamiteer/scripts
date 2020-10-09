@@ -81,6 +81,8 @@ class LightBulb():
         self.sat = MAX_SATURATION
         self.hue = new_hue
         time_to_sleep = transition_time
+        self.update(time_to_sleep - 1)
+        self.bri = None
         while True:
             self.update(time_to_sleep - 1)
             time.sleep(time_to_sleep)
