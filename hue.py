@@ -5,6 +5,8 @@
 
 import http.client
 import json
+import random
+import time
 
 from argparse import ArgumentParser
 
@@ -28,7 +30,7 @@ class LightBulb():
         self.name = ""
         self.product_id = ""
         self.on = False
-        self.bri = False
+        self.bri = None
         self.hue = None
         self.sat = None
         self.bridge = bridge
@@ -73,6 +75,21 @@ class LightBulb():
         elif bri > MAX_BRIGHTNESS:
             bri = MAX_BRIGHTNESS
         self.bri = bri
+
+    def run_color_cycler(self, transition_time=120): #TODO thread
+        new_hue = random.randint(0, 0xffff)
+        self.sat = MAX_SATURATION
+        self.hue = new_hue
+        time_to_sleep = transition_time
+        while True:
+            self.update(time_to_sleep - 1)
+            time.sleep(time_to_sleep)
+            while abs(new_hue - self.hue) < 1000:
+                new_hue = random.randint(0, 0xffff)
+            self.sat = random.randint(
+                int(MAX_SATURATION * 0.8), MAX_SATURATION + 1)
+            self.hue = new_hue
+
 
     def update(self, transition_time):
         body = {"on": self.on}
@@ -155,6 +172,9 @@ def gen_args():
     parser.add_argument("--list",
                         action="store_true",
                         dest="list_lights")
+    parser.add_argument("--cycler",
+                        action="store_true",
+                        dest="run_cycler")
     return parser.parse_args()
 
 
@@ -180,6 +200,11 @@ def main():
                 need_update = True
             if need_update:
                 bulb.update(args.delay)
+            if args.run_cycler:
+                try:
+                    bulb.run_color_cycler()
+                except KeyboardInterrupt:
+                    return
         if args.list_lights:
             bulb.print()
 
