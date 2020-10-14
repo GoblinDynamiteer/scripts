@@ -132,6 +132,7 @@ class Tv4PlayEpisodeData(EpisodeData):
         self.show = episode_data.get("program_nid", "N/A")
         self.sub_url_list = []
         self.sub_m3u_url = ""
+        self.srt_index = 1
 
     def __str__(self):
         return f"{self.show} S{self.season_num}E{self.episode_num} " \
@@ -194,8 +195,10 @@ class Tv4PlayEpisodeData(EpisodeData):
         self.sub_m3u_url = ""
         return ""
 
-    def _convert_vtt_seg_to_srt(self, text, index):
+    def _convert_vtt_seg_to_srt(self, text):
         lines = text.splitlines()
+        if self.srt_index == 1:
+            self.log("first vtt seg text:", text)
         # example X-TIMESTAMP-MAP=MPEGTS:1260000,LOCAL:00:00:00.000
         rgx = r"\:(?P<start_time>\d{1,20})\,"
         match = re.search(rgx, lines[1])
@@ -203,39 +206,48 @@ class Tv4PlayEpisodeData(EpisodeData):
             return None
         mpegts = int(match.groupdict().get("start_time", 0))
         # example: 00:00:01.280 --> 00:00:02.960
-        try:
-            start, end = lines[3].split(" --> ")
-        except IndexError:
-            return ""  # no subtitle lines
-        # 90000 is default MPEG-TS timescale, allegedly, and tv4 has a 10s offset for some reason...
-        delta = timedelta(seconds=mpegts / 90000 - 10)
-        start = datetime.strptime(start, r"%H:%M:%S.%f") + delta
-        end = datetime.strptime(end, r"%H:%M:%S.%f") + delta
-        lines[3] = f'{start.strftime(r"%H:%M:%S,%f")[:-3]} --> {end.strftime(r"%H:%M:%S,%f")[:-3]}'
-        merged = str(index) + "\n" + lines[3] + "\n" + lines[4]
-        try:
-            merged += "\n" + lines[5]
-        except IndexError:
-            pass  # Had only one row of subtitle lines..
+        line_index = 3
+        merged = ""
+        while True:
+            try:
+                start, end = lines[line_index].split(" --> ")
+            except IndexError:
+                break
+            except ValueError:
+                line_index += 1
+                continue
+            # 90000 is default MPEG-TS timescale, allegedly, and tv4 has a 10s offset for some reason...
+            delta = timedelta(seconds=mpegts / 90000 - 10)
+            start = datetime.strptime(start, r"%H:%M:%S.%f") + delta
+            end = datetime.strptime(end, r"%H:%M:%S.%f") + delta
+            srt_dur = f'{start.strftime(r"%H:%M:%S,%f")[:-3]} --> {end.strftime(r"%H:%M:%S,%f")[:-3]}'
+            if merged != "":
+                merged += "\n" * 2
+            merged += str(self.srt_index) + "\n" + srt_dur + "\n" + lines[line_index+1]
+            self.srt_index += 1
+            try:
+                if lines[line_index+2] != "":
+                    merged += "\n" + lines[line_index+2]
+            except IndexError:
+                break
+            line_index += 1
         return merged + "\n\n"
 
     def download_sub(self, filename, url_list):
         if not isinstance(url_list, list) or not url_list:
             print("cannot download subtitle!")
             return
-        index = 1
         self.log("attempting to download and merge webvtt subtitle fragments",
                  f"number of fragments={len(url_list)}")
         sub_contents = ""
         for url in url_list:
             fragment_text = SessionSingleton().get(url).text
-            edited = self._convert_vtt_seg_to_srt(fragment_text, index)
+            edited = self._convert_vtt_seg_to_srt(fragment_text)
             if edited is None:
                 self.log("failed to merge vtt subtitles, aborting")
                 return
             if edited != "":
                 sub_contents += edited
-                index += 1
         sub_contents = sub_contents.encode(
             "latin-1").decode("utf-8", errors="ignore").replace("\n" * 3, "\n" * 2)
         new_filename = Path(filename).with_suffix(".srt")
