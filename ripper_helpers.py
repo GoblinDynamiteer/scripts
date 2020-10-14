@@ -2,17 +2,17 @@
 
 import json
 import re
-
-from urllib.request import urlopen
-from urllib.parse import urlparse, quote
-
-from datetime import datetime
-from requests import Session
+from datetime import datetime, timedelta
 from http.cookiejar import MozillaCookieJar
+from pathlib import Path
+from urllib.parse import quote, urlparse
+from urllib.request import urlopen
 
-from util import Singleton
-from printing import fcs
+from requests import Session
+
 from config import ConfigurationManager
+from printing import fcs
+from util import Singleton
 
 VALID_FILTER_KEYS = ["season", "episode", "title", "date"]
 
@@ -67,6 +67,24 @@ def apply_filter(ep_list: list, filter_type: str, filter_val: str):
     return filtered_list
 
 
+class EpisodeData():
+    def __init__(self, verbose=False):
+        self.print_log = verbose
+        self.raw_data = {}
+        self.log_prefix = "EPISODE_DATA"
+
+    def set_log_prefix(self, log_prefix: str):
+        self.log_prefix = log_prefix.upper()
+
+    def log(self, info_str, info_str_line2=""):
+        if not self.print_log:
+            return
+        print(fcs(f"i[({self.log_prefix})]"), info_str)
+        if info_str_line2:
+            spaces = " " * len(f"({self.log_prefix}) ")
+            print(f"{spaces}{info_str_line2}")
+
+
 class SVTPlayEpisodeData():
     URL_PREFIX = r"https://www.svtplay.se"
 
@@ -100,16 +118,20 @@ class SVTPlayEpisodeData():
         return f"{self.URL_PREFIX}{self.url_suffix}"
 
 
-class Tv4PlayEpisodeData():
+class Tv4PlayEpisodeData(EpisodeData):
     URL_PREFIX = r"https://www.tv4play.se/program/"
 
-    def __init__(self, episode_data: dict):
+    def __init__(self, episode_data: dict, verbose=False):
+        super().__init__(verbose)
+        self.set_log_prefix("TV4PLAY_DATA")
         self.raw_data = episode_data
         self.season_num = episode_data.get("season", 0)
         self.episode_num = episode_data.get("episode", 0)
         self.title = episode_data.get("title", "N/A")
         self.id = episode_data.get("id", 0)
         self.show = episode_data.get("program_nid", "N/A")
+        self.sub_url_list = []
+        self.sub_m3u_url = ""
 
     def __str__(self):
         return f"{self.show} S{self.season_num}E{self.episode_num} " \
@@ -117,6 +139,110 @@ class Tv4PlayEpisodeData():
 
     def url(self):
         return f"{self.URL_PREFIX}{quote(self.show)}/{self.id}"
+
+    def retrieve_sub_url(self) -> list:
+        if self.sub_url_list:
+            self.log("already retrieved/gotten subtitle url")
+            return self.sub_url_list
+        if self.id == 0:
+            self.log("show id is 0, cannot retrive subtitle url")
+            return None
+        if self.sub_m3u_url:
+            self.log("have already retrieved subtitle m3u url",
+                     info_str_line2=fcs(f"p[{self.sub_m3u_url}]"))
+        else:
+            self.log("attempting to retrieve subtitle url...")
+            data_url = f"https://playback-api.b17g.net/media/{self.id}?"\
+                f"service=tv4&device=browser&protocol=hls%2Cdash&drm=widevine"
+            res = SessionSingleton().get(data_url)
+            try:
+                hls_url = res.json()[
+                    "playbackItem"]["manifestUrl"]
+                self.log("got manifest url:",
+                         info_str_line2=fcs(f"p[{hls_url}]"))
+            except KeyError as key_error:
+                self.log("failed to retrieve manifest url from",
+                         fcs(f"o[{data_url}]"))
+                return ""
+            hls_data = SessionSingleton().get(hls_url)
+            last_path = hls_url.split("/")[-1]
+            hls_url_prefix = hls_url.replace(last_path, "")
+            self.log("using hls url prefix", hls_url_prefix)
+            for line in hls_data.text.splitlines():
+                if all([x in line for x in ["TYPE=SUBTITLES", "URI=", 'LANGUAGE="sv"']]):
+                    sub_url_suffix = line.split('URI="')[1]
+                    sub_url_suffix = sub_url_suffix[:-1]
+                    self.sub_m3u_url = hls_url_prefix + "/" + sub_url_suffix
+                    break
+        if not self.sub_m3u_url:
+            self.log("could not retrieve subtitle m3u url")
+            return ""
+        self.log("using subtitle m3u url:",
+                 info_str_line2=fcs(f"p[{self.sub_m3u_url}]"))
+        res = SessionSingleton().get(self.sub_m3u_url)
+        vtt_files = []
+        last_path = hls_url.split("/")[-1]
+        hls_url_prefix = hls_url.replace(last_path, "")
+        for line in res.text.splitlines():
+            if ".webvtt" in line:
+                vtt_files.append(hls_url_prefix + "/" + line)
+        self.sub_url_list = vtt_files
+        if self.sub_url_list:
+            self.log(f"found {len(self.sub_url_list)} vtt files")
+            return self.sub_url_list
+        self.log(fcs("w[WARNING] could not find vtt link in subtitle m3u!"))
+        self.sub_m3u_url = ""
+        return ""
+
+    def _convert_vtt_seg_to_srt(self, text, index):
+        lines = text.splitlines()
+        # example X-TIMESTAMP-MAP=MPEGTS:1260000,LOCAL:00:00:00.000
+        rgx = r"\:(?P<start_time>\d{1,20})\,"
+        match = re.search(rgx, lines[1])
+        if not match:
+            return None
+        mpegts = int(match.groupdict().get("start_time", 0))
+        # example: 00:00:01.280 --> 00:00:02.960
+        try:
+            start, end = lines[3].split(" --> ")
+        except IndexError:
+            return ""  # no subtitle lines
+        # 90000 is default MPEG-TS timescale, allegedly, and tv4 has a 10s offset for some reason...
+        delta = timedelta(seconds=mpegts / 90000 - 10)
+        start = datetime.strptime(start, r"%H:%M:%S.%f") + delta
+        end = datetime.strptime(end, r"%H:%M:%S.%f") + delta
+        lines[3] = f'{start.strftime(r"%H:%M:%S,%f")[:-3]} --> {end.strftime(r"%H:%M:%S,%f")[:-3]}'
+        merged = str(index) + "\n" + lines[3] + "\n" + lines[4]
+        try:
+            merged += "\n" + lines[5]
+        except IndexError:
+            pass  # Had only one row of subtitle lines..
+        return merged + "\n\n"
+
+    def download_sub(self, filename, url_list):
+        if not isinstance(url_list, list) or not url_list:
+            print("cannot download subtitle!")
+            return
+        index = 1
+        self.log("attempting to download and merge webvtt subtitle fragments",
+                 f"number of fragments={len(url_list)}")
+        sub_contents = ""
+        for url in url_list:
+            fragment_text = SessionSingleton().get(url).text
+            edited = self._convert_vtt_seg_to_srt(fragment_text, index)
+            if edited is None:
+                self.log("failed to merge vtt subtitles, aborting")
+                return
+            if edited != "":
+                sub_contents += edited
+                index += 1
+        sub_contents = sub_contents.encode(
+            "latin-1").decode("utf-8", errors="ignore").replace("\n" * 3, "\n" * 2)
+        new_filename = Path(filename).with_suffix(".srt")
+        if str(new_filename) != str(filename):
+            self.log("using new filename:", str(new_filename))
+        with open(new_filename, "wb") as sub_output_file:
+            sub_output_file.write(sub_contents.encode("utf-8"))
 
 
 class DPlayEpisodeData():
@@ -192,6 +318,7 @@ class DPlayEpisodeData():
                 return ""
             hls_data = SessionSingleton().get(hls_url)
             hls_url_prefix = hls_url.split("playlist.m3u8")[0]
+            self.log("using hls url prefix", hls_url_prefix)
             for line in hls_data.text.splitlines():
                 if all([x in line for x in ["TYPE=SUBTITLES", "URI=", 'LANGUAGE="sv"']]):
                     sub_url_suffix = line.split('URI="')[1]
@@ -244,8 +371,6 @@ class ViafreeEpisodeData():
     def url(self):
         return f"{self.URL_PREFIX}{self.episode_path}"
 
-class EpisodeLister():
-    pass
 
 class EpisodeLister():
     def __init__(self, url, verbose=False):
@@ -390,7 +515,6 @@ class Tv4PlayEpisodeLister(EpisodeLister):
     REGEXES = [r"application\/json\">(.*\})<\/script><script ",
                r"application\/json\">(.*\}\})<\/script><script "]
 
-
     def __init__(self, url, verbose=False):
         super().__init__(url, verbose)
         self.set_log_prefix("TV4PLAY_LISTER")
@@ -435,7 +559,8 @@ class Tv4PlayEpisodeLister(EpisodeLister):
                 continue
             elif "id" not in video_data:
                 continue
-            ep_list.append(Tv4PlayEpisodeData(video_data))
+            ep_list.append(Tv4PlayEpisodeData(
+                video_data, verbose=self.print_log))
         for filter_key, filter_val in self.filter.items():
             ep_list = apply_filter(ep_list, filter_key, filter_val)
         ep_list.sort(key=lambda x: (x.season_num, x.episode_num),

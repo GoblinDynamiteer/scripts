@@ -22,7 +22,7 @@ from config import ConfigurationManager
 from printing import cstr, pfcs, fcs
 from ripper_helpers import (DPlayEpisodeData, DPlayEpisodeLister,
                             SVTPlayEpisodeData, SVTPlayEpisodeLister,
-                            Tv4PlayEpisodeLister, ViafreeEpisodeLister)
+                            Tv4PlayEpisodeLister, ViafreeEpisodeLister, Tv4PlayEpisodeData)
 
 SIM_STR = r"(SIMULATE)"
 
@@ -63,15 +63,15 @@ class SubRipper():
         if sim:
             pfcs(f"{self.SIM_STR} init")
         self.filename = self.determine_file_name()
-        self.log(fcs(f"using filename p[{self.filename}]"))
         self.dest_path = Path(self.video_file_path).parent
         self.download_succeeded = False
-        self.dplay_data_obj = None
+        self.data_obj = None
+        self.log(fcs(f"using filename p[{self.filename}]"))
 
     def determine_file_name(self):
         dest_path = Path(self.video_file_path)
         file_ext = dest_path.suffix
-        if "viafree" or "dplay" in self.url:
+        if "viafree" in self.url or "dplay" in self.url:
             srt_file_name = dest_path.name.replace(file_ext, r".vtt")
         else:
             srt_file_name = dest_path.name.replace(file_ext, r".srt")
@@ -104,6 +104,9 @@ class SubRipper():
             elif "dplay" in self.url:
                 self.log("using dplay workaround")
                 self.download_dplay()
+            elif isinstance(self.url, list) and "cmore" in self.url[0]:
+                self.log("using tv4play workaround")
+                self.download_tv4lay()
             else:
                 self.download_with_svtplaydl()
             if self.get_dest_path().is_file():
@@ -153,12 +156,16 @@ class SubRipper():
         self.curl(sub_url)
 
     def download_dplay(self):
-        if not self.dplay_data_obj:
-            self.log("mising dplay data object!")
+        if not self.data_obj:
+            self.log("missing dplay data object!")
             return
-        self.dplay_data_obj.download_sub(self.filename, self.url)
-        print("OK?")
+        self.data_obj.download_sub(self.filename, self.url)
 
+    def download_tv4lay(self):
+        if not self.data_obj:
+            self.log("missing tv4play data object!")
+            return
+        self.data_obj.download_sub(self.filename, self.url)
 
     def curl(self, sub_url):
         command = f"curl {sub_url} > {self.get_dest_path()}"
@@ -179,7 +186,7 @@ class PlayRipperYoutubeDl():
         self.ep_data = None
         self.print_log = verbose
         self.url = url
-        if isinstance(url, SVTPlayEpisodeData) or isinstance(url, DPlayEpisodeData):
+        if isinstance(url, (SVTPlayEpisodeData, DPlayEpisodeData, Tv4PlayEpisodeData)):
             self.ep_data = url
             self.url = url.url()
         self.dest_path = dest
@@ -311,7 +318,8 @@ class PlayRipperYoutubeDl():
             ext = "mp4"
         file_name = ""
         if series and season_number and episode_number:
-            series = series.replace("é", "e") #TODO: replace umlauts in series...
+            # TODO: replace umlauts in series...
+            series = series.replace("é", "e")
             file_name = f"{series}.s{season_number:02d}e{episode_number:02d}"
             if self.use_title and title:
                 file_name = f"{file_name}.{title}"
@@ -357,23 +365,23 @@ def log_main(info_str):
     print(MAIN_LOG_PREFIX, info_str)
 
 
-def retrive_dplay_sub_url(dplay_data_obj):
+def retrive_sub_url(data_obj):
     count = 0
-    dplay_sub_url = ""
-    while not dplay_sub_url:
-        dplay_sub_url = dplay_data_obj.retrieve_sub_url()
-        if dplay_sub_url:
+    sub_url = ""
+    while not sub_url:
+        sub_url = data_obj.retrieve_sub_url()
+        if sub_url:
             if ARGS.verb:
-                log_main("successfully retrieved dplay subtitle url")
-            return dplay_sub_url
+                log_main("successfully retrieved subtitle url")
+            return sub_url
         else:
             if ARGS.verb:
-                log_main("failed to retrieve dplay subtitle url")
+                log_main("failed to retrieve subtitle url")
             count += 1
             if count > 5:
                 if ARGS.verb:
                     log_main(
-                        "could retrieve dplay subtitle url, skipping sub download")
+                        "could retrieve subtitle url, skipping sub download")
                 return ""
             if ARGS.verb:
                 # Could be done in bg when processing others?
@@ -393,7 +401,8 @@ if __name__ == "__main__":
     PARSER.add_argument("--sub-only", "-s",
                         action="store_true", dest="sub_only")
     PARSER.add_argument("--get-last", default=0, dest="get_last")
-    PARSER.add_argument("--download-last-first", "-u", action="store_false", dest="use_ep_order")
+    PARSER.add_argument("--download-last-first", "-u",
+                        action="store_false", dest="use_ep_order")
     PARSER.add_argument("--filter", "-f", type=str, default="")
     PARSER.add_argument("--simulate", action="store_true", help="run tests")
     PARSER.add_argument("--verbose", "-v", action="store_true", dest="verb")
@@ -436,7 +445,7 @@ if __name__ == "__main__":
             if filter_dict:
                 lister.set_filter(**filter_dict)
             urls = lister.list_episode_urls(
-                revered_order=True, limit=wanted_last
+                revered_order=True, limit=wanted_last, objects=True
             )
         elif "svtplay" in urls[0]:
             lister = SVTPlayEpisodeLister(urls[0], verbose=ARGS.verb)
@@ -454,7 +463,7 @@ if __name__ == "__main__":
             urls.reverse()
         print(f"will download {len(urls)} link(s):")
         for url in urls:
-            if isinstance(url, SVTPlayEpisodeData) or isinstance(url, DPlayEpisodeData):
+            if isinstance(url, (SVTPlayEpisodeData, DPlayEpisodeData, Tv4PlayEpisodeData)):
                 url_str = url.url()
             else:
                 url_str = url
@@ -469,6 +478,8 @@ if __name__ == "__main__":
         elif isinstance(url, DPlayEpisodeData):
             url.set_logging(ARGS.verb)
             subtitle_url = "dplay_placeholder_url"
+        elif isinstance(url, Tv4PlayEpisodeData):
+            subtitle_url = "tv4_placeholder_url"
         else:
             subtitle_url = url
         if ARGS.verb:
@@ -478,11 +489,11 @@ if __name__ == "__main__":
             sub_ripper = SubRipper(
                 subtitle_url, str(file_name), sim=ARGS.simulate, verbose=ARGS.verb)
             if not sub_ripper.file_already_exists():
-                if isinstance(url, DPlayEpisodeData):
-                    retrieved_url = retrive_dplay_sub_url(url)
+                if isinstance(url, (DPlayEpisodeData, Tv4PlayEpisodeData)):
+                    retrieved_url = retrive_sub_url(url)
                     if retrieved_url:
                         sub_ripper.url = retrieved_url
-                        sub_ripper.dplay_data_obj = url
+                        sub_ripper.data_obj = url
                 if "placeholder" not in sub_ripper.url:
                     sub_ripper.download()
         else:
@@ -500,11 +511,11 @@ if __name__ == "__main__":
                     subtitle_url, str(file_name), sim=ARGS.simulate, verbose=ARGS.verb)
                 sub_ripper.print_info()
                 if not sub_ripper.file_already_exists():
-                    if isinstance(url, DPlayEpisodeData):
-                        retrieved_url = retrive_dplay_sub_url(url)
+                    if isinstance(url, (DPlayEpisodeData, Tv4PlayEpisodeData)):
+                        retrieved_url = retrive_sub_url(url)
                         if retrieved_url:
                             sub_ripper.url = retrieved_url
-                            sub_ripper.dplay_data_obj = url
+                            sub_ripper.data_obj = url
                     if "placeholder" not in sub_ripper.url:
                         sub_ripper.download()
                 elif ARGS.verb:
