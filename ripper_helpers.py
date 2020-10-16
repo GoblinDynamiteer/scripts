@@ -363,10 +363,13 @@ class DPlayEpisodeData():
         return f"{self.URL_PREFIX}/videos/{self.episode_path}"
 
 
-class ViafreeEpisodeData():
+class ViafreeEpisodeData(EpisodeData):
     URL_PREFIX = r"https://www.viafree.se"
+    CONT_URL_PREFIX = r"https://viafree-content.mtg-api.com/viafree-content/v1/se/path/"
 
-    def __init__(self, episode_data: dict):
+    def __init__(self, episode_data: dict, verbose=False):
+        super().__init__(verbose)
+        self.set_log_prefix("VIAFREE_DATA")
         self.raw_data = episode_data
         self.episode_path = episode_data.get("publicPath", "")
         episode_info = episode_data.get("episode", {})
@@ -375,6 +378,7 @@ class ViafreeEpisodeData():
         self.title = episode_data.get("title", "N/A")
         self.show = episode_info.get("seriesTitle", 0)
         self.id = episode_data.get("guid", "N/A")
+        self.sub_url = ""
 
     def __str__(self):
         return f"{self.show} S{self.season_num}E{self.episode_num} " \
@@ -382,6 +386,32 @@ class ViafreeEpisodeData():
 
     def url(self):
         return f"{self.URL_PREFIX}{self.episode_path}"
+
+    def retrieve_sub_url(self):
+        if self.sub_url:
+            self.log("already retrieved/gotten subtitle url")
+            return self.sub_url
+        content_url = f"{self.CONT_URL_PREFIX}{self.episode_path}"
+        res = SessionSingleton().get(content_url)
+        stream_url = ""
+        try:
+            stream_url = res.json()[
+                '_embedded']['viafreeBlocks'][0]['_embedded']['program']['_links']['streamLink']['href']
+            self.log(fcs("got stream url"), fcs(f"i[{stream_url}]"))
+        except KeyError as error:
+            self.log(fcs("failed to retrieve stream url from:"),
+                     fcs(f"o[{content_url}]"))
+            return ""
+        res = SessionSingleton().get(stream_url)
+        try:
+            sub_url = res.json()["embedded"]["subtitles"][0]["link"]["href"]
+            self.log(fcs("got subtitle url"), fcs(f"i[{sub_url}]"))
+            self.sub_url = sub_url
+        except KeyError as error:
+            self.log(fcs("failed to retrieve subtitle url from:"),
+                     fcs(f"o[{stream_url}]"))
+            return ""
+        return self.sub_url
 
 
 class EpisodeLister():
@@ -753,7 +783,8 @@ class ViafreeEpisodeLister(EpisodeLister):
             return []
         ep_list = []
         for episode_data in json_data:
-            ep_list.append(ViafreeEpisodeData(episode_data))
+            ep_list.append(ViafreeEpisodeData(
+                episode_data, verbose=self.print_log))
         for filter_key, filter_val in self.filter.items():
             ep_list = apply_filter(ep_list, filter_key, filter_val)
         ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
