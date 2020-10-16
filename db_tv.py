@@ -3,12 +3,16 @@
 '''TV Episode/Show Database handler'''
 
 import os
+import sys
+from argparse import ArgumentParser
 from datetime import datetime
 
 import config
 import db_json
 import printing
 import util
+import util_tv
+from printing import pfcs
 
 CFG = config.ConfigurationManager()
 EPISODE_DATABASE_PATH = CFG.get('path_epdb')
@@ -155,3 +159,38 @@ class EpisodeDatabaseSingleton(metaclass=util.Singleton):
 
     def get_id(self, filename: str) -> int:
         return self._db.get(filename, "tvmaze")
+
+
+if __name__ == "__main__":
+    PARSER = ArgumentParser()
+    PARSER.add_argument("show_folder", type=str)
+    PARSER.add_argument("--setimdb", "-i", type=str)
+    PARSER.add_argument("--rescan", "-r", action="store_true")
+    ARGS = PARSER.parse_args()
+    SHOW_DB = ShowDatabaseSingleton().db()
+    if ARGS.show_folder not in SHOW_DB:
+        pfcs(f"w[{ARGS.show_folder}] not in show database")
+        sys.exit(1)
+    if SHOW_DB.is_removed(ARGS.show_folder):
+        pfcs(f"w[{ARGS.show_folder}] is marked removed, not processing")
+        sys.exit(1)
+    pfcs(f"processing g[{ARGS.show_folder}]")
+    if ARGS.setimdb:
+        if ARGS.show_folder not in util_tv.list_all_shows():
+            pfcs(f"could not find w[{ARGS.show_folder}] on disk!")
+            sys.exit(1)
+        if not util_tv.save_nfo(ARGS.show_folder, ARGS.setimdb):
+            pfcs(f"failed to save tvshow.nfo in w[{ARGS.show_folder}]!")
+            sys.exit(1)
+    NEED_SAVE = False
+    if ARGS.rescan:
+        from scan import process_new_show  # prevents circular import...
+        pfcs(f"rescanning tvmaze for g[{ARGS.show_folder}]")
+        DATA = process_new_show(ARGS.show_folder)
+        for key in ["tvmaze", "title", "imdb", "year"]:
+            if key in DATA:
+                if SHOW_DB.update(ARGS.show_folder, key, DATA[key]):
+                    pfcs(f"set b[{key}] = {DATA[key]}")
+                    NEED_SAVE = True
+    if NEED_SAVE:
+        SHOW_DB.save()

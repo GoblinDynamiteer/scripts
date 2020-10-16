@@ -180,6 +180,22 @@ def imdb_from_nfo(show_name: str):
     return util.parse_imdbid_from_file(nfo_file)
 
 
+def save_nfo(show_name, imdb_id: str):
+    if not util.is_imdbid(imdb_id):
+        return False
+    show_path = Path(show_name)
+    if not util.is_dir(show_path):
+        show_path = Path(SHOW_DIR) / show_name
+    if not util.is_dir(show_path):
+        return False
+    file_path = show_path / "tvshow.nfo"
+    if file_path.is_file():
+        return False
+    with open(show_path / "tvshow.nfo", "w") as nfo_file:
+        nfo_file.write(imdb_id)
+        return show_path / "tvshow.nfo"
+
+
 def show_root_dir():
     'Get path of show root directory'
     return SHOW_DIR

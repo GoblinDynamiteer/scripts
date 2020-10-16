@@ -77,9 +77,12 @@ def process_new_movie(movie_folder: str) -> dict:
     return data
 
 
-def process_new_show(show_folder: str) -> dict:
+def process_new_show(show_folder: str, imdb_id=None) -> dict:
     pfcs(f"processing o[{show_folder}]")
-    nfo_imdb_id = util_tv.imdb_from_nfo(show_folder)
+    if imdb_id is None:
+        nfo_imdb_id = util_tv.imdb_from_nfo(show_folder)
+    else:
+        nfo_imdb_id = imdb_id
     maze_data = {}
     if nfo_imdb_id:
         pfcs(f"searching TVMaze for i[{show_folder}] using b[{nfo_imdb_id}]")
@@ -106,6 +109,8 @@ def process_new_show(show_folder: str) -> dict:
             if "imdb" in ext and ext["imdb"]:
                 data["imdb"] = ext["imdb"]
                 pfcs(f" - got imdb-id:          g[{data['imdb']}]")
+                if util_tv.save_nfo(show_folder, data["imdb"]):
+                    pfcs(f" - saved tvshow.nfo")
     return data
 
 
