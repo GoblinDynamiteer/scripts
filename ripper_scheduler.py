@@ -13,9 +13,7 @@ import config
 
 from ripper import PlayRipperYoutubeDl as youtube_ripper
 from ripper import SubRipper as subrip
-from ripper_helpers import Tv4PlayEpisodeLister
-from ripper_helpers import DPlayEpisodeLister
-from ripper_helpers import ViafreeEpisodeLister
+from ripper_helpers import EpisodeLister
 from printing import cstr, pfcs
 
 JSON_SCHEDULE_FILE = r"ripper_schedule.json"
@@ -184,20 +182,12 @@ class ScheduledShow():
         return min(at_list) if at_list else WEEK_IN_SECONDS
 
     def get_url_objects(self):
-        lister = None
-        if "dplay" in self.url:
-            lister = DPlayEpisodeLister(self.url)
-        elif "viafree" in self.url:
-            lister = ViafreeEpisodeLister(self.url)
-        elif "tv4play" in self.url:
-            lister = Tv4PlayEpisodeLister(self.url)
-        else:
-            return []
+        lister = EpisodeLister.get_lister(self.url)
         if self.filter_dict:
             lister.set_filter(**self.filter_dict)
-        return lister.list_episode_urls(revered_order=True,
-                                        limit=2,
-                                        objects=True)
+        return lister.get_episodes(revered_order=True,
+                                   limit=5,
+                                   )
 
     def get_url_list(self):
         return [obj.url() for obj in self.get_url_objects()]
