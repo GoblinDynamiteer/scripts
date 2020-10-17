@@ -695,69 +695,6 @@ class DPlayEpisodeLister(EpisodeLister):
         return super().get_episodes(revered_order, limit)
 
 
-class ViafreeUrlHandler():
-    APU_URL_VID = r"http://playapi.mtgx.tv/v3/videos/"
-    APU_URL_STREAM = r"https://viafree.mtg-api.com/stream-links/viafree/web" \
-                     r"/se/clear-media-guids/{}/streams"
-
-    def __init__(self, url):
-        if not "viafree" in url:
-            print("cannot handle non-viafree.se urls!")
-        self.url = url
-        self.session = Session()
-        self.id = self.parse_id()
-        self.mpx_guid = None
-        self.stream_url = self.determine_stream_url()
-        self.m3u8_data = {}
-        self.get_m3u8_data()
-
-    def parse_id(self):
-        if not "avsnitt" in self.url:
-            return None
-        page_contents = urlopen(self.url).read()
-        match = re.search(
-            r"\"product[Gg]uid\"\:\"\d{1,10}\"", str(page_contents))
-        if not match:
-            print("viafree workaround -> failed to extract video id")
-            return None
-        vid_id = match.group(0).replace(r'"productGuid":"', "")
-        vid_id = vid_id.replace(r'"', "")
-        try:
-            return int(vid_id)
-        except:
-            return None
-
-    def determine_stream_url(self):
-        if self.id is None:
-            return ""
-        res = self.session.get(f"{self.APU_URL_VID}{self.id}")
-        json_data = res.json()
-        self.mpx_guid = json_data.get("mpx_guid", None)
-        res = self.session.get(self.APU_URL_STREAM.format(self.mpx_guid))
-        try:
-            stream_url = res.json()[
-                "embedded"]["prioritizedStreams"][0]["links"]["stream"]["href"]
-        except:
-            stream_url = ""
-        return stream_url
-
-    def get_m3u8_data(self):
-        if not self.stream_url:
-            return
-        url_prefix = self.stream_url.split(".ism")[0] + ".ism/"
-        master_content = urlopen(self.stream_url).read().decode().split("\n")
-        self.m3u8_data["master"] = master_content
-        for index, line in enumerate(master_content):
-            if line.startswith("#EXT-X-MEDIA:TYPE=AUDIO"):
-                uri = url_prefix + line.split(r'URI="')[1][:-1]
-                content = urlopen(uri).read().decode().split("\n")
-                self.m3u8_data["audio"] = content
-            if "1920x1080" in line.lower() and not "keyframes" in line.lower():
-                uri = url_prefix + master_content[index+1]
-                content = urlopen(uri).read().decode().split("\n")
-                self.m3u8_data["video"] = content
-
-
 class ViafreeEpisodeLister(EpisodeLister):
     def __init__(self, url, verbose=False):
         super().__init__(url, verbose)
