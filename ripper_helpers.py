@@ -14,6 +14,8 @@ from config import ConfigurationManager
 from printing import fcs
 from util import Singleton
 
+import unittest
+
 VALID_FILTER_KEYS = ["season", "episode", "title", "date"]
 
 
@@ -439,6 +441,17 @@ class EpisodeLister():
             spaces = " " * len(f"({self.log_prefix}) ")
             print(f"{spaces}{info_str_line2}")
 
+    @staticmethod
+    def get_lister(url):
+        matches = {"viafree.se": ViafreeEpisodeLister,
+                   "tv4play.se": Tv4PlayEpisodeLister,
+                   "dplay.se": DPlayEpisodeLister,
+                   "svtplay.se": SVTPlayEpisodeLister}
+        for site, lister in matches.items():
+            if site in url:
+                return lister(url)
+        raise ValueError(f"unsupported site: {url}")
+
 
 class SVTPlayEpisodeLister(EpisodeLister):
     REGEX = r"application\/json\">(.*\}\})<\/script><script "
@@ -821,8 +834,36 @@ class ViafreeEpisodeLister(EpisodeLister):
         return best_data
 
 
+class TestEpisodeLister(unittest.TestCase):
+
+    def test_get_lister_viafree(self):
+        url = r"https://www.viafree.se/program/livsstil/lyxfallan"
+        lister = EpisodeLister.get_lister(url)
+        self.assertTrue(isinstance(lister, ViafreeEpisodeLister))
+
+    def test_get_lister_tv4play(self):
+        url = r"https://www.tv4play.se/program/idol"
+        lister = EpisodeLister.get_lister(url)
+        self.assertTrue(isinstance(lister, Tv4PlayEpisodeLister))
+
+    def test_get_lister_dplay(self):
+        url = r"https://www.dplay.se/program/alla-mot-alla-med-filip-och-fredrik"
+        lister = EpisodeLister.get_lister(url)
+        self.assertTrue(isinstance(lister, DPlayEpisodeLister))
+
+    def test_get_lister_svtplay(self):
+        url = r"https://www.svtplay.se/skavlan"
+        lister = EpisodeLister.get_lister(url)
+        self.assertTrue(isinstance(lister, SVTPlayEpisodeLister))
+
+    def test_get_lister_unsupported(self):
+        url = r"http://www.somerandomsite.se/tvshow/"
+        with self.assertRaises(Exception):
+            EpisodeLister.get_lister(url)
+
+
 def main():
-    pass
+    unittest.main()
 
 
 if __name__ == "__main__":
