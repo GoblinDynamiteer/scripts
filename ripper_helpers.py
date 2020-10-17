@@ -2,19 +2,20 @@
 
 import json
 import re
+import unittest
+import warnings
 from datetime import datetime, timedelta
 from http.cookiejar import MozillaCookieJar
 from pathlib import Path
 from urllib.parse import quote, urlparse
 from urllib.request import urlopen
+from argparse import ArgumentParser
 
 from requests import Session
 
 from config import ConfigurationManager
 from printing import fcs
 from util import Singleton
-
-import unittest
 
 VALID_FILTER_KEYS = ["season", "episode", "title", "date"]
 
@@ -44,7 +45,6 @@ class SessionSingleton(metaclass=Singleton):
 
 
 def apply_filter(ep_list: list, filter_type: str, filter_val: str):
-    "Just for Tv4PlayEpisodeData for now"
     filtered_list = []
     for ep_item in ep_list:
         if filter_type == "season":
@@ -70,9 +70,9 @@ def apply_filter(ep_list: list, filter_type: str, filter_val: str):
 
 
 class EpisodeData():
-    def __init__(self, verbose=False):
+    def __init__(self, episode_data={}, verbose=False):
         self.print_log = verbose
-        self.raw_data = {}
+        self.raw_data = episode_data
         self.log_prefix = "EPISODE_DATA"
 
     def set_log_prefix(self, log_prefix: str):
@@ -86,11 +86,26 @@ class EpisodeData():
             spaces = " " * len(f"({self.log_prefix}) ")
             print(f"{spaces}{info_str_line2}")
 
+    def url(self):
+        raise NotImplementedError()
 
-class SVTPlayEpisodeData():
+    def subtitle_url(self):
+        raise NotImplementedError()
+
+    def __str__(self):
+        raise NotImplementedError()
+
+    @staticmethod
+    def get_availabe_classes():
+        return [SVTPlayEpisodeData, DPlayEpisodeData, ViafreeEpisodeData, Tv4PlayEpisodeData]
+
+
+class SVTPlayEpisodeData(EpisodeData):
     URL_PREFIX = r"https://www.svtplay.se"
 
-    def __init__(self):
+    def __init__(self, verbose=False):
+        super().__init__(verbose)
+        self.set_log_prefix("SVTPLAY_DATA")
         self.season_num = 0
         self.episode_num = 0
         self.title = "N/A"
@@ -119,14 +134,16 @@ class SVTPlayEpisodeData():
     def url(self):
         return f"{self.URL_PREFIX}{self.url_suffix}"
 
+    def subtitle_url(self):
+        return self.url()
+
 
 class Tv4PlayEpisodeData(EpisodeData):
     URL_PREFIX = r"https://www.tv4play.se/program/"
 
-    def __init__(self, episode_data: dict, verbose=False):
-        super().__init__(verbose)
+    def __init__(self, episode_data={}, verbose=False):
+        super().__init__(episode_data, verbose)
         self.set_log_prefix("TV4PLAY_DATA")
-        self.raw_data = episode_data
         self.season_num = episode_data.get("season", 0)
         self.episode_num = episode_data.get("episode", 0)
         self.title = episode_data.get("title", "N/A")
@@ -143,7 +160,7 @@ class Tv4PlayEpisodeData(EpisodeData):
     def url(self):
         return f"{self.URL_PREFIX}{quote(self.show)}/{self.id}"
 
-    def retrieve_sub_url(self) -> list:
+    def subtitle_url(self) -> list:
         if self.sub_url_list:
             self.log("already retrieved/gotten subtitle url")
             return self.sub_url_list
@@ -225,7 +242,8 @@ class Tv4PlayEpisodeData(EpisodeData):
             srt_dur = f'{start.strftime(r"%H:%M:%S,%f")[:-3]} --> {end.strftime(r"%H:%M:%S,%f")[:-3]}'
             if merged != "":
                 merged += "\n" * 2
-            merged += str(self.srt_index) + "\n" + srt_dur + "\n" + lines[line_index+1]
+            merged += str(self.srt_index) + "\n" + \
+                srt_dur + "\n" + lines[line_index+1]
             self.srt_index += 1
             try:
                 if lines[line_index+2] != "":
@@ -259,12 +277,12 @@ class Tv4PlayEpisodeData(EpisodeData):
             sub_output_file.write(sub_contents.encode("utf-8"))
 
 
-class DPlayEpisodeData():
+class DPlayEpisodeData(EpisodeData):
     URL_PREFIX = r"https://www.dplay.se"
-    LOG_PREFIX = fcs("i[(DPLAY_DATA)]")
 
-    def __init__(self, episode_data: dict, show_data: dict, premium=False):
-        self.raw_data = episode_data
+    def __init__(self, episode_data={}, show_data={}, premium=False, verbose=False):
+        super().__init__(verbose, episode_data)
+        self.set_log_prefix("DPLAY_DATA")
         attr = episode_data.get("attributes", {})
         self.episode_path = attr.get("path", "")
         self.season_num = attr.get("seasonNumber", 0)
@@ -285,19 +303,6 @@ class DPlayEpisodeData():
         except:
             pass
 
-    def set_logging(self, state=True):
-        self.print_log = state
-        if state:
-            self.log("enabling verbose logging")
-
-    def log(self, info_str, info_str_line2=""):
-        if not self.print_log:
-            return
-        print(self.LOG_PREFIX, info_str)
-        if info_str_line2:
-            spaces = " " * len("(DPLAY_DATA) ")
-            print(f"{spaces}{info_str_line2}")
-
     def __str__(self):
         string = f"{self.show} S{self.season_num}E{self.episode_num} " \
                  f"\"{self.title}\" -- id:{self.id} -- url:{self.url()}"
@@ -308,7 +313,7 @@ class DPlayEpisodeData():
     def name(self):
         return f"{self.show} S{self.season_num}E{self.episode_num}"
 
-    def retrieve_sub_url(self):
+    def subtitle_url(self):
         if self.sub_url:
             self.log("already retrieved/gotten subtitle url")
             return self.sub_url
@@ -369,10 +374,9 @@ class ViafreeEpisodeData(EpisodeData):
     URL_PREFIX = r"https://www.viafree.se"
     CONT_URL_PREFIX = r"https://viafree-content.mtg-api.com/viafree-content/v1/se/path/"
 
-    def __init__(self, episode_data: dict, verbose=False):
-        super().__init__(verbose)
+    def __init__(self, episode_data={}, verbose=False):
+        super().__init__(episode_data, verbose)
         self.set_log_prefix("VIAFREE_DATA")
-        self.raw_data = episode_data
         self.episode_path = episode_data.get("publicPath", "")
         episode_info = episode_data.get("episode", {})
         self.season_num = episode_info.get("seasonNumber", 0)
@@ -389,7 +393,7 @@ class ViafreeEpisodeData(EpisodeData):
     def url(self):
         return f"{self.URL_PREFIX}{self.episode_path}"
 
-    def retrieve_sub_url(self):
+    def subtitle_url(self):
         if self.sub_url:
             self.log("already retrieved/gotten subtitle url")
             return self.sub_url
@@ -419,6 +423,7 @@ class ViafreeEpisodeData(EpisodeData):
 class EpisodeLister():
     def __init__(self, url, verbose=False):
         self.url = url
+        self.ep_list = []
         self.filter = {}
         self.print_log = verbose
         self.log_prefix = "EPISODE_LISTER"
@@ -441,15 +446,24 @@ class EpisodeLister():
             spaces = " " * len(f"({self.log_prefix}) ")
             print(f"{spaces}{info_str_line2}")
 
+    def get_episodes(self, revered_order=False, limit=None):
+        for filter_key, filter_val in self.filter.items():
+            ep_list = apply_filter(ep_list, filter_key, filter_val)
+        self.ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
+                          reverse=revered_order)
+        if limit is not None:
+            return self.ep_list[0:limit]
+        return self.ep_list
+
     @staticmethod
-    def get_lister(url):
+    def get_lister(url, verbose_logging=False):
         matches = {"viafree.se": ViafreeEpisodeLister,
                    "tv4play.se": Tv4PlayEpisodeLister,
                    "dplay.se": DPlayEpisodeLister,
                    "svtplay.se": SVTPlayEpisodeLister}
         for site, lister in matches.items():
             if site in url:
-                return lister(url)
+                return lister(url, verbose=verbose_logging)
         raise ValueError(f"unsupported site: {url}")
 
 
@@ -462,7 +476,9 @@ class SVTPlayEpisodeLister(EpisodeLister):
         if not "svtplay.se" in url:
             print("cannot handle non-svtplay.se urls!")
 
-    def list_episode_urls(self, revered_order=False, limit=None, objects=False):
+    def get_episodes(self, revered_order=False, limit=None):
+        if self.ep_list:
+            return super().get_episodes(revered_order, limit)
         res = SessionSingleton().get(f"{self.url}")
         match = re.search(r"__svtplay_apollo'] = ({.*});", res.text)
         if not match:
@@ -484,19 +500,12 @@ class SVTPlayEpisodeLister(EpisodeLister):
                     self.log(fcs(f"w[warning] failed to get show name!"))
                 break
         episode_keys = self.find_episode_keys(json_data, season_slug)
-        ep_list = []
         for ep_key in episode_keys:
             obj = self.key_to_obj(json_data, ep_key)
             if obj is not None:
                 obj.set_data(show=show_name)
-                ep_list.append(obj)
-        for filter_key, filter_val in self.filter.items():
-            ep_list = apply_filter(ep_list, filter_key, filter_val)
-        ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
-                     reverse=revered_order)
-        if limit:
-            return [ep if objects else ep.url() for ep in ep_list[0:limit]]
-        return [ep if objects else ep.url() for ep in ep_list]
+                self.ep_list.append(obj)
+        return super().get_episodes(revered_order, limit)
 
     def key_to_obj(self, json_data: dict, key: str):
         re_ix = r"\d{3}$"
@@ -579,7 +588,9 @@ class Tv4PlayEpisodeLister(EpisodeLister):
         self.session = Session()
         self.filter = {}
 
-    def list_episode_urls(self, revered_order=False, limit=None, objects=False):
+    def get_episodes(self, revered_order=False, limit=None):
+        if self.ep_list:
+            return super().get_episodes(revered_order, limit)
         res = self.session.get(f"{self.url}")
         for regex_str in self.REGEXES:
             match = re.search(regex_str, res.text)
@@ -605,7 +616,6 @@ class Tv4PlayEpisodeLister(EpisodeLister):
         if program_data is None:
             print(f"can't parse episodes data @ {self.url}")
             return []
-        ep_list = []
         for key in program_data:
             if not "VideoAsset:" in key:
                 continue
@@ -614,15 +624,9 @@ class Tv4PlayEpisodeLister(EpisodeLister):
                 continue
             elif "id" not in video_data:
                 continue
-            ep_list.append(Tv4PlayEpisodeData(
+            self.ep_list.append(Tv4PlayEpisodeData(
                 video_data, verbose=self.print_log))
-        for filter_key, filter_val in self.filter.items():
-            ep_list = apply_filter(ep_list, filter_key, filter_val)
-        ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
-                     reverse=revered_order)
-        if limit:
-            return [ep if objects else ep.url() for ep in ep_list[0:limit]]
-        return [ep if objects else ep.url() for ep in ep_list]
+        return super().get_episodes(revered_order, limit)
 
 
 class DPlayEpisodeLister(EpisodeLister):
@@ -662,7 +666,9 @@ class DPlayEpisodeLister(EpisodeLister):
             return True  # TODO: might still be free?
         return free_datetime > datetime.now()
 
-    def list_episode_urls(self, revered_order=False, limit=None, objects=False):
+    def get_episodes(self, revered_order=False, limit=None):
+        if self.ep_list:
+            return super().get_episodes(revered_order, limit)
         match = re.search(
             "/(program|programmer|videos|videoer)/([^/]+)", self.url)
         if not match:
@@ -670,13 +676,9 @@ class DPlayEpisodeLister(EpisodeLister):
             return
         res = SessionSingleton().get(
             f"{self.API_URL}/content/shows/{match.group(2)}")
-
         show_data = res.json()
         show_id = res.json()["data"]["id"]
         season_numbers = res.json()["data"]["attributes"]["seasonNumbers"]
-
-        ep_list = []
-
         for season_number in season_numbers:
             qyerystring = (
                 "include=primaryChannel,show&filter[videoType]=EPISODE"
@@ -689,17 +691,8 @@ class DPlayEpisodeLister(EpisodeLister):
                 is_premium = self.is_episode_data_premium(
                     data.get("attributes", {}))
                 obj = DPlayEpisodeData(data, show_data, premium=is_premium)
-                ep_list.append(obj)
-        for filter_key, filter_val in self.filter.items():
-            ep_list = apply_filter(ep_list, filter_key, filter_val)
-        ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
-                     reverse=revered_order)
-        if limit:
-            ep_list = ep_list[0:limit]
-        for obj in ep_list:
-            if obj.is_premium:  # TODO: add check/arg to determine if prem. is dlable
-                self.log(fcs(f"w[warning] w['{obj.name()}'] is premium"))
-        return [obj if objects else obj.url() for obj in ep_list]
+                self.ep_list.append(obj)
+        return super().get_episodes(revered_order, limit)
 
 
 class ViafreeUrlHandler():
@@ -775,7 +768,9 @@ class ViafreeEpisodeLister(EpisodeLister):
         self.session = Session()
         self.filter = {}
 
-    def list_episode_urls(self, revered_order=False, limit=None, objects=False):
+    def get_episodes(self, revered_order=False, limit=None):
+        if self.ep_list:
+            return super().get_episodes(revered_order, limit)
         res = self.session.get(self.url)
         splits = res.text.split("\"programs\":")
         candidates = []
@@ -787,24 +782,20 @@ class ViafreeEpisodeLister(EpisodeLister):
                     continue
                 index_of_list_end = string.rfind("]")
                 candidates.append(string[:index_of_list_end+1])
-        except:
+        except Exception as error:
+            self.log(fcs("e[error]"), error)
             return []
         if not candidates:
+            self.log("failed to retrieve episodes!")
             return []
         json_data = self.candidates_to_json(candidates)
         if not json_data:
+            self.log("failed to retrieve episodes!")
             return []
-        ep_list = []
         for episode_data in json_data:
-            ep_list.append(ViafreeEpisodeData(
+            self.ep_list.append(ViafreeEpisodeData(
                 episode_data, verbose=self.print_log))
-        for filter_key, filter_val in self.filter.items():
-            ep_list = apply_filter(ep_list, filter_key, filter_val)
-        ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
-                     reverse=revered_order)
-        if limit:
-            return [ep if objects else ep.url() for ep in ep_list[0:limit]]
-        return [ep if objects else ep.url() for ep in ep_list]
+        return super().get_episodes(revered_order, limit)
 
     def candidates_to_json(self, candidate_list):
         best_data = {}
@@ -835,35 +826,81 @@ class ViafreeEpisodeLister(EpisodeLister):
 
 
 class TestEpisodeLister(unittest.TestCase):
+    URL_TV4 = r"https://www.tv4play.se/program/idol"
+    URL_VIAFREE = r"https://www.viafree.se/program/livsstil/lyxfallan"
+    URL_SVTPLAY = r"https://www.svtplay.se/skavlan"
+    URL_INVALID = r"http://www.somerandomsite.se/tvshow/"
+    URL_DPLAY = r"https://www.dplay.se/program/alla-mot-alla-med-filip-och-fredrik"
+
+    def setUp(self):
+        warnings.simplefilter("ignore", category=ResourceWarning)
 
     def test_get_lister_viafree(self):
-        url = r"https://www.viafree.se/program/livsstil/lyxfallan"
-        lister = EpisodeLister.get_lister(url)
+        lister = EpisodeLister.get_lister(self.URL_VIAFREE)
         self.assertTrue(isinstance(lister, ViafreeEpisodeLister))
 
     def test_get_lister_tv4play(self):
-        url = r"https://www.tv4play.se/program/idol"
-        lister = EpisodeLister.get_lister(url)
+        lister = EpisodeLister.get_lister(self.URL_TV4)
         self.assertTrue(isinstance(lister, Tv4PlayEpisodeLister))
 
     def test_get_lister_dplay(self):
-        url = r"https://www.dplay.se/program/alla-mot-alla-med-filip-och-fredrik"
-        lister = EpisodeLister.get_lister(url)
+        lister = EpisodeLister.get_lister(self.URL_DPLAY)
         self.assertTrue(isinstance(lister, DPlayEpisodeLister))
 
     def test_get_lister_svtplay(self):
-        url = r"https://www.svtplay.se/skavlan"
-        lister = EpisodeLister.get_lister(url)
+        lister = EpisodeLister.get_lister(self.URL_SVTPLAY)
         self.assertTrue(isinstance(lister, SVTPlayEpisodeLister))
 
     def test_get_lister_unsupported(self):
-        url = r"http://www.somerandomsite.se/tvshow/"
         with self.assertRaises(Exception):
-            EpisodeLister.get_lister(url)
+            EpisodeLister.get_lister(self.URL_INVALID)
+
+    def test_get_episodes_svtplay(self):
+        lister = EpisodeLister.get_lister(self.URL_SVTPLAY)
+        self.assertGreater(len(lister.get_episodes()), 0)
+
+    def test_get_episodes_viafree(self):
+        lister = EpisodeLister.get_lister(self.URL_VIAFREE)
+        self.assertGreater(len(lister.get_episodes()), 0)
+
+    def test_get_episodes_tv4play(self):
+        lister = EpisodeLister.get_lister(self.URL_TV4)
+        self.assertGreater(len(lister.get_episodes()), 0)
+
+    def test_get_episodes_dplay(self):
+        lister = EpisodeLister.get_lister(self.URL_DPLAY)
+        self.assertGreater(len(lister.get_episodes()), 0)
+
+
+class TestEpisodeData(unittest.TestCase):
+    def test_subtitle_url_implemented(self):
+        for data_class in EpisodeData.get_availabe_classes():
+            data = data_class()
+            try:
+                data.subtitle_url()
+            except NotImplementedError:
+                self.fail(
+                    f"{data.__class__.__name__} has not implemented subtitle_url")
+
+
+def get_args():
+    parser = ArgumentParser("ripper helper")
+    parser.add_argument("--test", dest="run_tests", action="store_true")
+    parser.add_argument("--url", type=str)
+    parser.add_argument("--verbose", action="store_true")
+    return parser.parse_args()
 
 
 def main():
-    unittest.main()
+    args = get_args()
+    if args.run_tests:
+        print("running unit tests")
+        unittest.main(argv=[__file__])
+    if args.url:
+        lister = EpisodeLister.get_lister(args.url, args.verbose)
+        for episode in lister.get_episodes():
+            print("vid url", episode.url())
+            print("sub url", episode.subtitle_url())
 
 
 if __name__ == "__main__":
