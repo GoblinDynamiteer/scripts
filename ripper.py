@@ -274,16 +274,27 @@ class PlayRipperYoutubeDl():
             return None
         if not self.simulate:
             self.log(fcs(f"downloading to: p[{self.dest_path}]"))
-            try:
-                with youtube_dl.YoutubeDL(self.options) as ydl:
-                    ydl.params["outtmpl"] = str(self.get_dest_path())
-                    ydl.download([self.url])
-                    if self.file_already_exists():
-                        self.download_succeeded = True
-                    return str(self.get_dest_path())
-            except youtube_dl.utils.DownloadError as error:
-                print(error)
-                return None
+            retries = 0
+            while retries < 4:
+                if retries:
+                    self.log(fcs(f"retry attempt w[{retries}]"))
+                    print("retrying...")
+                    time.sleep(1)
+                try:
+                    with youtube_dl.YoutubeDL(self.options) as ydl:
+                        ydl.params["outtmpl"] = str(self.get_dest_path())
+                        ydl.download([self.url])
+                        if self.file_already_exists():
+                            self.download_succeeded = True
+                        return str(self.get_dest_path())
+                except youtube_dl.utils.DownloadError as error:
+                    print("\ngot error during download attempt:\n", error)
+                except KeyboardInterrupt:
+                    print("user cancelled...")
+                    return None
+                retries += 1
+            self.log(fcs("e[failed download!]"))
+            return None
         else:
             pfcs(f"{self.SIM_STR} downloading")
             pfcs(f"{self.SIM_STR} dest: {self.get_dest_path()}")
