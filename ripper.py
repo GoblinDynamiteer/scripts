@@ -9,8 +9,9 @@ import queue
 import re
 import shlex
 import subprocess
-import time
 import sys
+import time
+from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from urllib.request import urlopen
@@ -19,10 +20,8 @@ import printing
 import rename
 import run
 from config import ConfigurationManager
-from printing import cstr, pfcs, fcs
-from ripper_helpers import (DPlayEpisodeData, DPlayEpisodeLister,
-                            SVTPlayEpisodeData, SVTPlayEpisodeLister, ViafreeEpisodeData,
-                            Tv4PlayEpisodeLister, ViafreeEpisodeLister, Tv4PlayEpisodeData)
+from printing import cstr, fcs, pfcs
+from ripper_helpers import EpisodeLister, SessionSingleton
 
 SIM_STR = r"(SIMULATE)"
 
@@ -54,7 +53,7 @@ class YoutubeDLFormats(Enum):
 
 class SubRipper():
     SIM_STR = f"i[{SIM_STR}] o[SUBDL]"
-    LOG_PREFIX = fcs("i[(SUBDL)]")
+    LOG_PREFIX = "SUBRIP"
 
     def __init__(self, sub_url, video_file_path, sim=False, verbose=False):
         self.url = sub_url
@@ -68,11 +67,12 @@ class SubRipper():
         self.download_succeeded = False
         self.data_obj = None
         self.log(fcs(f"using filename p[{self.filename}]"))
+        self.srt_index = 1
 
     def determine_file_name(self):
         dest_path = Path(self.video_file_path)
         file_ext = dest_path.suffix
-        if "viafree" in self.url or "dplay" in self.url:
+        if "vtt" in self.url:
             srt_file_name = dest_path.name.replace(file_ext, r".vtt")
         else:
             srt_file_name = dest_path.name.replace(file_ext, r".srt")
@@ -98,33 +98,29 @@ class SubRipper():
         if self.file_already_exists():
             pfcs(f"subtitle already exists: o[{self.filename}], skipping")
             return None
-        if not self.simulate:
-            if any(via in self.url for via in ["viafree", "viaplay"]):
-                self.log("using viafree workaround")
-                self.download_viafree()
-            elif "dplay" in self.url:
-                self.log("using dplay workaround")
-                self.download_dplay()
-            elif isinstance(self.url, list) and "cmore" in self.url[0]:
-                self.log("using tv4play workaround")
-                self.download_tv4lay()
-            else:
-                self.download_with_svtplaydl()
-            if self.get_dest_path().is_file():
-                self.download_succeeded = True
-                print(
-                    f"downloaded subtitle: {CSTR(f'{self.get_dest_path()}', 'lblue')}")
-                return self.get_dest_path()
-            else:
-                self.log(fcs("subtitle download e[failed]!"))
-        else:
+        if self.simulate:
             pfcs(f"{self.SIM_STR} downloading")
             pfcs(f"{self.SIM_STR} dest: {self.get_dest_path()}")
             self.download_succeeded = True
             pfcs(f"{self.SIM_STR} setting download succeded: "
                  f"{self.download_succeeded}")
             return str(self.get_dest_path())
-        return None
+        if isinstance(self.url, list):
+            self.download_vtt_fragments_as_srt()
+        elif self.url.endswith(".vtt"):
+            self.download_with_curl()
+        elif "vtt" in self.url:
+            self.download_single_vtt()
+        else:
+            self.download_with_svtplaydl()
+        if self.get_dest_path().is_file():
+            self.download_succeeded = True
+            print(
+                f"downloaded subtitle: {CSTR(f'{self.get_dest_path()}', 'lblue')}")
+            return self.get_dest_path()
+        else:
+            self.log(fcs("subtitle download e[failed]!"))
+            return None
 
     def download_with_svtplaydl(self):
         command = f'svtplay-dl -S --force-subtitle -o "{self.get_dest_path()}" {self.url}'
@@ -137,47 +133,104 @@ class SubRipper():
         if dual_srt_extension_path.exists():  # svtplay-dl adds srt extension?
             dual_srt_extension_path.rename(self.get_dest_path())
 
-    def download_viafree(self):
-        if not self.data_obj:
-            self.log("missing viafree data object!")
-            return
-        self.curl(self.data_obj.retrieve_sub_url())
-
-    def download_dplay(self):
-        if not self.data_obj:
-            self.log("missing dplay data object!")
-            return
-        self.data_obj.download_sub(self.filename, self.url)
-
-    def download_tv4lay(self):
-        if not self.data_obj:
-            self.log("missing tv4play data object!")
-            return
-        self.data_obj.download_sub(self.filename, self.url)
-
-    def curl(self, sub_url):
-        command = f"curl {sub_url} > {self.get_dest_path()}"
+    def download_with_curl(self):
+        command = f"curl {self.url} > {self.get_dest_path()}"
         self.log(f"running: {cstr(command, 'lgreen')}")
         if not run.local_command(command, hide_output=True, print_info=False):
             self.download_succeeded = False
 
-    def log(self, info_str):
+    def log(self, info_str, info_str_line2="", repeat=False):
         if not self.print_log:
             return
-        print(self.LOG_PREFIX, info_str)
+        if repeat:
+            print(fcs(f"\ri[({self.LOG_PREFIX})]"), info_str, end="")
+        else:
+            print(fcs(f"i[({self.LOG_PREFIX})]"), info_str)
+        # TODO: fix repeat with line 2
+        if info_str_line2:
+            spaces = " " * len(f"({self.LOG_PREFIX}) ")
+            print(f"{spaces}{info_str_line2}")
+
+    def _convert_vtt_seg_to_srt(self, text):
+        lines = text.splitlines()
+        # example X-TIMESTAMP-MAP=MPEGTS:1260000,LOCAL:00:00:00.000
+        rgx = r"\:(?P<start_time>\d{1,20})\,"
+        match = re.search(rgx, lines[1])
+        if not match:
+            return None
+        mpegts = int(match.groupdict().get("start_time", 0))
+        # example: 00:00:01.280 --> 00:00:02.960
+        line_index = 3
+        merged = ""
+        while True:
+            try:
+                start, end = lines[line_index].split(" --> ")
+            except IndexError:
+                break
+            except ValueError:
+                line_index += 1
+                continue
+            # 90000 is default MPEG-TS timescale, allegedly,
+            # and tv4 has a 10s offset for some reason...
+            delta = timedelta(seconds=mpegts / 90000 - 10)
+            start = datetime.strptime(start, r"%H:%M:%S.%f") + delta
+            end = datetime.strptime(end, r"%H:%M:%S.%f") + delta
+            srt_dur = f'{start.strftime(r"%H:%M:%S,%f")[:-3]}'
+            srt_dur += f' --> {end.strftime(r"%H:%M:%S,%f")[:-3]}'
+            if merged != "":
+                merged += "\n" * 2
+            merged += str(self.srt_index) + "\n" + \
+                srt_dur + "\n" + lines[line_index+1]
+            self.log(f"added srt index {self.srt_index}", repeat=True)
+            self.srt_index += 1
+            try:
+                if lines[line_index+2] != "":
+                    merged += "\n" + lines[line_index+2]
+            except IndexError:
+                break
+            line_index += 1
+        return merged + "\n\n"
+
+    def download_vtt_fragments_as_srt(self):
+        if not isinstance(self.url, list) or not self.url:
+            print("cannot download subtitle!")
+            return False
+        self.log("attempting to download and merge webvtt subtitle fragments",
+                 f"number of fragments={len(self.url)}")
+        sub_contents = ""
+        for url in self.url:
+            fragment_text = SessionSingleton().get(url).text
+            edited = self._convert_vtt_seg_to_srt(fragment_text)
+            if edited is None:
+                if self.print_log:
+                    print()
+                self.log("failed to merge vtt subtitles, aborting")
+                return False
+            if edited != "":
+                sub_contents += edited
+        if self.print_log:
+            print()
+        sub_contents = sub_contents.encode(
+            "latin-1").decode("utf-8", errors="ignore").replace("\n" * 3, "\n" * 2)
+        with open(self.get_dest_path(), "wb") as sub_output_file:
+            sub_output_file.write(sub_contents.encode("utf-8"))
+        return True
+
+    def download_single_vtt(self):
+        sub_contents = SessionSingleton().get(self.url).text
+        sub_contents = sub_contents.encode("latin-1").decode("utf-8")
+        with open(self.get_dest_path(), "wb") as sub_output_file:
+            sub_output_file.write(sub_contents.encode("utf-8"))
 
 
 class PlayRipperYoutubeDl():
     SIM_STR = f"i[{SIM_STR}] p[YTDL]"
     LOG_PREFIX = fcs("i[(YTDL)]")
 
-    def __init__(self, url, dest=None, use_title=False, sim=False, verbose=False):
-        self.ep_data = None
+    def __init__(self, url, ep_data=None, dest=None, use_title=False, sim=False, verbose=False):
+        self.ep_data = ep_data
         self.print_log = verbose
         self.url = url
-        if isinstance(url, (SVTPlayEpisodeData, DPlayEpisodeData, Tv4PlayEpisodeData, ViafreeEpisodeData)):
-            self.ep_data = url
-            self.url = url.url()
         self.dest_path = dest
         self.format = None
         self.simulate = sim
@@ -342,7 +395,7 @@ def retrive_sub_url(data_obj, verbose=False):
     count = 0
     sub_url = ""
     while not sub_url:
-        sub_url = data_obj.retrieve_sub_url()
+        sub_url = data_obj.subtitle_url()
         if sub_url:
             if verbose:
                 log_main("successfully retrieved subtitle url")
@@ -357,14 +410,12 @@ def retrive_sub_url(data_obj, verbose=False):
                         "could retrieve subtitle url, skipping sub download")
                 return ""
             if verbose:
-                # Could be done in bg when processing others?
+                # Could be done in bg when processing others
                 log_main("sleeping 10 seconds...")
             time.sleep(10)
 
 
-def main():
-    print(CSTR("======= ripper =======".upper(), "purple"))
-
+def get_args():
     parser = argparse.ArgumentParser(description="ripper")
     parser.add_argument("url", type=str, help="URL")
     parser.add_argument("--dir", type=str, default=os.getcwd())
@@ -378,18 +429,76 @@ def main():
     parser.add_argument("--filter", "-f", type=str, default="")
     parser.add_argument("--simulate", action="store_true", help="run tests")
     parser.add_argument("--verbose", "-v", action="store_true", dest="verb")
-    args = parser.parse_args()
+    return parser.parse_args()
 
+
+def download_episodes(episode_list, cli_args):
+    first = True
+    for ep in episode_list:
+        if not first:
+            print("=" * 100)
+        first = False
+        if isinstance(ep, str):
+            url = ep
+            data = None
+        else:
+            url = ep.url()
+            data = ep
+        ripper = PlayRipperYoutubeDl(
+            url,
+            dest=cli_args.dir,
+            ep_data=data,
+            sim=cli_args.simulate,
+            use_title=cli_args.use_title,
+            verbose=cli_args.verb)
+        ripper.print_info()
+        file_name = ""
+        get_subs = False
+        if not cli_args.sub_only:
+            file_name = ripper.download()
+            if file_name and ripper.download_succeeded:
+                get_subs = True
+            elif not file_name and ripper.file_already_exists():
+                file_name = ripper.get_dest_path()
+                get_subs = True
+        if get_subs or cli_args.sub_only:
+            if not file_name:
+                file_name = ripper.get_dest_path()
+            subtitle_url = url if isinstance(
+                ep, str) else retrive_sub_url(ep, cli_args.verb)
+            if cli_args.verb:
+                if isinstance(subtitle_url, list) and subtitle_url != []:
+                    log_main(
+                        fcs(f"using url(s) for subtitles: o[{subtitle_url[0]}]..."))
+                else:
+                    log_main(
+                        fcs(f"using url for subtitles: o[{subtitle_url}]"))
+            sub_ripper = SubRipper(
+                subtitle_url,
+                str(file_name),
+                sim=cli_args.simulate,
+                verbose=cli_args.verb)
+            if sub_ripper.file_already_exists():
+                if cli_args.verb:
+                    log_main(
+                        fcs(f"subtitle already exists: i[{sub_ripper.get_dest_path()}]"))
+                continue
+            sub_ripper.download()
+
+
+def main():
+    pfcs(f"p[======= RIPPER =======]")
+    args = get_args()
     if args.sub_only:
         print("Only downloading subtitles")
-
     if args.simulate:
         print("Running simulation, not downloading...")
-
-    print(f"Saving files to: {CSTR(args.dir, 'lgreen')}")
-
+    pfcs(f"saving files to: i[{args.dir}]")
     urls = args.url.split(",")
     if args.get_last:
+        if len(urls) > 1:
+            pfcs(
+                f"w[warning] multiple urls unsupported with --get-last, using only: {urls[0]}")
         filter_dict = {}
         if args.filter:
             try:
@@ -398,104 +507,27 @@ def main():
                 print(f"invalid json for filter: {args.filter}, quitting...")
                 sys.exit(1)
         wanted_last = int(args.get_last)
-        if "dplay" in urls[0]:
-            lister = DPlayEpisodeLister(urls[0], verbose=args.verb)
+        try:
+            lister = EpisodeLister.get_lister(
+                urls[0], verbose_logging=args.verb)
             if filter_dict:
                 lister.set_filter(**filter_dict)
-            urls = lister.list_episode_urls(objects=True,
-                                            revered_order=True, limit=wanted_last
-                                            )
-        elif "viafree" in urls[0]:
-            lister = ViafreeEpisodeLister(urls[0], verbose=args.verb)
-            if filter_dict:
-                lister.set_filter(**filter_dict)
-            urls = lister.list_episode_urls(
-                revered_order=True, limit=wanted_last, objects=True
-            )
-        elif "tv4play" in urls[0]:
-            lister = Tv4PlayEpisodeLister(urls[0], verbose=args.verb)
-            if filter_dict:
-                lister.set_filter(**filter_dict)
-            urls = lister.list_episode_urls(
-                revered_order=True, limit=wanted_last, objects=True
-            )
-        elif "svtplay" in urls[0]:
-            lister = SVTPlayEpisodeLister(urls[0], verbose=args.verb)
-            if filter_dict:
-                lister.set_filter(**filter_dict)
-            urls = lister.list_episode_urls(objects=True,
-                                            revered_order=True, limit=wanted_last
-                                            )
-        else:
-            print("cannot list episodes..")
+            episodes = lister.get_episodes(
+                revered_order=True, limit=wanted_last)
+        except ValueError as error:
+            pfcs("e[failed] to list episodes")
+            pfcs(f"e[error]: {error}")
             sys.exit(1)
-        if len(urls) >= wanted_last:
-            urls = urls[-1 * wanted_last:]
+        if len(episodes) >= wanted_last:
+            episodes = episodes[-1 * wanted_last:]
         if args.use_ep_order:
-            urls.reverse()
-        print(f"will download {len(urls)} link(s):")
-        for url in urls:
-            if isinstance(url, (SVTPlayEpisodeData, DPlayEpisodeData, Tv4PlayEpisodeData, ViafreeEpisodeData)):
-                url_str = url.url()
-            else:
-                url_str = url
-            print(CSTR(f"  {url_str}", "lblue"))
-    # TODO: refactor and do major cleanups! always get objects instead of url strings....
-    for url in urls:
-        ripper = PlayRipperYoutubeDl(
-            url, args.dir, sim=args.simulate, use_title=args.use_title, verbose=args.verb)
-        ripper.print_info()
-        if isinstance(url, SVTPlayEpisodeData):
-            subtitle_url = url.url()
-        elif isinstance(url, ViafreeEpisodeData):
-            subtitle_url = "viafree_placeholder_url"
-        elif isinstance(url, DPlayEpisodeData):
-            url.set_logging(args.verb)
-            subtitle_url = "dplay_placeholder_url"
-        elif isinstance(url, Tv4PlayEpisodeData):
-            subtitle_url = "tv4_placeholder_url"
-        else:
-            subtitle_url = url
-        if args.verb:
-            log_main(fcs(f"using url for subtitles: o[{subtitle_url}]"))
-        if args.sub_only:
-            file_name = ripper.get_dest_path()
-            sub_ripper = SubRipper(
-                subtitle_url, str(file_name), sim=args.simulate, verbose=args.verb)
-            if not sub_ripper.file_already_exists():
-                if isinstance(url, (DPlayEpisodeData, Tv4PlayEpisodeData, ViafreeEpisodeData)):
-                    retrieved_url = retrive_sub_url(url, args.verb)
-                    if retrieved_url:
-                        sub_ripper.url = retrieved_url
-                        sub_ripper.data_obj = url
-                if "placeholder" not in sub_ripper.url:
-                    sub_ripper.download()
-        else:
-            get_subs = False
-            file_name = ripper.download()
-            if file_name and ripper.download_succeeded:
-                get_subs = True
-            elif not file_name and ripper.file_already_exists():
-                file_name = ripper.get_dest_path()
-                get_subs = True
-            if get_subs:
-                if args.verb:
-                    log_main("preparing to download subtitles if needed")
-                sub_ripper = SubRipper(
-                    subtitle_url, str(file_name), sim=args.simulate, verbose=args.verb)
-                sub_ripper.print_info()
-                if not sub_ripper.file_already_exists():
-                    if isinstance(url, (DPlayEpisodeData, Tv4PlayEpisodeData, ViafreeEpisodeData)):
-                        retrieved_url = retrive_sub_url(url, args.verb)
-                        if retrieved_url:
-                            sub_ripper.url = retrieved_url
-                            sub_ripper.data_obj = url
-                    if "placeholder" not in sub_ripper.url:
-                        sub_ripper.download()
-                elif args.verb:
-                    log_main("subtitle file already exists, skipping")
-
-        print("=" * 100)
+            episodes.reverse()
+        print(f"will download {len(episodes)} episode(s):")
+        for episode in episodes:
+            pfcs(f"b[{episode.url()}]")
+        download_episodes(episodes, args)
+    else:
+        download_episodes(urls, args)
 
 
 if __name__ == "__main__":
