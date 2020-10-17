@@ -379,7 +379,7 @@ class EpisodeLister():
 
     def get_episodes(self, revered_order=False, limit=None):
         for filter_key, filter_val in self.filter.items():
-            ep_list = apply_filter(ep_list, filter_key, filter_val)
+            self.ep_list = apply_filter(self.ep_list, filter_key, filter_val)
         self.ep_list.sort(key=lambda x: (x.season_num, x.episode_num),
                           reverse=revered_order)
         if limit is not None:
