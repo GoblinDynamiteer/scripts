@@ -281,7 +281,7 @@ class DPlayEpisodeData(EpisodeData):
     URL_PREFIX = r"https://www.dplay.se"
 
     def __init__(self, episode_data={}, show_data={}, premium=False, verbose=False):
-        super().__init__(verbose, episode_data)
+        super().__init__(episode_data, verbose)
         self.set_log_prefix("DPLAY_DATA")
         attr = episode_data.get("attributes", {})
         self.episode_path = attr.get("path", "")
