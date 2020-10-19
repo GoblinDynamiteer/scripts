@@ -13,6 +13,7 @@ import config
 
 from ripper import PlayRipperYoutubeDl as youtube_ripper
 from ripper import SubRipper as subrip
+from ripper import retrive_sub_url
 from ripper_helpers import EpisodeLister
 from printing import cstr, pfcs
 
@@ -142,10 +143,11 @@ class ScheduledShow():
         for obj in self.get_url_objects():
             rip = youtube_ripper(obj.url(),
                                  dest=self.dest_path,
+                                 ep_data=obj,
+                                 verbose=True,
                                  use_title=self.use_title)
             file_path = None
             if not rip.file_already_exists():
-
                 file_path = rip.download()
                 if file_path and rip.download_succeeded:
                     pfcs(f"downloaded: i[{str(file_path)}]")
@@ -154,7 +156,7 @@ class ScheduledShow():
             else:
                 file_path = rip.get_dest_path()
             if file_path:
-                srip = subrip(obj.url(), str(file_path))
+                srip = subrip(retrive_sub_url(obj), str(file_path), verbose=True)
                 if not srip.file_already_exists():
                     srip.download()
         return True
@@ -182,7 +184,7 @@ class ScheduledShow():
         return min(at_list) if at_list else WEEK_IN_SECONDS
 
     def get_url_objects(self):
-        lister = EpisodeLister.get_lister(self.url)
+        lister = EpisodeLister.get_lister(self.url, verbose_logging=True)
         if self.filter_dict:
             lister.set_filter(**self.filter_dict)
         return lister.get_episodes(revered_order=True,
@@ -201,7 +203,8 @@ def parse_json_schedule():
     try:
         with open(file_path) as json_file:
             data = json.load(json_file)
-    except:
+    except Exception as error:
+        print(error)
         pfcs(f"could parse json from file: e[{str(file_path)}]")
         sys.exit(1)
     return data
