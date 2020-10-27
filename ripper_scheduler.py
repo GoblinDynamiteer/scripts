@@ -15,7 +15,7 @@ from ripper import PlayRipperYoutubeDl as youtube_ripper
 from ripper import SubRipper as subrip
 from ripper import retrive_sub_url
 from ripper_helpers import EpisodeLister
-from printing import cstr, pfcs
+from printing import cstr, pfcs, fcs
 
 JSON_SCHEDULE_FILE = r"ripper_schedule.json"
 WEEK_IN_SECONDS = 60 * 60 * 24 * 7
@@ -119,6 +119,19 @@ class Airtime():
         return int((self.next_airdate() - get_now()).total_seconds())
 
 
+def log(info_str, info_str_line2=""):
+    log_prefix = "SCHEDULER"
+    print(fcs(f"i[({log_prefix})]"),
+          f"{get_now_color_str()}:", info_str)
+    if info_str_line2:
+        spaces = " " * len(f"({log_prefix}) ")
+        print(f"{spaces}{info_str_line2}")
+
+
+def print_seperator():
+    pfcs(f"d[{'=' * 60}]")
+
+
 class ScheduledShow():
     def __init__(self, data: dict):
         self.raw_data = data
@@ -128,6 +141,7 @@ class ScheduledShow():
         self.url = data["url"]
         self.use_title = data.get("use_title", False)
         self.disabled = data.get("disabled", False)
+        self.skip_sub = data.get("skip_sub", False)
         self.downloaded_today = False
         self.airtimes = []
 
@@ -138,8 +152,7 @@ class ScheduledShow():
     def download(self, force=False):
         if not force and not self.should_download():
             return False
-        print(f"{get_now_color_str()}: ", end="")
-        pfcs(f"trying to download i[{self.name}]")
+        log(fcs(f"trying to download episodes for i[{self.name}]"))
         for obj in self.get_url_objects():
             rip = youtube_ripper(obj.url(),
                                  dest=self.dest_path,
@@ -150,15 +163,32 @@ class ScheduledShow():
             if not rip.file_already_exists():
                 file_path = rip.download()
                 if file_path and rip.download_succeeded:
-                    pfcs(f"downloaded: i[{str(file_path)}]")
+                    log(fcs(f"downloaded: i[{str(file_path)}]"))
                     self.downloaded_today = True
                     write_to_log(self.name, str(file_path))
             else:
                 file_path = rip.get_dest_path()
-            if file_path:
-                srip = subrip(retrive_sub_url(obj), str(file_path), verbose=True)
+                log(
+                    fcs(f"i[{file_path.name}] already exists, skipping dl..."))
+            if file_path and not self.skip_sub:
+                existing = subrip.vid_file_has_subs(file_path)
+                if existing is not False:
+                    log(
+                        fcs(f"i[{existing.name}] already exists, skipping sub dl..."))
+                    print_seperator()
+                    continue
+                srip = subrip(retrive_sub_url(obj),
+                              str(file_path), verbose=True)
                 if not srip.file_already_exists():
+                    log(
+                        fcs(f"trying to download subtitles: i[{srip.filename}]"))
                     srip.download()
+                else:
+                    log(
+                        fcs(f"i[{srip.filename}] already exists, skipping sub dl..."))
+            elif self.skip_sub:
+                log(fcs(f"skipping subtitle download for i[{self.name}]"))
+            print_seperator()
         return True
 
     def reset_downloaded_today(self):
@@ -170,7 +200,8 @@ class ScheduledShow():
         sec_to = self.shortest_airtime()
         if sec_to > 0:
             delta = timedelta(seconds=sec_to)
-            pfcs(f"b[{self.name}] airs in i[{delta}]...", show=show)
+            if show:
+                log(fcs(f"b[{self.name}] airs in i[{delta}]..."))
         return sec_to < 0
 
     def shortest_airtime(self):
@@ -210,19 +241,19 @@ def parse_json_schedule():
     return data
 
 
-if __name__ == "__main__":
-    PARSER = argparse.ArgumentParser()
-    PARSER.add_argument("--force",
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force",
                         "-f",
                         dest="force_download",
                         action="store_true",
                         help="force check/download all shows")
-    PARSER.add_argument("--set-all-downloaded",
+    parser.add_argument("--set-all-downloaded",
                         "-s",
                         dest="set_all_dl",
                         action="store_true",
                         help="sets all shows as downloaded today")
-    ARGS = PARSER.parse_args()
+    args = parser.parse_args()
     schedule_data = parse_json_schedule()
     sheduled_shows = []
     for show_data in schedule_data:
@@ -230,28 +261,28 @@ if __name__ == "__main__":
         if not sheduled_show.disabled:
             sheduled_shows.append(sheduled_show)
         else:
-            pfcs(f"show o[{sheduled_show.name}] is disabled, skipping...")
+            log(fcs(f"show o[{sheduled_show.name}] is disabled, skipping..."))
     if not sheduled_shows:
         print("no shows to process.. exiting.")
         sys.exit(1)
-    if ARGS.set_all_dl:
+    if args.set_all_dl:
         for show in sheduled_shows:
             if show.should_download(show=False):
                 show.downloaded_today = True
-                print(f"setting {show.name} as downloaded today")
-    if ARGS.force_download:
+                log(f"setting i[{show.name}] as downloaded today")
+    if args.force_download:
         for show in sheduled_shows:
             show.download(force=True)
     weekday = today_weekday()
-    pfcs(f"today is b[{Day(weekday).name}]")
+    log(fcs(f"today is b[{Day(weekday).name}]"))
     while True:
         if weekday != today_weekday():
-            print("new day, resetting all show \"downloaded\" flags")
+            log("new day, resetting all show \"downloaded\" flags")
             for show in sheduled_shows:
                 show.reset_downloaded_today()
             weekday = today_weekday()
-            pfcs(f"today is b[{Day(weekday).name}]")
-        print(f"{get_now_color_str()}: checking shows...")
+            log(fcs(f"today is b[{Day(weekday).name}]"))
+        log("checking shows...")
         sleep_to_next_airdate = True
         for show in sheduled_shows:
             show.download()
@@ -260,14 +291,14 @@ if __name__ == "__main__":
         sleep_time = None
         name = None
         sleep_time_delta = None
-        pfcs(f"d[{'=' * 52}]")
+        print_seperator()
         if sleep_to_next_airdate:
             for show in sheduled_shows:
                 airtime = show.shortest_airtime()
                 if airtime < 0:
                     if show.should_download():
-                        pfcs(f"w[warning] {show.name} seems has not "
-                             f"been flagged as downloaded today..")
+                        log(fcs(f"w[warning] {show.name} seems has not "
+                                f"been flagged as downloaded today.."))
                     continue
                 elif sleep_time is None:
                     sleep_time = airtime
@@ -282,11 +313,14 @@ if __name__ == "__main__":
             wake_date_str = date_to_time_str(wake_date)
             if wake_date.weekday() != weekday:
                 wake_date_str = date_to_full_str(wake_date)
-            print(f"{get_now_color_str()}: ", end="")
-            pfcs(f"sleeping p[{sleep_time_delta}] (to {wake_date_str})\n"
-                 f"next show is b[{name}]")
+            log(fcs(f"sleeping p[{sleep_time_delta}] (to {wake_date_str})",
+                    f"next show is b[{name}]"))
         else:
             sleep_time = 60 * 5  # try again in 5 minutes, show has failed dl
             sleep_time_delta = timedelta(seconds=sleep_time)
-            pfcs(f"sleeping p[{sleep_time_delta}]")
+            log(fcs(f"sleeping p[{sleep_time_delta}]"))
         sleep(sleep_time)
+
+
+if __name__ == "__main__":
+    main()
