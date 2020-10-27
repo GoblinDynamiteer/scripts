@@ -269,7 +269,7 @@ def main():
         for show in sheduled_shows:
             if show.should_download(show=False):
                 show.downloaded_today = True
-                log(f"setting i[{show.name}] as downloaded today")
+                log(fcs(f"setting i[{show.name}] as downloaded today"))
     if args.force_download:
         for show in sheduled_shows:
             show.download(force=True)
