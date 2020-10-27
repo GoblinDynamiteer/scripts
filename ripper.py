@@ -69,6 +69,14 @@ class SubRipper():
         self.log(fcs(f"using filename p[{self.filename}]"))
         self.srt_index = 1
 
+    @staticmethod
+    def vid_file_has_subs(video_file_path):
+        video_file_path = Path(video_file_path)
+        for ext in [".vtt", ".srt"]:
+            if video_file_path.with_suffix(ext).is_file:
+                return video_file_path.with_suffix(ext)
+        return False
+
     def determine_file_name(self):
         dest_path = Path(self.video_file_path)
         file_ext = dest_path.suffix
