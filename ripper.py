@@ -50,6 +50,12 @@ class YoutubeDLFormats(Enum):
     WorstVideo = "worstvideo"
     BestViaplay = "bestvideo+bestaudio/best"
 
+    @staticmethod
+    def preferred_format(url):
+        if any(x in url for x in ["dplay", "viafree"]):
+            return YoutubeDLFormats.BestMP4M4A
+        return YoutubeDLFormats.Best
+
 
 class SubRipper():
     SIM_STR = f"i[{SIM_STR}] o[SUBDL]"
@@ -337,7 +343,15 @@ class PlayRipperYoutubeDl():
 
     def retrieve_info(self):
         self.log("attempting to retrieve video info using youtube-dl...")
-        for vid_format in YoutubeDLFormats:
+        formats = [f for f in YoutubeDLFormats]
+        preferred = YoutubeDLFormats.preferred_format(self.url)
+        if preferred is not None:
+            self.log(
+                fcs(f"trying preferred format first: p<{preferred.value}>",
+                    format_chars=["<", ">"]))
+            formats.remove(preferred)
+            formats.insert(0, preferred)
+        for vid_format in formats:
             self.log(f"trying format: {vid_format.value}")
             self.options["format"] = vid_format.value
             self.format = vid_format
