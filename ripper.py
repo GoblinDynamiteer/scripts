@@ -79,7 +79,7 @@ class SubRipper():
     def vid_file_has_subs(video_file_path):
         video_file_path = Path(video_file_path)
         for ext in [".vtt", ".srt"]:
-            if video_file_path.with_suffix(ext).is_file:
+            if video_file_path.with_suffix(ext).is_file():
                 return video_file_path.with_suffix(ext)
         return False
 
