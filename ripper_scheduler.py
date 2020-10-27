@@ -313,7 +313,7 @@ def main():
             wake_date_str = date_to_time_str(wake_date)
             if wake_date.weekday() != weekday:
                 wake_date_str = date_to_full_str(wake_date)
-            log(fcs(f"sleeping p[{sleep_time_delta}] (to {wake_date_str})",
+            log(fcs(f"sleeping p[{sleep_time_delta}] (to {wake_date_str}) - "
                     f"next show is b[{name}]"))
         else:
             sleep_time = 60 * 5  # try again in 5 minutes, show has failed dl
