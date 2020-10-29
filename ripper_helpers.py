@@ -344,7 +344,7 @@ class ViafreeEpisodeData(EpisodeData):
             sub_url = res.json()["embedded"]["subtitles"][0]["link"]["href"]
             self.log(fcs("got subtitle url"), fcs(f"i[{sub_url}]"))
             self.sub_url = sub_url
-        except KeyError as error:
+        except (KeyError, IndexError) as error:
             self.log(fcs("failed to retrieve subtitle url from:"),
                      fcs(f"o[{stream_url}]"))
             return ""
