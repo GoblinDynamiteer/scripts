@@ -123,7 +123,7 @@ def now_timestamp() -> int:
 
 def video_extensions() -> list:
     "Get a list of used video file extensions"
-    return ['.mkv', '.avi', '.mp4']
+    return ['.mkv', '.avi', '.mp4', '.flv']
 
 
 def date_str_to_timestamp(string, date_format=None) -> int:
