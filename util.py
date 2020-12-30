@@ -77,6 +77,8 @@ def dirname_of_file(file_path):
 
 def filename_of_path(file_path):
     "Gets just the filename of a full part"
+    if isinstance(file_path, Path):
+        return file_path.name
     _, tail = ntpath.split(file_path)
     return tail or None
 
