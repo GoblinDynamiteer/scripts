@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 
 import argparse
-from enum import IntEnum
-from pathlib import Path
 import sys
+from enum import IntEnum, Enum
+from pathlib import Path
+import operator
 
+import requests
+from bs4 import BeautifulSoup
+
+import config
 import run
+import util
 import util_movie
 import util_tv
-import util
-from printing import cstr, pcstr, print_line, pfcs
-import config
+from printing import cstr, pcstr, pfcs, print_line, fcs
 
 
 class SubtitleMediaType(IntEnum):
@@ -23,6 +27,7 @@ class Language(IntEnum):
     English = 0
     Swedish = 1
     Unknown = 2
+    Other = 3
 
 
 class Subtitle():
@@ -87,6 +92,196 @@ class Subtitle():
         return self.matching_media[0][1]
 
 
+class SubSceneSubtitle(util.BaseLog):
+
+    class SpanIndex(Enum):
+        Language = 0
+        Title = 1
+
+    def __init__(self, soup, release_str, verbose=False):
+        super().__init__(verbose)
+        self.set_log_prefix("SUB_RESULT")
+        self.soup = soup
+        self.release = release_str
+        self.title = None
+        self.url = None
+        self.language = Language.Unknown
+        self.parse_ok = True
+        self.similarity = None
+        try:
+            self._parse()
+            title = self.title.replace(" ", ".")
+            self.similarity = util.check_string_similarity(release_str, title)
+            if release_str in title:
+                self.similarity += 0.2  # boost
+        except Exception as error:
+            self.warn("parsing failed!")
+            self.parse_ok = False
+
+    def _parse(self):
+        spans = self.soup.find("td", "a1").a.find_all("span")
+        self.title = spans[self.SpanIndex.Title.value].text.strip()
+        lang_str = spans[self.SpanIndex.Language.value].text.strip()
+        if lang_str.lower() in ["english", "swedish"]:
+            self.language = Language.Swedish if "swedish" in lang_str.lower() else Language.English
+        else:
+            self.language = Language.Other
+        self.url = self.soup.find("td", "a1").a.get("href")
+
+    def print(self):
+        print("Title:", cstr(self.title, "lgreen"))
+        print("Lang:", cstr(self.language.name, "lgreen"))
+        print("URL: ", cstr(self.url, "lgreen"))
+        sim_color = "lgreen"
+        if self.similarity < 1:
+            sim_color = "lyellow"
+        elif self.similarity < 0.7:
+            sim_color = "orange"
+        elif self.similarity < 0.5:
+            sim_color = "red"
+        print("Similarity:", cstr(self.similarity, sim_color))
+
+
+class SubSceneSearchResult(util.BaseLog):
+    BASE_URL = r"https://subscene.com"
+
+    class MatchType(Enum):
+        Exact = "Exact"
+        TV = "TV-Series"
+        Close = "Close"
+        Popular = "Popular"
+
+    def __init__(self, result_text, release_str, title, year, verbose=False):
+        super().__init__(verbose)
+        self.verbose = verbose
+        self.set_log_prefix("RESULT")
+        self.release = release_str
+        self.title = title
+        self.year = year
+        self.log("init")
+        self.soup = BeautifulSoup(result_text, "html.parser")
+        self.best_match_url = self._parse_best_match_url()
+        self.subs = []
+        if not self.best_match_url:
+            self.error(f"could not get url for {title}")
+        else:
+            self.subs = self._parse_subs()
+
+    def get_best(self, language):
+        for sub in self.subs:
+            if sub.language == language:
+                return sub
+        return None
+
+    def _parse_subs(self):
+        url = self.BASE_URL + self.best_match_url
+        res = requests.get(url)
+        if res.status_code != 200:
+            self.error(f"got status code {res.status_code} for {url}")
+            return []
+        soup = BeautifulSoup(res.text, "html.parser")
+        rows = soup.find("table").tbody.find_all("tr")
+        ret = []
+        for row in rows:
+            if row.td.a is not None:
+                sub = SubSceneSubtitle(row, self.release, verbose=self.verbose)
+                if not sub.parse_ok:
+                    continue
+                if sub.language == Language.Swedish or sub.language == Language.English:
+                    ret.append(sub)
+        ret = sorted(ret, key=operator.attrgetter("similarity"), reverse=True)
+        return ret
+
+    def _parse_best_match_url(self):
+        match_types = self.soup.find("div", "search-result").find_all("h2")
+        for match_type in match_types:
+            try:
+                mt = self.MatchType(match_type.text)
+                self.log(f"got MatchType: {mt.name}")
+                if mt == self.MatchType.Exact:
+                    items = match_type.findNext("ul").findAll("a")
+                    return self._get_best_match_url(items)
+            except Exception as error:
+                self.log(f"could not parse MatchType:"
+                         f" {cstr(match_type.text, 'red')}")
+        return 1
+
+    def _get_best_match_url(self, items: list):
+        url = None
+        if not items:
+            self.warn("no matches")
+            return url
+        if len(items) == 1:
+            item = items[0]
+            url = item.get("href")
+            self.log(f"only one match: \"{item.text}\"")
+        elif not self.year:
+            # TODO: try to match title
+            self.warn(f"year is not dermined! "
+                      f"using first match: \"{item.text}\"")
+            item = items[0]
+            url = item.get("href")
+        else:
+            for item in items:
+                if str(self.year) in item.text:
+                    url = item.get("href")
+                    self.log(f"found year {cstr(self.year, 'lgreen')} "
+                             f"in \"{item.text}\"")
+                    break
+            else:
+                item = items[0]
+                self.warn(f"could not find {cstr(self.year, 'orange')} in matches! "
+                          f"using first: \"{item.text}\"")
+        self.log(f"using url: {cstr(url, 'lgreen')}")
+        return url
+
+
+class SubScene(util.BaseLog):
+    BASE_URL = r"https://subscene.com/"
+    URL_SEARCH = r"https://subscene.com/subtitles/searchbytitle"
+
+    def __init__(self, search_str=None, verbose=True):
+        super().__init__(verbose)
+        self.set_log_prefix("SUBSCENE")
+        self.search_str = search_str
+        self.movie_title = util_movie.determine_title(search_str)
+        self.movie_year = util_movie.parse_year(search_str)
+        self.verbose = verbose
+        self.log("init")
+        if not util_movie.is_movie(search_str):
+            raise ValueError("Search string has to be a movie"
+                             "release (for now)")
+            # TODO: handle tv episodes...
+        self.log(f"parsed title: {self.movie_title}")
+        if self.movie_year:
+            self.log(f"parsed year: {self.movie_year}")
+        else:
+            self.log_warn("could not parse year!")
+        self.result = None
+        if self.search_str is not None:
+            self.result = self.search()
+
+    def search(self):
+        if not self.search_str:
+            self.log("no string set for searching...")
+            return []
+        self.log(f"searching for: {cstr(self.search_str, 'orange')}")
+        return self._search_get_result()
+
+    def _search_get_result(self):
+        data = {"query": self.movie_title}
+        res = requests.post(self.URL_SEARCH, data=data)
+        if res.status_code != 200:
+            self.log(f"failed search with query {cstr(data, 'orange')} "
+                     f"got response: {cstr(res.status_code, 'red')}")
+            return []
+        return SubSceneSearchResult(res.text,
+                                    self.search_str,
+                                    self.movie_title,
+                                    self.movie_year,
+                                    verbose=self.verbose)
+
+
 def find_srt_filenames_in_zip(zip_file_path):
     command = f"unzip -l {zip_file_path}"
     srt_files = []
@@ -96,7 +291,7 @@ def find_srt_filenames_in_zip(zip_file_path):
     return srt_files
 
 
-def handle_srt(srt_file, auto_move = False):
+def handle_srt(srt_file, auto_move=False):
     subtitle = Subtitle(srt_file)
     print(f"processed file: {cstr(subtitle.filename, 154)}")
     print(f" - guessed match: {cstr(subtitle.best_match(), 'lgreen')}")
@@ -126,32 +321,49 @@ def handle_srt(srt_file, auto_move = False):
     pcstr("moved file!", 'lgreen')
 
 
-if __name__ == "__main__":
-    PARSER = argparse.ArgumentParser()
-    PARSER.add_argument("file",
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("file",
                         nargs="?",
                         default="*.srt")
-    PARSER.add_argument("--yes",
+    parser.add_argument("--yes",
                         "-y",
                         action="store_true",
                         dest="auto_move")
-    ARGS = PARSER.parse_args()
+    parser.add_argument("--search",
+                        "-s",
+                        default=None,
+                        dest="search_subscene")
+    parser.add_argument("--verbose",
+                        "-v",
+                        action="store_true",
+                        dest="verbose")
+    return parser.parse_args()
+
+
+def main():
+    args = get_args()
     srt_filenames = []
-    if "*" in ARGS.file:
-        items = list(Path().glob(ARGS.file))
+    if args.search_subscene is not None:
+        if args.verbose:
+            print("searching subscene")
+        subscene = SubScene(args.search_subscene)
+        return 0
+    if "*" in args.file:
+        items = list(Path().glob(args.file))
         if items:
-            pfcs(f"found i[{len(items)}] item matching i[{ARGS.file}]")
+            pfcs(f"found i[{len(items)}] item matching i[{args.file}]")
         for num, item in enumerate(items, 1):
             if len(items) > 1:
                 pfcs(f"processing item i[{num}] of {len(items)}")
             if item.suffix.endswith("srt"):
-                handle_srt(item.name, auto_move=ARGS.auto_move)
+                handle_srt(item.name, auto_move=args.auto_move)
             else:
                 pfcs(f"skipping item w[{item.name}], not srt")
             print_line()
         print("done!")
         sys.exit(0)
-    file_path = Path(ARGS.file)
+    file_path = Path(args.file)
     if not file_path.exists():
         print("passed file does not exists")
         exit()
@@ -169,4 +381,8 @@ if __name__ == "__main__":
     else:
         print("no subtitle file to process..")
         exit()
-    [handle_srt(srt, auto_move=ARGS.auto_move) for srt in srt_filenames]
+    [handle_srt(srt, auto_move=args.auto_move) for srt in srt_filenames]
+
+
+if __name__ == "__main__":
+    main()
