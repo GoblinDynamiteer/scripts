@@ -287,7 +287,7 @@ class SubSceneSearchResult(util.BaseLog):
 class SubScene(util.BaseLog):
     URL_SEARCH = r"https://subscene.com/subtitles/searchbytitle"
 
-    def __init__(self, search_str=None, verbose=True):
+    def __init__(self, search_str=None, verbose=False):
         super().__init__(verbose)
         self.set_log_prefix("SUBSCENE")
         self.search_str = search_str
@@ -394,7 +394,7 @@ def main():
     if args.search_subscene is not None:
         if args.verbose:
             print("searching subscene")
-        subscene = SubScene(args.search_subscene)
+        subscene = SubScene(args.search_subscene, verbose=args.verbose)
         for lang in [Language.English, Language.Swedish]:
             sub = subscene.result.get_best(lang)
             if sub:
