@@ -385,6 +385,12 @@ def get_args():
                         "-v",
                         action="store_true",
                         dest="verbose")
+    parser.add_argument("--language",
+                        "-l",
+                        "--lang",
+                        default=None,
+                        choices=["en", "sv"],
+                        dest="lang")
     return parser.parse_args()
 
 
@@ -396,11 +402,18 @@ def main():
             print("searching subscene")
         subscene = SubScene(args.search_subscene, verbose=args.verbose)
         for lang in [Language.English, Language.Swedish]:
+            if args.lang is not None:
+                if args.lang == "en" and lang != Language.English:
+                    continue
+                if args.lang == "sv" and lang != Language.Swedish:
+                    continue
             sub = subscene.result.get_best(lang)
             if sub:
                 srt_path = sub.download_and_unzip()
                 if srt_path:
                     handle_srt(srt_path)
+            else:
+                print(f"could not find any subs for language: {lang}")
         return 0
     if "*" in args.file:
         items = list(Path().glob(args.file))
