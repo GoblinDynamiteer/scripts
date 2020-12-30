@@ -5,6 +5,8 @@ import sys
 from enum import IntEnum, Enum
 from pathlib import Path
 import operator
+import tempfile
+import zipfile
 
 import requests
 from bs4 import BeautifulSoup
@@ -39,7 +41,7 @@ class Subtitle():
         self.language = Language.Unknown
         self.contents = []
 
-        with open(self.filename, encoding='latin1', errors='replace') as subtitle_file:
+        with open(self.path, encoding='latin1', errors='replace') as subtitle_file:
             self.contents = subtitle_file.read()
 
         self._determine_type()
@@ -93,6 +95,7 @@ class Subtitle():
 
 
 class SubSceneSubtitle(util.BaseLog):
+    BASE_URL = r"https://subscene.com"
 
     class SpanIndex(Enum):
         Language = 0
@@ -103,11 +106,14 @@ class SubSceneSubtitle(util.BaseLog):
         self.set_log_prefix("SUB_RESULT")
         self.soup = soup
         self.release = release_str
+        self.verbose = verbose
         self.title = None
         self.url = None
+        self.url_zip = None
         self.language = Language.Unknown
         self.parse_ok = True
         self.similarity = None
+        self.hearing_impaired = False
         try:
             self._parse()
             title = self.title.replace(" ", ".")
@@ -126,7 +132,47 @@ class SubSceneSubtitle(util.BaseLog):
             self.language = Language.Swedish if "swedish" in lang_str.lower() else Language.English
         else:
             self.language = Language.Other
-        self.url = self.soup.find("td", "a1").a.get("href")
+        self.url = self.BASE_URL + self.soup.find("td", "a1").a.get("href")
+        if self.language == Language.English:
+            self.hearing_impaired = self.soup.find("td", "a41") is not None
+
+    def download_and_unzip(self, file_dest=None):
+        if file_dest is None:
+            if self.language == Language.Swedish:
+                ext = ".sv.zip"
+            elif self.language == Language.English:
+                ext = ".en.zip"
+            else:
+                ext = ".zip"
+            file_dest = Path(tempfile.gettempdir()) / (self.release + ext)
+        res = requests.get(self.url)
+        soup = BeautifulSoup(res.text, "html.parser")
+        zip_url = soup.find("div", "download").a.get("href")
+        if self.url_zip is None:
+            self.url_zip = self.BASE_URL + zip_url
+        self.log("downloading", info_str_line2=cstr(self.url_zip, "orange"))
+        if not run.wget(self.url_zip, file_dest, debug_print=self.verbose):
+            self.error("download failed!")
+            return None
+        self.log("downloaded to", cstr(file_dest, "lgreen"))
+        extracted_srts = []
+        with zipfile.ZipFile(file_dest) as zf:
+            for i in zf.infolist():
+                if i.filename.endswith(".srt"):
+                    extracted_srts.append(zf.extract(
+                        i, path=tempfile.gettempdir()))
+        if len(extracted_srts) > 1:
+            self.warn("found more than one srt in zip! using first")
+        elif not extracted_srts:
+            self.warn("could not extract any srt files!")
+            return None
+        extracted = Path(extracted_srts[0])
+        self.log(f"extracted file:", cstr(extracted, "lgreen"))
+        dest = file_dest.with_suffix(".srt")
+        if not run.rename_file(extracted, dest):
+            self.error("failed to rename extracted file!")
+        self.log(f"renamed to:", cstr(dest, "lgreen"))
+        return dest
 
     def print(self):
         print("Title:", cstr(self.title, "lgreen"))
@@ -167,8 +213,10 @@ class SubSceneSearchResult(util.BaseLog):
         else:
             self.subs = self._parse_subs()
 
-    def get_best(self, language):
+    def get_best(self, language, skip_hi=True):
         for sub in self.subs:
+            if sub.hearing_impaired and skip_hi:
+                continue
             if sub.language == language:
                 return sub
         return None
@@ -237,7 +285,6 @@ class SubSceneSearchResult(util.BaseLog):
 
 
 class SubScene(util.BaseLog):
-    BASE_URL = r"https://subscene.com/"
     URL_SEARCH = r"https://subscene.com/subtitles/searchbytitle"
 
     def __init__(self, search_str=None, verbose=True):
@@ -274,7 +321,7 @@ class SubScene(util.BaseLog):
         if res.status_code != 200:
             self.log(f"failed search with query {cstr(data, 'orange')} "
                      f"got response: {cstr(res.status_code, 'red')}")
-            return []
+            return None
         return SubSceneSearchResult(res.text,
                                     self.search_str,
                                     self.movie_title,
@@ -348,6 +395,12 @@ def main():
         if args.verbose:
             print("searching subscene")
         subscene = SubScene(args.search_subscene)
+        for lang in [Language.English, Language.Swedish]:
+            sub = subscene.result.get_best(lang)
+            if sub:
+                srt_path = sub.download_and_unzip()
+                if srt_path:
+                    handle_srt(srt_path)
         return 0
     if "*" in args.file:
         items = list(Path().glob(args.file))
