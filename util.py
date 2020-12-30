@@ -40,6 +40,22 @@ class BaseLog():
             spaces = " " * len(f"({self.log_prefix}) ")
             print(f"{spaces}{info_str_line2}")
 
+    def log_warn(self, warn_str):
+        if not self.print_log:
+            return
+        print(fcs(f"i[({self.log_prefix})]"), fcs("w[warning]"), warn_str)
+
+    def warn(self, warn_str):
+        self.log_warn(warn_str)
+
+    def log_error(self, err_str):
+        if not self.print_log:
+            return
+        print(fcs(f"i[({self.log_prefix})]"), fcs("e[error]"), err_str)
+
+    def error(self, err_str):
+        self.log_error(err_str)
+
 
 class Settings(Enum):
     "Various settings for the utils in this file"
