@@ -11,6 +11,8 @@ from datetime import datetime as DateTime
 from enum import Enum
 from pathlib import Path
 
+from printing import fcs
+
 
 class Singleton(type):
     instances = {}
@@ -20,6 +22,23 @@ class Singleton(type):
             class_type.instances[class_type] = super(
                 Singleton, class_type).__call__(*args, **kwargs)
         return class_type.instances[class_type]
+
+
+class BaseLog():
+    def __init__(self, verbose=False):
+        self.print_log = verbose
+        self.log_prefix = "LOG"
+
+    def set_log_prefix(self, log_prefix: str):
+        self.log_prefix = log_prefix.upper()
+
+    def log(self, info_str, info_str_line2=""):
+        if not self.print_log:
+            return
+        print(fcs(f"i[({self.log_prefix})]"), info_str)
+        if info_str_line2:
+            spaces = " " * len(f"({self.log_prefix}) ")
+            print(f"{spaces}{info_str_line2}")
 
 
 class Settings(Enum):
