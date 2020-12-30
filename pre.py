@@ -14,6 +14,8 @@ import requests
 import config
 from vid import VideoFileMetadata
 
+from printing import cstr, print_line
+
 CFG = config.ConfigurationManager()
 
 
@@ -62,6 +64,17 @@ def pre_search_from_file(file_path: Path, use_replacement_list=True, use_metadat
     return ""
 
 
+def print_rename_info(src, dst, line=False):
+    src_c = cstr(str(src), "orange")
+    dst_c = cstr(str(dst), "lgreen")
+    print("renamed:")
+    print(" " * 5, src_c,)
+    print(cstr("--->", "grey"))
+    print(" " * 5, dst_c)
+    if line:
+        print_line()
+
+
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser(description='Pre Search')
     PARSER.add_argument('query', type=str, help='Search query')
@@ -85,11 +98,13 @@ if __name__ == "__main__":
             ITEMS = ARGS.query.split(",")
         else:
             ITEMS = [ARGS.query]
+        count = len(ITEMS)
         for item in ITEMS:
             FILE_NAME = Path(item).resolve()
             if ARGS.use_parent:
                 sys.exit()
-            RET = pre_search_from_file(FILE_NAME, use_metadata=ARGS.use_metadata)
+            RET = pre_search_from_file(
+                FILE_NAME, use_metadata=ARGS.use_metadata)
             if not RET:
                 if ARGS.rename:
                     print(
@@ -107,8 +122,9 @@ if __name__ == "__main__":
                 NEW_FILE_NAME = RET
                 if not RET.endswith(FILE_NAME.suffix):
                     NEW_FILE_NAME = RET + FILE_NAME.suffix
-                print("renaming: " + str(FILE_NAME) + " -> " + NEW_FILE_NAME)
                 FILE_NAME.rename(NEW_FILE_NAME)
+                print_rename_info(FILE_NAME, NEW_FILE_NAME,
+                                  line=count > 1)
     else:
         RET = pre_search(ARGS.query)
         if not RET:
