@@ -237,6 +237,13 @@ class SubSceneSearchResult(util.BaseLog):
                     continue
                 if sub.language == Language.Swedish or sub.language == Language.English:
                     ret.append(sub)
+        if not ret:
+            self.warn("no subtitles found!")
+            return ret
+        if self.verbose:
+            for lang in [Language.Swedish, Language.English]:
+                count = len([x for x in ret if x.language == lang])
+                self.log(f"found {cstr(count, 'lgreen')} subs for {lang.name}")
         ret = sorted(ret, key=operator.attrgetter("similarity"), reverse=True)
         return ret
 
@@ -252,7 +259,7 @@ class SubSceneSearchResult(util.BaseLog):
             except Exception as error:
                 self.log(f"could not parse MatchType:"
                          f" {cstr(match_type.text, 'red')}")
-        return 1
+        return None
 
     def _get_best_match_url(self, items: list):
         url = None
