@@ -52,7 +52,7 @@ class YoutubeDLFormats(Enum):
 
     @staticmethod
     def preferred_format(url):
-        if any(x in url for x in ["dplay", "viafree"]):
+        if any(x in url for x in ["discoveryplus", "viafree"]):
             return YoutubeDLFormats.BestMP4M4A
         return YoutubeDLFormats.Best
 
@@ -264,8 +264,8 @@ class PlayRipperYoutubeDl():
         self.filename = ""
         self.download_succeeded = False
 
-        if "dplay" in self.url:
-            self.log(fcs("loading o[cookie.txt] for dplay"))
+        if "discoveryplus" in self.url:
+            self.log(fcs("loading o[cookie.txt] for discoveryplus"))
             self.options["cookiefile"] = ConfigurationManager().path(
                 "cookies_txt")
 

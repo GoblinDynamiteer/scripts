@@ -215,7 +215,7 @@ class Tv4PlayEpisodeData(EpisodeData):
 
 
 class DPlayEpisodeData(EpisodeData):
-    URL_PREFIX = r"https://www.dplay.se"
+    URL_PREFIX = r"https://www.discoveryplus.se"
 
     def __init__(self, episode_data={}, show_data={}, premium=False, verbose=False):
         super().__init__(episode_data, verbose)
@@ -390,7 +390,7 @@ class EpisodeLister():
     def get_lister(url, verbose_logging=False):
         matches = {"viafree.se": ViafreeEpisodeLister,
                    "tv4play.se": Tv4PlayEpisodeLister,
-                   "dplay.se": DPlayEpisodeLister,
+                   "discoveryplus.se": DPlayEpisodeLister,
                    "svtplay.se": SVTPlayEpisodeLister}
         for site, lister in matches.items():
             if site in url:
@@ -561,13 +561,13 @@ class Tv4PlayEpisodeLister(EpisodeLister):
 
 
 class DPlayEpisodeLister(EpisodeLister):
-    API_URL = "https://disco-api.dplay.se"
+    API_URL = "https://disco-api.discoveryplus.se"
 
     def __init__(self, url, verbose=False):
         super().__init__(url, verbose)
         self.set_log_prefix("DPLAY_LISTER")
-        if not "dplay.se" in url:
-            print("cannot handle non-dplay.se urls!")
+        if not "discoveryplus.se" in url:
+            print("cannot handle non discoveryplus.se urls!")
         if not self.check_token():
             print("failed to get session for dplay")
         else:
@@ -577,6 +577,7 @@ class DPlayEpisodeLister(EpisodeLister):
         url = f"{self.API_URL}/users/me/favorites?include=default"
         SessionSingleton().load_cookies_txt()
         res = SessionSingleton().get(url)
+        self.log(f"got ret code: {res.status_code} for url", url)
         return res.status_code < 400
 
     def is_episode_data_premium(self, data):
