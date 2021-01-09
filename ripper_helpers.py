@@ -32,6 +32,7 @@ class SessionSingleton(metaclass=Singleton):
         self.init_session()
         if not file_path:
             file_path = ConfigurationManager().path("cookies_txt")
+        # NOTE use: https://addons.mozilla.org/en-US/firefox/addon/export-cookies-txt/
         jar = MozillaCookieJar(file_path)
         jar.load(ignore_discard=True, ignore_expires=True)
         self.SESSION.cookies.update(jar)
