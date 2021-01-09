@@ -13,15 +13,38 @@ from argparse import ArgumentParser
 from config import ConfigurationManager
 from enum import Enum
 
+
 class Hue(Enum):
     FULL_RED = 0xffff
     FULL_GREEN = 0x639c
     FULL_BLUE = 0xb748
 
+
+class Color():
+    def __init__(self, bri, hue, sat):
+        self.bri = bri
+        self.hue = hue
+        self.sat = sat
+
+
+COLORS = {
+    "green": Color(bri=214, hue=24469, sat=234),
+    "teal": Color(bri=214, hue=42956, sat=254),
+    "blue": Color(bri=254, hue=45643, sat=254),
+    "purple": Color(bri=254, hue=49968, sat=221),
+    "yellow": Color(bri=214, hue=9726, sat=254),
+    "red": Color(bri=214, hue=65051, sat=254),
+    "orange": Color(bri=214, hue=4734, sat=254),
+    "pink": Color(bri=214, hue=58710, sat=166),
+    "grey": Color(bri=38, hue=41484, sat=50),
+    "white": Color(bri=240, hue=41484, sat=50)
+}
+
 MAX_SATURATION = 254
 MAX_HUE = 0xffff
 MAX_BRIGHTNESS = 254
 MIN_BRIGHTNESS = 1
+
 
 class LightBulb():
     def __init__(self, bridge, light_id, json_data):
@@ -43,18 +66,29 @@ class LightBulb():
         if state:
             self.on = state.get("on", False)
 
-    def print(self):
+    def print(self, only_color_info=False):
         print(f"id: {self.id} ({self.product_id})")
-        print("on:", self.on)
-        print(json.dumps(self.raw_data, indent=4))
+        if only_color_info:
+            state = self.raw_data.get("state", {})
+            string = " ".join(f"{x}: {state.get(x)}" for x in [
+                "bri", "hue", "sat"])
+            print(string)
+        else:
+            print("on:", self.on)
+            print(json.dumps(self.raw_data, indent=4))
         print("*" * 20)
 
     def set_state(self, state: bool):
         self.on = state
 
+    def set_color(self, color: Color):
+        self.set_hue(color.hue)
+        self.set_saturation(color.sat)
+        self.set_brightness(color.bri)
+
     def set_hue(self, hue):
         if isinstance(hue, int):
-            if hue < 0: 
+            if hue < 0:
                 hue = 0
             elif hue > MAX_HUE:
                 hue = MAX_HUE
@@ -76,7 +110,7 @@ class LightBulb():
             bri = MAX_BRIGHTNESS
         self.bri = bri
 
-    def run_color_cycler(self, transition_time=120): #TODO thread
+    def run_color_cycler(self, transition_time=120):  # TODO thread
         new_hue = random.randint(0, 0xffff)
         self.sat = MAX_SATURATION
         self.hue = new_hue
@@ -91,7 +125,6 @@ class LightBulb():
             self.sat = random.randint(
                 int(MAX_SATURATION * 0.8), MAX_SATURATION + 1)
             self.hue = new_hue
-
 
     def update(self, transition_time):
         body = {"on": self.on}
@@ -160,6 +193,12 @@ def gen_args():
                         type=int,
                         dest="sat",
                         default=None)
+    parser.add_argument("--color",
+                        "-c",
+                        type=str,
+                        choices=[x for x in COLORS],
+                        dest="color",
+                        default=None)
     parser.add_argument("--brightness",
                         "-b",
                         type=int,
@@ -174,6 +213,12 @@ def gen_args():
     parser.add_argument("--list",
                         action="store_true",
                         dest="list_lights")
+    parser.add_argument("--info",
+                        action="store_true",
+                        dest="print_info")
+    parser.add_argument("--info-color",
+                        action="store_true",
+                        dest="print_color")
     parser.add_argument("--cycler",
                         action="store_true",
                         dest="run_cycler")
@@ -187,7 +232,11 @@ def main():
     bridge = Bridge(hue_ip, key)
     for bulb in bridge.lights:
         if bulb.id == args.id:
-            need_update = False 
+            if args.print_info:
+                bulb.print()
+            if args.print_color:
+                bulb.print(only_color_info=True)
+            need_update = False
             if args.state is not None:
                 bulb.set_state(bool(args.state))
                 need_update = True
@@ -199,6 +248,9 @@ def main():
                 need_update = True
             if args.bri is not None:
                 bulb.set_brightness(args.bri)
+                need_update = True
+            if args.color is not None:
+                bulb.set_color(COLORS[args.color])
                 need_update = True
             if need_update:
                 bulb.update(args.delay)
