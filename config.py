@@ -23,6 +23,7 @@ class SettingKeys(Enum):
     PATH_RESTORE = "path_rest"
     PATH_SCRIPTS = "path_scripts"
     PATH_COOKIES_TXT = "path_cookies_txt"
+    PATCH_ECONOMY_CSV = "path_economy_csv"
     NAS_SHARE_MOUNT_PATH = "ds_mount_path"
     SMB_CREDENTIALS_REGULAR = "smb_credentials_reg"
     SMB_CREDENTIALS_DRB = "smb_credentials_drb"
