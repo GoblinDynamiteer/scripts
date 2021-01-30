@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.8
 
 "Unit tests"
 
@@ -7,6 +7,7 @@ import platform
 import string
 import tempfile
 import unittest
+import config
 from pathlib import Path
 
 import db_json
@@ -16,6 +17,53 @@ import tvmaze
 import util
 import util_movie
 import util_tv
+
+
+class TestConfig(unittest.TestCase):
+    def setUp(self):
+        self.cm = config.ConfigurationManager()
+        self.cm.set_verbose(True)
+
+    def test_custom_file(self):
+        with tempfile.NamedTemporaryFile(mode="w+", delete=True) as cf:
+            val = "test_value_123"
+            key = "test_key"
+            lines = ["[default]\n", f"{key}={val}\n"]
+            cf.writelines(lines)
+            cf.flush()
+            self.cm.set_config_file(Path(cf.name))
+            self.assertEqual(val, self.cm.get(key))
+
+    def test_default_value(self):
+        with tempfile.NamedTemporaryFile(mode="w+", delete=True) as cf:
+            val = "test_value_123"
+            key = "test_key"
+            lines = ["[default]\n", f"{key}={val}\n"]
+            cf.writelines(lines)
+            cf.flush()
+            self.cm.set_config_file(Path(cf.name))
+            self.assertEqual(None, self.cm.get("none_existinging"))
+            self.assertEqual("hello", self.cm.get(
+                "none_existinging", default="hello"))
+
+    def test_convert(self):
+        with tempfile.NamedTemporaryFile(mode="w+", delete=True) as cf:
+            val = "123"
+            key_int = "test_int"
+            key_path = "test_path"
+            lines = ["[default]\n",
+                     f"{key_int}={val}\n"
+                     f"{key_path}={cf.name}"]
+            cf.writelines(lines)
+            cf.flush()
+            self.cm.set_config_file(Path(cf.name))
+            self.assertEqual(123, self.cm.get(key_int, convert=int))
+            self.assertEqual(Path(cf.name), self.cm.get(
+                key_path, convert=Path))
+
+    def tearDown(self):
+        self.cm.set_default_config_file()
+        self.cm.set_verbose(False)
 
 
 class TestUtilMovie(unittest.TestCase):
@@ -244,7 +292,7 @@ class TestLister(unittest.TestCase):
         self.assertEqual(obj.season, 1)
         self.assertEqual(obj.episode, 5)
 
-        arg = "tv firefly s04".split(" ") # wishful thinking...
+        arg = "tv firefly s04".split(" ")  # wishful thinking...
         lister_type = self.type.TVShowSeason
         obj = lister.ListerItemTVShow(arg, lister_type)
         self.assertEqual(obj.season, 4)
