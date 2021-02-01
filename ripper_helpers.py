@@ -231,7 +231,6 @@ class DPlayEpisodeData(EpisodeData):
         self.id = 0
         self.sub_url = ""
         self.sub_m3u_url = ""
-        self.print_log = False
         self.is_premium = premium
         try:
             self.show = show_data["data"]["attributes"]["name"]
@@ -624,7 +623,10 @@ class DPlayEpisodeLister(EpisodeLister):
             for data in res.json()["data"]:
                 is_premium = self.is_episode_data_premium(
                     data.get("attributes", {}))
-                obj = DPlayEpisodeData(data, show_data, premium=is_premium)
+                obj = DPlayEpisodeData(data,
+                                       show_data,
+                                       verbose=self.print_log,
+                                       premium=is_premium)
                 self.ep_list.append(obj)
         return super().get_episodes(revered_order, limit)
 
