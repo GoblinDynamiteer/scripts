@@ -217,6 +217,7 @@ class Tv4PlayEpisodeData(EpisodeData):
 
 class DPlayEpisodeData(EpisodeData):
     URL_PREFIX = r"https://www.discoveryplus.se"
+    API_URL = "https://disco-api.discoveryplus.se"
 
     def __init__(self, episode_data={}, show_data={}, premium=False, verbose=False):
         super().__init__(episode_data, verbose)
@@ -264,7 +265,7 @@ class DPlayEpisodeData(EpisodeData):
                      info_str_line2=fcs(f"p[{self.sub_m3u_url}]"))
         else:
             res = SessionSingleton().get(
-                f"https://disco-api.dplay.se/playback/videoPlaybackInfo/{self.id}")
+                f"{self.API_URL}/playback/videoPlaybackInfo/{self.id}")
             try:
                 hls_url = res.json()[
                     "data"]["attributes"]["streaming"]["hls"]["url"]
