@@ -8,10 +8,17 @@ from datetime import datetime
 import shutil
 
 import config
-from printing import print_line
+from printing import print_line, pfcs, fcs
 from util import BaseLog, now_timestamp
 
 DATE_FMT = r"%Y-%m-%d"
+
+
+def to_kr_str(value: int, color=True):
+    ret = f"{value:,}".replace(",", " ") + " kr"  # todo: better/correct way?
+    if color:
+        return fcs(f"i[{ret}]")
+    return ret
 
 
 class MainLog(BaseLog):
@@ -42,7 +49,7 @@ class Balance():
         prefix = ""
         if show_date:
             prefix = self.date.strftime(DATE_FMT) + ": "
-        print(prefix + str(self.value) + " kr")
+        print(prefix + to_kr_str(self.value))
 
 
 class Account():
@@ -105,9 +112,9 @@ class AccountList():
                 val = account.get_latest_balance().value
                 tot_bank += val
                 tot += val
-            print(f" {bank_str} total: {tot_bank} kr")
+            print(f" {bank_str} total: {to_kr_str(tot_bank)}")
             print_line()
-        print(f"total: {tot} kr")
+        print(f"total: {to_kr_str(tot)}")
 
 
 def get_args():
