@@ -51,7 +51,13 @@ def find_mkv_in_path(path):
     path = validate_path(path)
     if not path:
         return None
-    mkv_files = [f for f in path.glob("**/*.mkv") if "sample" not in f.name]
+    skip_list = ["Sample", "sample"]
+    found_files = path.glob("**/*.mkv")
+    mkv_files = []
+    for f in found_files:
+        if any([x in str(f) for x in skip_list]):
+            continue
+        mkv_files.append(f)
     if len(mkv_files) > 1:
         return None  # TODO: determine which file is valid
     try:
