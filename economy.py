@@ -14,11 +14,16 @@ from util import BaseLog, now_timestamp
 DATE_FMT = r"%Y-%m-%d"
 
 
-def to_kr_str(value: int, color=True):
-    ret = f"{value:,}".replace(",", " ") + " kr"  # todo: better/correct way?
+def to_kr_str(value: int, color=True, show_prefix=False):
+    ret = f"{value:,}".replace(",", " ") + " kr"
+    if show_prefix:
+        prefix = "+" if value >= 0 else ""
+    else:
+        prefix = ""
     if color:
-        return fcs(f"i[{ret}]")
-    return ret
+        format_char = "i" if value >= 0 else "r"
+        return fcs(f"{format_char}[{prefix}{ret}]")
+    return prefix + ret
 
 
 class MainLog(BaseLog):
@@ -45,11 +50,18 @@ class Balance():
         self.date = date
         self.value = value
 
-    def print(self, show_date=False):
-        prefix = ""
+    def print(self, show_date=True, end="\n"):
         if show_date:
-            prefix = self.date.strftime(DATE_FMT) + ": "
-        print(prefix + to_kr_str(self.value))
+            suffix = fcs(f" d[({self.date.strftime(DATE_FMT)})]")
+        else:
+            suffix = ""
+        print(to_kr_str(self.value) + suffix, end=end)
+
+    def print_change(self, other):
+        change = self.value - other.value
+        percentage = round(self.value / other.value * 100 - 100, 2)
+        print("->", to_kr_str(change, show_prefix=True), "since",
+              other.date.strftime(DATE_FMT), fcs(f"d[({percentage} %)]"))
 
 
 class Account():
@@ -61,13 +73,18 @@ class Account():
     def add_balance(self, date: datetime, balance: int):
         self.balance_history.append(Balance(date, balance))
 
-    def print(self):
+    def print(self, print_change=True):
         latest_balance = self.get_latest_balance()
+        first_balance = self.get_first_balance()
         if latest_balance is None:
             print(f"{self.bank}/{self.name} : N/A")
         else:
             print(f"{self.bank}/{self.name}: ", end="")
-            latest_balance.print()
+            if print_change and first_balance != latest_balance:
+                latest_balance.print(end="")
+                latest_balance.print_change(first_balance)
+            else:
+                latest_balance.print()
 
     def get_latest_balance(self):
         ret_bal = None
@@ -76,6 +93,16 @@ class Account():
                 ret_bal = bal
                 continue
             if ret_bal.date < bal.date:
+                ret_bal = bal
+        return ret_bal
+
+    def get_first_balance(self):
+        ret_bal = None
+        for bal in self.balance_history:
+            if ret_bal is None:
+                ret_bal = bal
+                continue
+            if ret_bal.date > bal.date:
                 ret_bal = bal
         return ret_bal
 
@@ -112,9 +139,9 @@ class AccountList():
                 val = account.get_latest_balance().value
                 tot_bank += val
                 tot += val
-            print(f" {bank_str} total: {to_kr_str(tot_bank)}")
+            print(fcs(f" o[- {bank_str} total]: {to_kr_str(tot_bank)}"))
             print_line()
-        print(f"total: {to_kr_str(tot)}")
+        print(fcs(f"o[ - total]: {to_kr_str(tot)}"))
 
 
 def get_args():

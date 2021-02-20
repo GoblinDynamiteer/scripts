@@ -40,8 +40,9 @@ FORMAT_CODES = {
     'i[': 154,  # info
     'o[': 214,  # orange
     'd[': 239,  # dark /grey
-    'y[' : 229,  # yellow
+    'y[': 229,  # yellow
     'w[': COLORS['warning'],
+    'r[': COLORS['red'],
     'p[': COLORS['purple']}
 
 
@@ -95,8 +96,10 @@ def pcfs(string, format_chars=('[', ']'), show=True, end='\n'):
     print_color_format_string(
         string, format_chars=format_chars, show=show, end=end)
 
+
 def fcs(string, format_chars=('[', ']')):
     return print_color_format_string(string, format_chars, get_str=True)
+
 
 def percentage_to_cstr(percentage: str) -> str:
     percentage_val = int(percentage.replace('%', ''))
