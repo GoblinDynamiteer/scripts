@@ -5,18 +5,23 @@
 import argparse
 import re
 from pathlib import Path
+from enum import Enum
 
 import config
 import extract
 import util
 from db_mov import MovieDatabase
 from db_tv import EpisodeDatabase
-from printing import pfcs
-from printing import to_color_str as CSTR
+from printing import pfcs, cstr
 from release import determine_release_type
 from run import local_command, remote_command_get_output
 
 CACHED_WB_LIST_FILENAME = "cached_wb_list.txt"
+
+
+class Server(Enum):
+    WB1 = "wb"
+    WB2 = "wb2"
 
 
 def parse_ls_line(line: str):
@@ -31,7 +36,7 @@ def parse_ls_line(line: str):
     return data
 
 
-def ls_remote_items(filter_re: str = "", use_cached_if_new=False):
+def ls_remote_items(filter_re: str = "", use_cached_if_new=False, server=Server.WB1):
     file_name = Path(__file__).resolve().parent / CACHED_WB_LIST_FILENAME
     file_list = []
     if use_cached_if_new:
@@ -43,7 +48,7 @@ def ls_remote_items(filter_re: str = "", use_cached_if_new=False):
                              for l in list_file.readlines()]
     if not file_list:
         file_list = remote_command_get_output(
-            r'ls -trl --time-style="+%Y-%m-%d %H:%M" ~/files', "wb"
+            r'ls -trl --time-style="+%Y-%m-%d %H:%M" ~/files', server.value
         ).split("\n")
         with open(file_name, "w") as list_file:
             list_file.write(str(util.now_timestamp()) + "\n")
@@ -86,7 +91,7 @@ def wb_list_items(items):
         item_str_color = "orange"
         if item["downloaded"]:
             item_str_color = "lgreen"
-        item_name = CSTR(item["name"], item_str_color)
+        item_name = cstr(item["name"], item_str_color)
         # Right trim filename strings if to prevent multiple lines in terminal window
         if len_without_itemname + len(item["name"]) + 1 > util.terminal_width():
             diff = abs(
@@ -96,9 +101,9 @@ def wb_list_items(items):
             trimmed_item_name = util.shorten_string(
                 item["name"], len(item["name"]) - diff
             )
-            item_name = CSTR(trimmed_item_name, item_str_color)
+            item_name = cstr(trimmed_item_name, item_str_color)
         print(
-            f'[{CSTR(index, item_str_color)}] (-{item_len:03d}) {item["date"]} '
+            f'[{cstr(index, item_str_color)}] (-{item_len:03d}) {item["date"]} '
             f'{item["size"]:>10} ({media_type}) '
             f"[{item_name}]"
         )
@@ -126,13 +131,13 @@ def filter_using_get_arg_indexes(items: list, indexes: str) -> list:
                 indexes_to_dl.append(int(ix_split))
         return [item for item in items if item["index"] in indexes_to_dl]
     except:
-        print(f'{CSTR("could not parse indexes, aborting!", "red")}')
+        print(f'{cstr("could not parse indexes, aborting!", "red")}')
         return []
 
 
-def download(item: dict, extr: bool = False):
+def download(item: dict, extr: bool = False, serer=Server.WB1):
     file_name = item["name"]
-    repl_list = [(" ", r"\ "), # TODO: use escaped for all?
+    repl_list = [(" ", r"\ "),  # TODO: use escaped for all?
                  ("'", "*"),
                  ("[", "*"),
                  ("]", "*"),
@@ -140,9 +145,10 @@ def download(item: dict, extr: bool = False):
                  (")", "*")]
     for char, repl in repl_list:
         file_name = file_name.replace(char, repl)
-    print(f'downloading: {CSTR(file_name, "orange")}')
-    dl_dir = CFG.get("path_download")
-    command = f'scp -r wb:"~/files/{file_name}" "{dl_dir}"'
+    print(f'downloading: {cstr(file_name, "orange")}')
+    conf = config.ConfigurationManager()
+    dl_dir = conf.get("path_download")
+    command = f'scp -r {serer.value}:"~/files/{file_name}" "{dl_dir}"'
     local_command(command, hide_output=False)
     # only run extract if dest was default dl dir
     if extr:
@@ -153,7 +159,7 @@ def download(item: dict, extr: bool = False):
         extract.extract_item(path_for_extract_cmd)
 
 
-def wb_download_items(items: list, indexes: str, extr=False):
+def wb_download_items(items: list, indexes: str, extr=False, server=Server.WB1):
     "Downloads the items passed, based on indexes, to dest_dir"
     items_to_dl = filter_using_get_arg_indexes(items, indexes)
     if not items_to_dl:
@@ -161,20 +167,21 @@ def wb_download_items(items: list, indexes: str, extr=False):
     print("Will download the following:")
     for item in items_to_dl:
         pfcs(f" - g[{item['name']}]")
-    [download(item, extr=extr) for item in items_to_dl]
+    [download(item, extr=extr, serer=server) for item in items_to_dl]
 
 
-def wb_scp_torrents():
+def wb_scp_torrents(server=Server.WB1):
     "send torrent files to wb watch dir"
     torrent_file_list = []
+    conf = config.ConfigurationManager()
     dl_paths = [Path.home() / "mnt" / "downloads",
-                Path(CFG.get("path_download"))]
+                Path(conf.get("path_download"))]
     for dl_path in dl_paths:
         if not dl_path.exists():
             continue
         torrent_file_list += dl_path.glob("**/*.torrent")
     for torrent_file in torrent_file_list:
-        command = f'scp "{str(torrent_file)}" wb:~/watch'
+        command = f'scp "{str(torrent_file)}" {server.value}:~/watch'
         pfcs(f"sending torrent: g[{torrent_file.name}]")
         if local_command(command, hide_output=True):
             try:
@@ -184,41 +191,56 @@ def wb_scp_torrents():
                 pfcs(f"failed to remove local torrent: e[{torrent_file.name}]")
 
 
-if __name__ == "__main__":
-    CFG = config.ConfigurationManager()
-    PARSER = argparse.ArgumentParser(description="ripper")
-    PARSER.add_argument(
+def get_cli_args():
+    parser = argparse.ArgumentParser(description="wb tool")
+    parser.add_argument(
         "command",
         type=str,
         choices=["list", "new", "download", "get", "send"])
-    PARSER.add_argument(
+    parser.add_argument(
         "--get",
         type=str,
         default="-1",
         help="items to download. indexes"
     )
-    PARSER.add_argument(
+    parser.add_argument(
         "--filter",
         "-f",
         type=str,
         default="",
         help="Filter items to be downloaded/listed, regex"
     )
-    PARSER.add_argument(
+    parser.add_argument(
         "--extract",
         "-e",
         action="store_true",
         help="Run extract after download",
         dest="extract"
     )
-    ARGS = PARSER.parse_args()
+    parser.add_argument(
+        "--server",
+        "-s",
+        default=Server.WB1,
+        type=Server,
+        help="select server",
+        dest="server"
+    )
+    return parser.parse_args()
 
-    if ARGS.command in ["list", "new"]:
-        wb_list_items(ls_remote_items(ARGS.filter))
-    elif ARGS.command in ["download", "get"]:
-        wb_download_items(ls_remote_items(
-            ARGS.filter, use_cached_if_new=True), ARGS.get, ARGS.extract)
-    elif ARGS.command == "send":
+
+def main():
+    args = get_cli_args()
+    if args.command in ["list", "new"]:
+        wb_list_items(ls_remote_items(args.filter, server=args.server))
+    elif args.command in ["download", "get"]:
+        items = ls_remote_items(
+            args.filter, use_cached_if_new=True, server=server)
+        wb_download_items(items, args.get, args.extract, server=args.server)
+    elif args.command == "send":
         wb_scp_torrents()
     else:
-        print(CSTR("wrong command!", "orange"))
+        print(cstr("wrong command!", "orange"))
+
+
+if __name__ == "__main__":
+    main()
