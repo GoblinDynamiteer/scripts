@@ -8,6 +8,10 @@ from time import sleep
 from datetime import datetime, timedelta, tzinfo
 from enum import Enum
 from pathlib import Path
+from threading import Thread
+import uvicorn
+from fastapi import FastAPI
+from util import Singleton
 
 import config
 
@@ -21,6 +25,8 @@ JSON_SCHEDULE_FILE = r"ripper_schedule.json"
 WEEK_IN_SECONDS = 60 * 60 * 24 * 7
 
 CFG = config.ConfigurationManager()
+
+fast_api_app = FastAPI()
 
 
 class TimeZoneInfo(tzinfo):
@@ -80,7 +86,7 @@ def get_now_color_str():
 
 def write_to_log(show_str, file_str):
     path = Path(CFG.path("ripper_log"))
-    if not path.is_file():
+    if not path.exists() or not path.is_file():
         print(f"warning: could not write to log: {str(path)}")
         return
     with open(path, "a+") as log_file:
@@ -92,7 +98,7 @@ def today_weekday():
     return now.weekday()
 
 
-class Airtime():
+class Airtime:
     def __init__(self, day_str: str, time_str: str):
         time_list = time_str.split(":")
         self.hour = int(time_list[0])
@@ -132,7 +138,59 @@ def print_seperator():
     pfcs(f"d[{'=' * 60}]")
 
 
-class ScheduledShow():
+class DownloaderStatus(Enum):
+    Init = "init"
+    Sleeping = "sleeping"
+    Downloading = "downloading"
+    DownloadingSubtitles = "downloadingSubs"
+    ProcessingShow = "processingShow"
+
+class SharedData(metaclass=Singleton):
+    _run = True
+    _downloader_info = {}
+
+    @property
+    def run(self):
+        return self._run
+
+    @run.setter
+    def run(self, state: bool):
+        if state == self._run:
+            return
+        log(f"setting run state to: {state}")
+        self._run = state
+
+    def add_downloaded_item(self, item):
+        if "downloaded_items" not in self._downloader_info:
+            self._downloader_info["downloaded_items"] = []
+        self._downloader_info["downloaded_items"].append(item)
+
+    def add_error(self, error_str):
+        if "errors" not in self._downloader_info:
+            self._downloader_info["errors"] = []
+        self._downloader_info["errors"].append({"date": get_now(), "error": error_str})
+
+    def get_info(self, key=None):
+        if "last_update" in self._downloader_info:
+            last = self._downloader_info["last_update"]
+            try:
+                seconds = (get_now() - last).seconds
+                self._downloader_info["last_update_secs_since"] = seconds
+            except Exception as _:
+                pass
+        if key is None:
+            return self._downloader_info
+        return self._downloader_info[key]
+
+    def set_info(self, key, value):
+        if isinstance(value, DownloaderStatus):
+            self._downloader_info[key] = value.value
+        else:
+            self._downloader_info[key] = value
+        self._downloader_info["last_update"] = get_now()
+
+
+class ScheduledShow:
     def __init__(self, data: dict):
         self.raw_data = data
         self.name = data["name"]
@@ -154,14 +212,23 @@ class ScheduledShow():
             return False
         log(fcs(f"trying to download episodes for i[{self.name}]"))
         for obj in self.get_url_objects():
+            SharedData().set_info("status", DownloaderStatus.ProcessingShow)
             ripper = PlayRipperYoutubeDl(obj.url(),
                                          dest=self.dest_path,
                                          ep_data=obj,
                                          verbose=True,
                                          use_title=self.use_title)
             if not ripper.file_already_exists():
-                file_path = ripper.download()
+                try:
+                    SharedData().set_info("status", DownloaderStatus.Downloading)
+                    file_path = ripper.download()
+                    SharedData().set_info("status", DownloaderStatus.ProcessingShow)
+                except Exception as error:
+                    log(fcs(f"e[got exception] when trying to download {self.name}"))
+                    SharedData().add_error(str(error))
+                    return False
                 if file_path and ripper.download_succeeded:
+                    SharedData().add_downloaded_item(file_path)
                     log(fcs(f"downloaded: i[{str(file_path)}]"))
                     self.downloaded_today = True
                     write_to_log(self.name, str(file_path))
@@ -177,7 +244,13 @@ class ScheduledShow():
                 sub_rip = SubRipper(retrive_sub_url(obj), str(file_path), verbose=True)
                 if not sub_rip.file_already_exists():
                     log(fcs(f"trying to download subtitles: i[{sub_rip.filename}]"))
-                    sub_rip.download()
+                    try:
+                        SharedData().set_info("status", DownloaderStatus.DownloadingSubtitles)
+                        sub_rip.download()
+                        SharedData().set_info("status", DownloaderStatus.ProcessingShow)
+                    except Exception as error:
+                        log(fcs(f"e[got exception] when trying to download subs for {self.name}"))
+                        SharedData().add_error(str(error))
                 else:
                     log(fcs(f"i[{sub_rip.filename}] already exists, skipping sub dl..."))
             elif self.skip_sub:
@@ -268,6 +341,9 @@ def get_cli_args():
                         dest="set_all_dl",
                         action="store_true",
                         help="sets all shows as downloaded today")
+    parser.add_argument("--web",
+                        dest="use_fast_api",
+                        action="store_true")
     args = parser.parse_args()
     return args
 
@@ -284,18 +360,24 @@ def get_show_list_from_json():
     return scheduled_shows
 
 
-def main():
-    args = get_cli_args()
+@fast_api_app.get("/")
+def root():
+    data = SharedData()
+    return {"dl_info": data.get_info()}
+
+
+def thread_downloader(cli_args):
+    SharedData().set_info("status", DownloaderStatus.Init)
     scheduled_shows = get_show_list_from_json()
     if not scheduled_shows:
         print("no shows to process.. exiting.")
-        sys.exit(1)
-    if args.set_all_dl:
+        return
+    if cli_args.set_all_dl:
         for show in scheduled_shows:
             if show.should_download(print_to_log=False):
                 show.downloaded_today = True
                 log(fcs(f"setting i[{show.name}] as downloaded today"))
-    if args.force_download:
+    if cli_args.force_download:
         for show in scheduled_shows:
             show.download(force=True)
     weekday = today_weekday()
@@ -323,11 +405,34 @@ def main():
                 wake_date_str = date_to_full_str(wake_date)
             log(fcs(f"sleeping p[{sleep_time_delta}] (to {wake_date_str}) - "
                     f"next show is b[{name}]"))
+            SharedData().set_info("next_show", name)
         else:
             sleep_time = 60 * 5  # try again in 5 minutes, show has failed dl
             sleep_time_delta = timedelta(seconds=sleep_time)
             log(fcs(f"sleeping p[{sleep_time_delta}]"))
-        sleep(sleep_time)
+        SharedData().set_info("status", DownloaderStatus.Sleeping)
+        while sleep_time > 0:
+            SharedData().set_info("next_show_seconds_until", sleep_time)
+            sleep_time -= 10
+            sleep(10)
+            if not SharedData().run:
+                log("stopping downloader")
+                return
+
+
+def main():
+    args = get_cli_args()
+    dl_thread = Thread(target=thread_downloader, args=[args])
+    dl_thread.start()
+    if args.use_fast_api:
+        uvicorn.run(fast_api_app, host="0.0.0.0", port=8000)
+        SharedData().run = False
+    else:
+        try:
+            while True:
+                sleep(1)
+        except KeyboardInterrupt as _:
+            SharedData().run = False
 
 
 if __name__ == "__main__":
