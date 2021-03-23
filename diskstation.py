@@ -1,6 +1,4 @@
-#!/usr/bin/env python3.6
-
-''' Personal script for interacting with NAS '''
+#!/usr/bin/env python3
 
 import argparse
 import os
@@ -19,12 +17,10 @@ def is_ds_special_dir(dir_str):
 
 
 def get_ds_shares() -> list:
-    " Get a list of available DS shares "
-    return ['APPS', 'TV', 'FILM', 'MISC', 'BACKUP', 'DATA', 'DOCEDU', 'AUDIO']
+    return ['APPS', 'TV', 'FILM', 'MISC', 'BACKUP', 'DATA', 'DOCEDU']
 
 
 def get_mount_dest() -> str:
-    " Get local mount destination path "
     return CONFIG.get("ds_mount_path")
 
 
@@ -33,7 +29,6 @@ def _print_error_invalid_share(string):
 
 
 def mount(ds_share):
-    " Mount a DS share on a linux system "
     if platform.system() != 'Linux':
         pcstr("not on a linux-system, quitting", "red")
         sys.exit(1)
@@ -59,7 +54,6 @@ def mount(ds_share):
 
 
 def ismounted(ds_share) -> bool:
-    " Check if share is mounted"
     ds_shares = get_ds_shares()
     mount_dest = get_mount_dest()
     if ds_share.upper() in ds_shares:
@@ -77,7 +71,6 @@ def ismounted(ds_share) -> bool:
 
 
 def get_mount_path(ds_share):
-    " Gets mount full mount path on DS "
     ds_shares = get_ds_shares()
     mount_dest = get_mount_dest()
     if ds_share.upper() in ds_shares:
@@ -88,8 +81,7 @@ def get_mount_path(ds_share):
         return None
 
 
-def print_ifmounted(ds_share) -> None:
-    " Prints out information about share mount status "
+def print_if_mounted(ds_share) -> None:
     ds_shares = get_ds_shares()
     for share in ds_shares:
         if ds_share == "all" or ds_share.lower() == share:
@@ -101,6 +93,6 @@ def print_ifmounted(ds_share) -> None:
 
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser()
-    PARSER.add_argument("share", help="DS share to mount", type=str)
+    PARSER.add_argument("share", help="DS share to mount", type=str, default="all")
     ARGS = PARSER.parse_args()
     mount(ARGS.share)
