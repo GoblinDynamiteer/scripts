@@ -11,6 +11,7 @@ from pathlib import Path
 from threading import Thread
 import uvicorn
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from util import Singleton
 
 import config
@@ -134,7 +135,7 @@ def log(info_str, info_str_line2=""):
         print(f"{spaces}{info_str_line2}")
 
 
-def print_seperator():
+def print_separator():
     pfcs(f"d[{'=' * 60}]")
 
 
@@ -144,6 +145,7 @@ class DownloaderStatus(Enum):
     Downloading = "downloading"
     DownloadingSubtitles = "downloadingSubs"
     ProcessingShow = "processingShow"
+
 
 class SharedData(metaclass=Singleton):
     _run = True
@@ -170,7 +172,7 @@ class SharedData(metaclass=Singleton):
             self._downloader_info["errors"] = []
         self._downloader_info["errors"].append({"date": get_now(), "error": error_str})
 
-    def get_info(self, key=None):
+    def get_info(self, key=None, default=None):
         if "last_update" in self._downloader_info:
             last = self._downloader_info["last_update"]
             try:
@@ -180,7 +182,7 @@ class SharedData(metaclass=Singleton):
                 pass
         if key is None:
             return self._downloader_info
-        return self._downloader_info[key]
+        return self._downloader_info.get(key, default)
 
     def set_info(self, key, value):
         if isinstance(value, DownloaderStatus):
@@ -207,13 +209,14 @@ class ScheduledShow:
         for day, time in data["airtime"].items():
             self.airtimes.append(Airtime(day, time))
 
-    def download(self, force=False):
+    def download(self, force=False, simulate=False):
         if not force and not self.should_download():
             return False
         log(fcs(f"trying to download episodes for i[{self.name}]"))
         for obj in self.get_url_objects():
             SharedData().set_info("status", DownloaderStatus.ProcessingShow)
             ripper = PlayRipperYoutubeDl(obj.url(),
+                                         sim=simulate,
                                          dest=self.dest_path,
                                          ep_data=obj,
                                          verbose=True,
@@ -221,6 +224,7 @@ class ScheduledShow:
             if not ripper.file_already_exists():
                 try:
                     SharedData().set_info("status", DownloaderStatus.Downloading)
+                    SharedData().set_info("file_name", ripper.filename or "None")
                     file_path = ripper.download()
                     SharedData().set_info("status", DownloaderStatus.ProcessingShow)
                 except Exception as error:
@@ -231,21 +235,23 @@ class ScheduledShow:
                     SharedData().add_downloaded_item(file_path)
                     log(fcs(f"downloaded: i[{str(file_path)}]"))
                     self.downloaded_today = True
-                    write_to_log(self.name, str(file_path))
+                    if not simulate:
+                        write_to_log(self.name, str(file_path))
             else:
                 file_path = ripper.get_dest_path()
                 log(fcs(f"i[{file_path.name}] already exists, skipping dl..."))
-            if file_path and not self.skip_sub:
+            if file_path and not self.skip_sub and not simulate:
                 existing = SubRipper.vid_file_has_subs(file_path)
                 if existing is not False:
                     log(fcs(f"i[{existing.name}] already exists, skipping sub dl..."))
-                    print_seperator()
+                    print_separator()
                     continue
                 sub_rip = SubRipper(retrive_sub_url(obj), str(file_path), verbose=True)
                 if not sub_rip.file_already_exists():
                     log(fcs(f"trying to download subtitles: i[{sub_rip.filename}]"))
                     try:
                         SharedData().set_info("status", DownloaderStatus.DownloadingSubtitles)
+                        SharedData().set_info("file_name", sub_rip.filename)
                         sub_rip.download()
                         SharedData().set_info("status", DownloaderStatus.ProcessingShow)
                     except Exception as error:
@@ -255,7 +261,7 @@ class ScheduledShow:
                     log(fcs(f"i[{sub_rip.filename}] already exists, skipping sub dl..."))
             elif self.skip_sub:
                 log(fcs(f"skipping subtitle download for i[{self.name}]"))
-            print_seperator()
+            print_separator()
         return True
 
     def reset_downloaded_today(self):
@@ -285,9 +291,7 @@ class ScheduledShow:
         lister = EpisodeLister.get_lister(self.url, verbose_logging=True)
         if self.filter_dict:
             lister.set_filter(**self.filter_dict)
-        return lister.get_episodes(revered_order=True,
-                                   limit=5,
-                                   )
+        return lister.get_episodes(revered_order=True, limit=5)
 
     def get_url_list(self):
         return [obj.url() for obj in self.get_url_objects()]
@@ -331,6 +335,8 @@ def determine_sleep_time(scheduled_shows: list):
 
 def get_cli_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--simulate",
+                        action="store_true")
     parser.add_argument("--force",
                         "-f",
                         dest="force_download",
@@ -360,10 +366,27 @@ def get_show_list_from_json():
     return scheduled_shows
 
 
-@fast_api_app.get("/")
+@fast_api_app.get("/", response_class=HTMLResponse)
 def root():
     data = SharedData()
-    return {"dl_info": data.get_info()}
+    resp_html_head = f"<head><title>{Path(__file__).name.upper()} WebInfo</title></head>"
+    resp_content = f"status: {data.get_info('status') or 'Unknown'}<br>"
+    file_item = data.get_info("file_name")
+    if file_item and file_item != "None":
+        resp_content += f"file being processed: {file_item}<br>"
+    secs_since = data.get_info("last_update_secs_since", default="Unknown")
+    resp_content += f"seconds since update: {secs_since}<br>"
+    next_timedelta = timedelta(seconds=data.get_info("next_show_seconds_until", default=0))
+    resp_content += f"next: {data.get_info('next_show', default='-')} in {next_timedelta}<p>"
+    resp_content += "downloaded files:<br>"
+    dl_items = data.get_info("downloaded_items", default=[])
+    if dl_items:
+        resp_content += "<ul>"
+        resp_content += "\n".join(f"<li>{dl}</li>" for dl in dl_items)
+        resp_content += "</ul>"
+    else:
+        resp_content += "None"
+    return f"<html>{resp_html_head}<body>{resp_content}</body></html>"
 
 
 def thread_downloader(cli_args):
@@ -379,7 +402,7 @@ def thread_downloader(cli_args):
                 log(fcs(f"setting i[{show.name}] as downloaded today"))
     if cli_args.force_download:
         for show in scheduled_shows:
-            show.download(force=True)
+            show.download(force=True, simulate=cli_args.simulate)
     weekday = today_weekday()
     log(fcs(f"today is b[{Day(weekday).name}]"))
     while True:
@@ -393,9 +416,10 @@ def thread_downloader(cli_args):
         sleep_to_next_airdate = True
         for show in scheduled_shows:
             show.download()
+            SharedData().set_info("file_name", "None")
             if show.should_download(print_to_log=False):
                 sleep_to_next_airdate = False
-        print_seperator()
+        print_separator()
         if sleep_to_next_airdate:
             name, sleep_time = determine_sleep_time(scheduled_shows)
             sleep_time_delta = timedelta(seconds=sleep_time)
@@ -423,6 +447,7 @@ def thread_downloader(cli_args):
 def main():
     args = get_cli_args()
     dl_thread = Thread(target=thread_downloader, args=[args])
+    dl_thread.daemon = True
     dl_thread.start()
     if args.use_fast_api:
         uvicorn.run(fast_api_app, host="0.0.0.0", port=8000)
