@@ -203,7 +203,10 @@ class ScheduledShow(BaseLog):
         self.filter_dict = data.get("filter", {})
         self.url = data["url"]
         self.use_title = data.get("use_title", False)
-        self.disabled = data.get("disabled", False)
+        if data.get("process", False):
+            self.disabled = False
+        else:
+            self.disabled = True
         self.skip_sub = data.get("skip_sub", False)
         self.downloaded_today = False
         self.airtimes = []
