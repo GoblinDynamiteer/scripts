@@ -265,9 +265,14 @@ class PlayRipperYoutubeDl():
         self.download_succeeded = False
 
         if "discoveryplus" in self.url:
-            self.log(fcs("loading o[cookie.txt] for discoveryplus"))
-            self.options["cookiefile"] = ConfigurationManager().path(
-                "cookies_txt")
+            file_path = ConfigurationManager().path("cookies_txt")
+            if not Path(file_path).exists():
+                file_path = Path(__file__).resolve().parent / "cookies.txt"
+            if not Path(file_path).exists():
+                self.log(fcs("e[error]: could not load cookies for discoveryplus"))
+            else:
+                self.log(fcs("loading o[cookie.txt] for discoveryplus"))
+                self.options["cookiefile"] = str(file_path)
 
         self.log(fcs(f"using url p[{self.url}]"))
         self.retrieve_info()

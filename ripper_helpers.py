@@ -4,17 +4,16 @@ import json
 import re
 import unittest
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime
 from http.cookiejar import MozillaCookieJar
 from pathlib import Path
 from urllib.parse import quote, urlparse
-from urllib.request import urlopen
 from argparse import ArgumentParser
 
 from requests import Session
 
 from config import ConfigurationManager
-from printing import fcs
+from printing import fcs, pfcs
 from util import Singleton
 
 VALID_FILTER_KEYS = ["season", "episode", "title", "date"]
@@ -32,6 +31,11 @@ class SessionSingleton(metaclass=Singleton):
         self.init_session()
         if not file_path:
             file_path = ConfigurationManager().path("cookies_txt")
+        if not Path(file_path).exists():
+            file_path = Path(__file__).resolve().parent / "cookies.txt"
+        if not Path(file_path).exists():
+            pfcs("e[error]: could not find cookies.txt!")
+            return
         # NOTE use: https://addons.mozilla.org/en-US/firefox/addon/export-cookies-txt/
         jar = MozillaCookieJar(file_path)
         jar.load(ignore_discard=True, ignore_expires=True)

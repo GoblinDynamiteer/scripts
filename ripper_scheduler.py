@@ -13,6 +13,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from util import Singleton
+from util import BaseLog
 
 import config
 
@@ -192,11 +193,13 @@ class SharedData(metaclass=Singleton):
         self._downloader_info["last_update"] = get_now()
 
 
-class ScheduledShow:
-    def __init__(self, data: dict):
+class ScheduledShow(BaseLog):
+    def __init__(self, data: dict, cli_args):
+        super().__init__(cli_args.verbose)
         self.raw_data = data
         self.name = data["name"]
-        self.dest_path = Path(data["dest"])
+        self.dest_path = self._parse_dest_path(data["dest"])
+        self.log(f"set dest path: {self.dest_path}")
         self.filter_dict = data.get("filter", {})
         self.url = data["url"]
         self.use_title = data.get("use_title", False)
@@ -204,10 +207,25 @@ class ScheduledShow:
         self.skip_sub = data.get("skip_sub", False)
         self.downloaded_today = False
         self.airtimes = []
-
+        self.set_log_prefix(f"show_{self.name}".replace(" ", "_").upper())
+        self.log("init")
         pfcs(f"added show i[{self.name}]")
         for day, time in data["airtime"].items():
             self.airtimes.append(Airtime(day, time))
+        if not self.disabled:
+            self._validate()
+
+    def _parse_dest_path(self, path_str):
+        if "$TV_TEMP" in path_str:
+            tv_temp_path = Path(CFG.path("misc")) / "tv_temp"
+            return Path(path_str.replace("$TV_TEMP", str(tv_temp_path)))
+        if "$TV" in path_str:
+            return Path(path_str.replace("$TV", str(CFG.path("tv"))))
+        return Path(path_str)
+
+    def _validate(self):
+        if not self.dest_path.exists():
+            log(fcs(f"warning: no such destination dir: w[{self.dest_path}] : ({self.name})"))
 
     def download(self, force=False, simulate=False):
         if not force and not self.should_download():
@@ -337,6 +355,8 @@ def get_cli_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--simulate",
                         action="store_true")
+    parser.add_argument("--verbose",
+                        action="store_true")
     parser.add_argument("--force",
                         "-f",
                         dest="force_download",
@@ -354,11 +374,11 @@ def get_cli_args():
     return args
 
 
-def get_show_list_from_json():
+def get_show_list_from_json(cli_args):
     scheduled_shows = []
     schedule_data = parse_json_schedule()
     for show_data in schedule_data:
-        scheduled_show = ScheduledShow(show_data)
+        scheduled_show = ScheduledShow(show_data, cli_args)
         if not scheduled_show.disabled:
             scheduled_shows.append(scheduled_show)
         else:
@@ -391,7 +411,7 @@ def root():
 
 def thread_downloader(cli_args):
     SharedData().set_info("status", DownloaderStatus.Init)
-    scheduled_shows = get_show_list_from_json()
+    scheduled_shows = get_show_list_from_json(cli_args)
     if not scheduled_shows:
         print("no shows to process.. exiting.")
         return
