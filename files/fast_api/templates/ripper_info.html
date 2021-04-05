@@ -1,0 +1,28 @@
+<html>
+<head>
+    <title>{{ web_title }}</title>
+    <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="title">{{ web_title }}</div>
+    <hr>
+    <div class="status">Status:</div>
+        <div class="status2">{{ status }}</div>
+    <br>
+    {% if file_processed is not none %}
+        <div class="status">Currently processing:</div>
+            <div class="status2">{{ file_processed }}</div>
+        <br>
+    {% endif %}
+    <div class="status">Next:</div>
+        <div class="status2">{{ next_show }} in {{ next_show_timedelta }}</div>
+    <br>
+    <hr>
+    <div class="section_title">Finished files</div>
+    <ul id="navigation">
+    {% for item in dl_items %}
+        <li>{{ item }}</li>
+    {% endfor %}
+    </ul>
+</body>
+</html>

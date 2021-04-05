@@ -1,0 +1,59 @@
+html *
+{
+   font-size: 1em;
+   color: white;
+   font-family: Arial !important;
+   font-weight: bold;
+}
+
+body {
+    background-color: #32557f !important;
+}
+
+hr {
+    width:50%;
+    text-align: left;
+    margin-left: 0;
+	border-top: 1px dashed #8c8b8b;
+	border-bottom: 1px dashed #fff;
+}
+
+.title
+{
+  text-align: left;
+  font-size: 70px;
+  text-shadow: 3px 3px black;
+  font-weight: bold;
+  padding-bottom: 25px;
+}
+
+.status
+{
+    float: left;
+    text-align: left;
+}
+
+.status2
+{
+    padding-left: 20px;
+    float: left;
+    color: #a8ccf7;
+    text-align: left;
+}
+
+.section_title
+{
+  text-align: left;
+  font-size: 30px;
+  font-weight: bold;
+}
+
+ul li {
+  list-style: square;
+  position: relative;
+  padding: 3px 0 2px 25px;
+}
+
+
+
+

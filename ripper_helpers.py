@@ -5,7 +5,7 @@ import re
 import unittest
 import warnings
 from datetime import datetime
-from http.cookiejar import MozillaCookieJar
+from http.cookiejar import MozillaCookieJar, LoadError
 from pathlib import Path
 from urllib.parse import quote, urlparse
 from argparse import ArgumentParser
@@ -14,7 +14,7 @@ from requests import Session
 
 from config import ConfigurationManager
 from printing import fcs, pfcs
-from util import Singleton
+from util import Singleton, BaseLog
 
 VALID_FILTER_KEYS = ["season", "episode", "title", "date"]
 
@@ -37,9 +37,12 @@ class SessionSingleton(metaclass=Singleton):
             pfcs("e[error]: could not find cookies.txt!")
             return
         # NOTE use: https://addons.mozilla.org/en-US/firefox/addon/export-cookies-txt/
-        jar = MozillaCookieJar(file_path)
-        jar.load(ignore_discard=True, ignore_expires=True)
-        self.SESSION.cookies.update(jar)
+        try:
+            jar = MozillaCookieJar(file_path)
+            jar.load(ignore_discard=True, ignore_expires=True)
+            self.SESSION.cookies.update(jar)
+        except LoadError as error:
+            pfcs(f"w[warning] could not load cookies.txt:\n{error}")
 
     def get(self, url):
         self.init_session()
@@ -74,22 +77,11 @@ def apply_filter(ep_list: list, filter_type: str, filter_val: str):
     return filtered_list
 
 
-class EpisodeData():
+class EpisodeData(BaseLog):
     def __init__(self, episode_data={}, verbose=False):
-        self.print_log = verbose
+        super().__init__(verbose=verbose)
+        self.set_log_prefix("EPISODE_DATA")
         self.raw_data = episode_data
-        self.log_prefix = "EPISODE_DATA"
-
-    def set_log_prefix(self, log_prefix: str):
-        self.log_prefix = log_prefix.upper()
-
-    def log(self, info_str, info_str_line2=""):
-        if not self.print_log:
-            return
-        print(fcs(f"i[({self.log_prefix})]"), info_str)
-        if info_str_line2:
-            spaces = " " * len(f"({self.log_prefix}) ")
-            print(f"{spaces}{info_str_line2}")
 
     def url(self):
         raise NotImplementedError()
@@ -108,8 +100,8 @@ class EpisodeData():
 class SVTPlayEpisodeData(EpisodeData):
     URL_PREFIX = r"https://www.svtplay.se"
 
-    def __init__(self, verbose=False):
-        super().__init__(verbose)
+    def __init__(self, episode_data={}, verbose=False):
+        super().__init__(episode_data, verbose)
         self.set_log_prefix("SVTPLAY_DATA")
         self.season_num = 0
         self.episode_num = 0
@@ -356,13 +348,13 @@ class ViafreeEpisodeData(EpisodeData):
         return self.sub_url
 
 
-class EpisodeLister():
+class EpisodeLister(BaseLog):
     def __init__(self, url, verbose=False):
+        super().__init__(verbose=verbose)
+        self.set_log_prefix("EPISODE_LISTER")
         self.url = url
         self.ep_list = []
         self.filter = {}
-        self.print_log = verbose
-        self.log_prefix = "EPISODE_LISTER"
 
     def set_filter(self, **kwargs):
         for key, val in kwargs.items():
@@ -370,17 +362,6 @@ class EpisodeLister():
                 print(f"invalid filter: {key}={val}")
             else:
                 self.filter[key] = val
-
-    def set_log_prefix(self, log_prefix: str):
-        self.log_prefix = log_prefix.upper()
-
-    def log(self, info_str, info_str_line2=""):
-        if not self.print_log:
-            return
-        print(fcs(f"i[({self.log_prefix})]"), info_str)
-        if info_str_line2:
-            spaces = " " * len(f"({self.log_prefix}) ")
-            print(f"{spaces}{info_str_line2}")
 
     def get_episodes(self, revered_order=False, limit=None):
         for filter_key, filter_val in self.filter.items():
@@ -614,8 +595,12 @@ class DPlayEpisodeLister(EpisodeLister):
         res = SessionSingleton().get(
             f"{self.API_URL}/content/shows/{match.group(2)}")
         show_data = res.json()
-        show_id = res.json()["data"]["id"]
-        season_numbers = res.json()["data"]["attributes"]["seasonNumbers"]
+        try:
+            show_id = res.json()["data"]["id"]
+            season_numbers = res.json()["data"]["attributes"]["seasonNumbers"]
+        except KeyError:
+            self.error(f"could not get data from response for: {self.url}")
+            return []
         for season_number in season_numbers:
             qyerystring = (
                 "include=primaryChannel,show&filter[videoType]=EPISODE"
