@@ -10,8 +10,9 @@ import shutil
 from datetime import datetime as DateTime
 from enum import Enum
 from pathlib import Path
+import random
 
-from printing import fcs
+from printing import fcs, cstr
 
 
 class Singleton(type):
@@ -28,14 +29,22 @@ class BaseLog():
     def __init__(self, verbose=False):
         self.print_log = verbose
         self.log_prefix = "LOG"
+        self._log_prefix_color = 154  # light green / info
 
-    def set_log_prefix(self, log_prefix: str):
+    def set_prefix_color(self, color):
+        if color == "random":
+            color = random.randint(22, 232)
+        self._log_prefix_color = color
+
+    def set_log_prefix(self, log_prefix: str, color=None):
         self.log_prefix = log_prefix.upper()
+        if color is not None:
+            self.set_prefix_color(color)
 
     def log(self, info_str, info_str_line2=""):
         if not self.print_log:
             return
-        print(fcs(f"i[({self.log_prefix})]"), info_str)
+        print(self._prefix_str(), info_str)
         if info_str_line2:
             spaces = " " * len(f"({self.log_prefix}) ")
             print(f"{spaces}{info_str_line2}")
@@ -43,7 +52,7 @@ class BaseLog():
     def log_warn(self, warn_str):
         if not self.print_log:
             return
-        print(fcs(f"i[({self.log_prefix})]"), fcs("w[warning]"), warn_str)
+        print(self._prefix_str(), fcs("w[warning]"), warn_str)
 
     def warn(self, warn_str):
         self.log_warn(warn_str)
@@ -51,10 +60,13 @@ class BaseLog():
     def log_error(self, err_str):
         if not self.print_log:
             return
-        print(fcs(f"i[({self.log_prefix})]"), fcs("e[error]"), err_str)
+        print(self._prefix_str(), fcs("e[error]"), err_str)
 
     def error(self, err_str):
         self.log_error(err_str)
+
+    def _prefix_str(self):
+        return cstr(f"({self.log_prefix})", self._log_prefix_color)
 
 
 class Settings(Enum):
