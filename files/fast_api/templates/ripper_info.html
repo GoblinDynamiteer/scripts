@@ -1,28 +1,38 @@
 <html>
 <head>
     <title>{{ web_title }}</title>
-    <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+    <link href="{{ url_for('css', path='/styles.css') }}" rel="stylesheet">
 </head>
 <body>
-    <div class="title">{{ web_title }}</div>
-    <hr>
-    <div class="status">Status:</div>
-        <div class="status2">{{ status }}</div>
+<div class="title">{{ web_title }}</div>
+<hr>
+<div class="status_title">Status:</div>
+<div class="status_value">{{ status.name }}</div>
+<br>
+{% if file_processed is not none %}
+    <div class="status_title">Currently processing:</div>
+    <div class="status_value">{{ file_processed }}</div>
     <br>
-    {% if file_processed is not none %}
-        <div class="status">Currently processing:</div>
-            <div class="status2">{{ file_processed }}</div>
-        <br>
-    {% endif %}
-    <div class="status">Next:</div>
-        <div class="status2">{{ next_show }} in {{ next_show_timedelta }}</div>
-    <br>
-    <hr>
-    <div class="section_title">Finished files</div>
-    <ul id="navigation">
+{% endif %}
+<div class="status_title">Next:</div>
+<div class="status_value">{{ next_show }} in {{ next_show_timedelta }}</div>
+<br>
+<hr>
+<div class="section_title">Finished files</div>
+<table style="width:50%">
+    <tr>
+        <th>Time</th>
+        <th>Show</th>
+        <th>File</th>
+    </tr>
     {% for item in dl_items %}
-        <li>{{ item }}</li>
+    <tr>
+        <td>{{ item.timestamp }}</td>
+        <td>{{ item.show_name }}</td>
+        <td>{{ item.file_path }}</td>
+    </tr>
     {% endfor %}
-    </ul>
+
+</table>
 </body>
 </html>

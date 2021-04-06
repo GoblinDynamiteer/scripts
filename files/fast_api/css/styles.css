@@ -27,17 +27,26 @@ hr {
   padding-bottom: 25px;
 }
 
-.status
+.status_title
 {
     float: left;
     text-align: left;
+    width: 180px;
 }
 
-.status2
+.status_value
 {
     padding-left: 20px;
     float: left;
     color: #a8ccf7;
+    text-align: left;
+}
+
+.timestamp
+{
+    padding-left: 20px;
+    float: left;
+    color: black;
     text-align: left;
 }
 
@@ -48,12 +57,19 @@ hr {
   font-weight: bold;
 }
 
-ul li {
-  list-style: square;
-  position: relative;
-  padding: 3px 0 2px 25px;
+table, th, td {
+  border: 0px;
+  border-collapse: collapse;
+  padding: 4px;
 }
 
+th {
+  text-align: left;
+  font-size: 20px;
+}
 
+tr:nth-child(even) {
+  background-color: #486e9c;
+}
 
 
