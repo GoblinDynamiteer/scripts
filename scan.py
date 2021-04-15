@@ -5,6 +5,7 @@
 import argparse
 from pathlib import Path
 from enum import Enum
+from datetime import datetime
 
 import tvmaze
 import util
@@ -65,7 +66,8 @@ def process_new_movie(movie_folder: str) -> dict:
         pfcs(f" - got title:   g[{data['title']}]")
     if "Year" in json_data:
         year = json_data["Year"]
-        if util.is_valid_year(year, min_value=1920, max_value=2019):
+        year_now = datetime.now().year
+        if util.is_valid_year(year, min_value=1920, max_value=year_now + 1):
             data["year"] = int(year)
             pfcs(f" - got year:    g[{str(data['year'])}]")
     if "imdbID" in json_data:
