@@ -253,7 +253,7 @@ class SubSceneSearchResult(util.BaseLog):
             try:
                 mt = self.MatchType(match_type.text)
                 self.log(f"got MatchType: {mt.name}")
-                if mt == self.MatchType.Exact:
+                if mt in [self.MatchType.Exact, self.MatchType.Popular]:
                     items = match_type.findNext("ul").findAll("a")
                     return self._get_best_match_url(items)
             except Exception as error:
@@ -323,6 +323,7 @@ class SubScene(util.BaseLog):
         return self._search_get_result()
 
     def _search_get_result(self):
+        self.log("query:", self.movie_title)
         data = {"query": self.movie_title}
         res = requests.post(self.URL_SEARCH, data=data)
         if res.status_code != 200:
