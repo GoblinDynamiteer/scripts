@@ -61,7 +61,7 @@ class Balance():
         change = self.value - other.value
         percentage = round(self.value / other.value * 100 - 100, 2)
         print("->", to_kr_str(change, show_prefix=True), "since",
-              other.date.strftime(DATE_FMT), fcs(f"d[({percentage} %)]"))
+                other.date.strftime(DATE_FMT), fcs(f"d[({percentage:.2f} %)]"))
 
 
 class Account():
