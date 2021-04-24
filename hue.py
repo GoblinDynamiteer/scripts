@@ -12,6 +12,7 @@ from argparse import ArgumentParser
 
 from config import ConfigurationManager
 from enum import Enum
+from printing import pfcs
 
 
 class Hue(Enum):
@@ -66,7 +67,10 @@ class LightBulb():
         if state:
             self.on = state.get("on", False)
 
-    def print(self, only_color_info=False):
+    def print(self, only_color_info=False, short=False):
+        if short:
+            pfcs(f"id: i[{self.id}] {self.product_id}:o[{self.name}]")
+            return
         print(f"id: {self.id} ({self.product_id})")
         if only_color_info:
             state = self.raw_data.get("state", {})
@@ -228,7 +232,10 @@ def gen_args():
 def main():
     args = gen_args()
     key = ConfigurationManager().get("hue_api_key")
-    hue_ip = ConfigurationManager().get("hue_ip")
+    hue_ip = ConfigurationManager().get("hue_ip", default="")
+    if not hue_ip:
+        print("cannot load hue_ip from settings, aborting")
+        return
     bridge = Bridge(hue_ip, key)
     for bulb in bridge.lights:
         if bulb.id == args.id:
@@ -260,7 +267,7 @@ def main():
                 except KeyboardInterrupt:
                     return
         if args.list_lights:
-            bulb.print()
+            bulb.print(short=True)
 
 
 if __name__ == "__main__":
