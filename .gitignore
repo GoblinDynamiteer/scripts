@@ -12,3 +12,5 @@ cached_wb_list.txt
 *.dbm
 *.lock
 *.log
+python-venv
+.idea
