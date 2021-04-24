@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import random
 import sys
 from time import sleep
 from datetime import datetime, timedelta, tzinfo
@@ -36,8 +37,8 @@ def fast_api_static_dir():
 
 
 fast_api_app = FastAPI()
-templates = Jinja2Templates(directory=fast_api_static_dir() / "templates")
-fast_api_app.mount("/css", StaticFiles(directory=fast_api_static_dir() / "css"), name="css")
+templates = Jinja2Templates(directory=str(fast_api_static_dir() / "templates"))
+fast_api_app.mount("/css", StaticFiles(directory=str(fast_api_static_dir() / "css")), name="css")
 
 
 class TimeZoneInfo(tzinfo):
@@ -120,8 +121,13 @@ def write_to_log(entry: DownloadedShowLogEntry):
 
 
 def load_from_log():
-    path = Path(CFG.path("ripper_log"))
-    if not path.exists():
+    try:
+        path = Path(CFG.path("ripper_log"))
+    except TypeError as _:
+        return []
+    except AttributeError as _:
+        return []
+    if path is None or not path.exists():
         return []
     with open(path, "r") as log_file:
         return [DownloadedShowLogEntry.from_log_txt_line(x) for x in log_file.readlines()]
@@ -169,10 +175,13 @@ class ScheduledShow(BaseLog):
         self.filter_dict = data.get("filter", {})
         self.url = data["url"]
         self.use_title = data.get("use_title", False)
-        if data.get("process", False):
-            self.disabled = False
+        if cli_args.simulate:
+            self.disabled = random.randint(0, 100) > 90
         else:
-            self.disabled = True
+            if data.get("process", False):
+                self.disabled = False
+            else:
+                self.disabled = True
         self.skip_sub = data.get("skip_sub", False)
         self.downloaded_today = False
         self.airtimes = []
@@ -183,6 +192,8 @@ class ScheduledShow(BaseLog):
             self.airtimes.append(Airtime(day, time))
         if not self.disabled:
             self._validate()
+        else:
+            self.log("is disabled")
 
     def _parse_dest_path(self, path_str):
         if "$TV_TEMP" in path_str:
@@ -216,7 +227,7 @@ class ScheduledShow(BaseLog):
             if not ripper.file_already_exists():
                 try:
                     SharedData().set_status(DownloaderStatus.Downloading)
-                    SharedData().set_info("file_name", ripper.filename or "None")
+                    SharedData().set_info(SharedDataKey.FileName, ripper.filename or "None")
                     file_path = ripper.download()
                     SharedData().set_status(DownloaderStatus.ProcessingShow)
                 except Exception as error:
@@ -246,7 +257,7 @@ class ScheduledShow(BaseLog):
                     self.log(fcs(f"trying to download subtitles: i[{sub_rip.filename}]"))
                     try:
                         SharedData().set_status(DownloaderStatus.DownloadingSubtitles)
-                        SharedData().set_info("file_name", sub_rip.filename)
+                        SharedData().set_info(SharedDataKey.FileName, sub_rip.filename)
                         sub_rip.download()
                         SharedData().set_status(DownloaderStatus.ProcessingShow)
                     except Exception as error:
@@ -272,6 +283,12 @@ class ScheduledShow(BaseLog):
                 self.log(fcs(f"b[{self.name}] airs in i[{delta}]..."))
         return sec_to < 0
 
+    @property
+    def next_airdate_str(self):
+        if self.disabled:
+            return "N/A"
+        return date_to_full_str(min([at.next_airdate() for at in self.airtimes]))
+
     def shortest_airtime(self):
         if not self.downloaded_today:
             return min([at.seconds_to() for at in self.airtimes])
@@ -294,26 +311,26 @@ class ScheduledShow(BaseLog):
 
 class ScheduledShowList(BaseLog):
     def __init__(self, cli_args):
-        super().__init__(verbose=cli_args.verbose)
+        BaseLog.__init__(self, verbose=cli_args.verbose)
         self.set_log_prefix("show_list".upper())
         self._cli_args = cli_args
         self.valid = False
-        self._list = self._init_shows()
-        self.log(f"processing {len(self._list)} shows")
+        self._active_list = []
+        self._disabled_list = []
+        self._init_shows()
+        self.log(f"processing {len(self._active_list)} shows")
 
     def _init_shows(self):
-        scheduled_shows = []
         schedule_data = self._parse_json_schedule()
         if schedule_data is None:
-            return []
+            return
         self.valid = True
         for show_data in schedule_data:
             scheduled_show = ScheduledShow(show_data, self._cli_args)
             if not scheduled_show.disabled:
-                scheduled_shows.append(scheduled_show)
+                self._active_list.append(scheduled_show)
             else:
-                log(fcs(f"show o[{scheduled_show.name}] is disabled, skipping..."))
-        return scheduled_shows
+                self._disabled_list.append(scheduled_show)
 
     def _parse_json_schedule(self):
         file_path = self._cli_args.json_file
@@ -328,16 +345,19 @@ class ScheduledShowList(BaseLog):
             self.error(f"could parse json file: e[{file_path}]")
         return None
 
+    def all_shows(self):
+        return self._active_list + self._disabled_list
+
     def empty(self):
-        return False if self._list else True
+        return False if self._active_list else True
 
     def next_show(self) -> [ScheduledShow, None]:
-        if not self._list:
+        if not self._active_list:
             return None
-        return sorted(self._list, key=lambda x: x.shortest_airtime())[0]
+        return sorted(self._active_list, key=lambda x: x.shortest_airtime())[0]
 
     def __iter__(self):
-        for show in self._list:
+        for show in self._active_list:
             yield show
 
 
@@ -362,6 +382,18 @@ class DownloaderStatus(Enum):
     ProcessingShow = "processingShow"
 
 
+class SharedDataKey(Enum):
+    Status = "status"
+    LastUpdateDateTime = "last_update"
+    LastUpdateSecondsSince = "last_update_secs"
+    DownloadedItems = "downloaded_items"
+    Errors = "errors"
+    FileName = "filename"
+    NextShow = "next_show"
+    NextShowSeconds = "next_show_seconds"
+    ShowList = "show_list"
+
+
 class SharedData(metaclass=Singleton):
     _run = True
     _downloader_info = {}
@@ -382,33 +414,36 @@ class SharedData(metaclass=Singleton):
         self._run = state
 
     def add_downloaded_item(self, log_entry: DownloadedShowLogEntry):
-        if "downloaded_items" not in self._downloader_info:
-            self._downloader_info["downloaded_items"] = []
-        self._downloader_info["downloaded_items"].append(log_entry)
+        key = SharedDataKey.DownloadedItems
+        if key not in self._downloader_info:
+            self._downloader_info[key] = []
+        self._downloader_info[key].append(log_entry)
 
     def add_error(self, error_str):
-        if "errors" not in self._downloader_info:
-            self._downloader_info["errors"] = []
-        self._downloader_info["errors"].append({"date": get_now(), "error": error_str})
+        key = SharedDataKey.Errors
+        if key not in self._downloader_info:
+            self._downloader_info[key] = []
+        self._downloader_info[key].append({"date": get_now(), "error": error_str})
 
     def get_info(self, key=None, default=None):
-        if "last_update" in self._downloader_info:
-            last = self._downloader_info["last_update"]
+        if SharedDataKey.LastUpdateDateTime in self._downloader_info:
+            last = self._downloader_info[SharedDataKey.LastUpdateDateTime]
             try:
                 seconds = (get_now() - last).seconds
-                self._downloader_info["last_update_secs_since"] = seconds
+                self._downloader_info[SharedDataKey.LastUpdateSecondsSince] = seconds
             except Exception as _:
+                print(_)
                 pass
         if key is None:
             return self._downloader_info
         return self._downloader_info.get(key, default)
 
     def set_status(self, status: DownloaderStatus):
-        self.set_info(key="status", value=status)
+        self.set_info(key=SharedDataKey.Status, value=status)
 
-    def set_info(self, key, value):
+    def set_info(self, key: SharedDataKey, value):
         self._downloader_info[key] = value
-        self._downloader_info["last_update"] = get_now()
+        self._downloader_info[SharedDataKey.LastUpdateDateTime] = get_now()
 
 
 def get_cli_args():
@@ -438,30 +473,47 @@ def get_cli_args():
     return args
 
 
-@fast_api_app.get("/template", response_class=HTMLResponse)
-def template_test(request: Request):
-    return templates.TemplateResponse("ripper_info.html", {"request": request, "id": 123})
+@fast_api_app.get("/list", response_class=HTMLResponse)
+def web_show_list(request: Request):
+    title_str = f"{Path(__file__).name} WebInfo ShowList"
+    show_list: ScheduledShowList = SharedData().get_info(SharedDataKey.ShowList, default=None)
+    if show_list is not None:
+        show_items = sorted(show_list.all_shows(), key=lambda x: x.name)
+    else:
+        show_items = []
+    return templates.TemplateResponse("ripper_info_showlist.html",
+                                      {"request": request,
+                                       "show_list": show_items,
+                                       "web_title": title_str})
 
 
 @fast_api_app.get("/", response_class=HTMLResponse)
-def root(request: Request):
+def web_root(request: Request):
     data = SharedData()
     title_str = f"{Path(__file__).name} WebInfo"
-    dl_items = data.get_info("downloaded_items", default=[])
-    next_timedelta = timedelta(seconds=data.get_info("next_show_seconds_until", default=0))
-    return templates.TemplateResponse("ripper_info.html", {"request": request,
-                                                           "web_title": title_str,
-                                                           "next_show": data.get_info('next_show', default='-'),
-                                                           "next_show_timedelta": next_timedelta,
-                                                           # TODO pagination of dl_items
-                                                           "dl_items": sorted(dl_items, reverse=True)[0:30],
-                                                           "file_processed": data.get_info("file_name"),
-                                                           "status": data.get_info("status")})
+    dl_items = data.get_info(SharedDataKey.DownloadedItems, default=[])
+    secs_since_checkin = data.get_info(SharedDataKey.LastUpdateSecondsSince, default=100)
+    if data.get_info(SharedDataKey.Status) == DownloaderStatus.Sleeping:
+        active = secs_since_checkin < 60
+    else:
+        active = True
+    next_timedelta = timedelta(seconds=data.get_info(SharedDataKey.NextShowSeconds, default=0))
+    return templates.TemplateResponse("ripper_info.html",
+                                      {"request": request,
+                                       "active": active,
+                                       "web_title": title_str,
+                                       "next_show": data.get_info(SharedDataKey.NextShow, default='-'),
+                                       "next_show_timedelta": next_timedelta,
+                                       # TODO pagination of dl_items
+                                       "dl_items": sorted(dl_items, reverse=True)[0:30],
+                                       "file_processed": data.get_info(SharedDataKey.FileName),
+                                       "status": data.get_info(SharedDataKey.Status)})
 
 
 def thread_downloader(cli_args):
     SharedData().set_status(DownloaderStatus.Init)
     show_list = ScheduledShowList(cli_args)
+    SharedData().set_info(SharedDataKey.ShowList, show_list)
     if show_list.empty():
         print("no shows to process.. exiting.")
         return
@@ -488,7 +540,7 @@ def thread_downloader(cli_args):
         sleep_to_next_airdate = True
         for show in show_list:
             show.download(simulate=cli_args.simulate)
-            SharedData().set_info("file_name", None)
+            SharedData().set_info(SharedDataKey.FileName, None)
             if show.should_download(print_to_log=False):
                 sleep_to_next_airdate = False
         print_separator()
@@ -501,14 +553,14 @@ def thread_downloader(cli_args):
                 wake_date_str = date_to_full_str(wake_date)
             log(fcs(f"sleeping p[{show.shortest_airtime()}] (to {wake_date_str}) - "
                     f"next show is b[{show.name}]"))
-            SharedData().set_info("next_show", show.name)
+            SharedData().set_info(SharedDataKey.NextShow, show.name)
         else:
             sleep_time = 60 * 5  # try again in 5 minutes, show has failed dl
             sleep_time_delta = timedelta(seconds=sleep_time)
             log(fcs(f"sleeping p[{sleep_time_delta}]"))
         SharedData().set_status(DownloaderStatus.Sleeping)
         while sleep_time > 0:
-            SharedData().set_info("next_show_seconds_until", sleep_time)
+            SharedData().set_info(SharedDataKey.NextShowSeconds, sleep_time)
             sleep_time -= 10
             sleep(10)
             if not SharedData().run:

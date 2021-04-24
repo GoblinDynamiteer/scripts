@@ -9,6 +9,9 @@
 <div class="status_title">Status:</div>
 <div class="status_value">{{ status.name }}</div>
 <br>
+<div class="status_title">Active:</div>
+<div class="status_value">{{ active }}</div>
+<br>
 {% if file_processed is not none %}
     <div class="status_title">Currently processing:</div>
     <div class="status_value">{{ file_processed }}</div>
@@ -17,6 +20,8 @@
 <div class="status_title">Next:</div>
 <div class="status_value">{{ next_show }} in {{ next_show_timedelta }}</div>
 <br>
+<hr>
+<a href="list">Show List</a>
 <hr>
 <div class="section_title">Finished files</div>
 <table style="width:50%">

@@ -1,0 +1,27 @@
+<html>
+<head>
+    <title>{{ web_title }}</title>
+    <link href="{{ url_for('css', path='/styles.css') }}" rel="stylesheet">
+</head>
+<body>
+<div class="title">{{ web_title }}</div><table style="width:50%">
+<table style="width:50%">
+    <tr>
+        <th>Show</th>
+        <th>Active</th>
+        <th>Next</th>
+        <th>URL</th>
+    </tr>
+    {% for show in show_list %}
+
+    <tr>
+        <td>{{ show.name }}</td>
+        <td>{{ not show.disabled }}</td>
+        <td>{{ show.next_airdate_str }}</td>
+        <td>{{ show.url }}</td>
+    </tr>
+    {% endfor %}
+
+</table>
+</body>
+</html>
