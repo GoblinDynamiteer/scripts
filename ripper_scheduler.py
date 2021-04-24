@@ -318,12 +318,13 @@ class ScheduledShowList(BaseLog):
         self._active_list = []
         self._disabled_list = []
         self._init_shows()
+        self._reloaded = False
         self.log(f"processing {len(self._active_list)} shows")
 
     def _init_shows(self):
         schedule_data = self._parse_json_schedule()
         if schedule_data is None:
-            return
+            return False
         self.valid = True
         for show_data in schedule_data:
             scheduled_show = ScheduledShow(show_data, self._cli_args)
@@ -331,6 +332,7 @@ class ScheduledShowList(BaseLog):
                 self._active_list.append(scheduled_show)
             else:
                 self._disabled_list.append(scheduled_show)
+        return True
 
     def _parse_json_schedule(self):
         file_path = self._cli_args.json_file
@@ -344,6 +346,19 @@ class ScheduledShowList(BaseLog):
             print(error)
             self.error(f"could parse json file: e[{file_path}]")
         return None
+
+    def reload_json(self) -> bool:
+        self.log("reloading JSON schedule file")
+        self._active_list = []
+        self._disabled_list = []
+        self._reloaded = True
+        return self._init_shows()
+
+    @property
+    def reloaded(self):
+        state = self._reloaded
+        self._reloaded = False
+        return state
 
     def all_shows(self):
         return self._active_list + self._disabled_list
@@ -473,6 +488,13 @@ def get_cli_args():
     return args
 
 
+@fast_api_app.get("/reload", response_class=HTMLResponse)
+def web_show_list(request: Request):
+    show_list = SharedData().get_info(SharedDataKey.ShowList)
+    show_list.reload_json()
+    return web_root(request)
+
+
 @fast_api_app.get("/list", response_class=HTMLResponse)
 def web_show_list(request: Request):
     title_str = f"{Path(__file__).name} WebInfo ShowList"
@@ -560,6 +582,9 @@ def thread_downloader(cli_args):
             log(fcs(f"sleeping p[{sleep_time_delta}]"))
         SharedData().set_status(DownloaderStatus.Sleeping)
         while sleep_time > 0:
+            if show_list.reloaded:
+                log("breaking sleep, show list was reloaded")
+                break
             SharedData().set_info(SharedDataKey.NextShowSeconds, sleep_time)
             sleep_time -= 10
             sleep(10)
@@ -570,10 +595,10 @@ def thread_downloader(cli_args):
 
 def main():
     args = get_cli_args()
+    SharedData().load_old_log_entries()
     dl_thread = Thread(target=thread_downloader, args=[args])
     dl_thread.daemon = True
     dl_thread.start()
-    SharedData().load_old_log_entries()
     if args.use_fast_api:
         uvicorn.run(fast_api_app, host="0.0.0.0", port=8000)
         SharedData().run = False
