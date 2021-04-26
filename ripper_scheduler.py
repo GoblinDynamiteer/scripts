@@ -193,7 +193,7 @@ class ScheduledShow(BaseLog):
         if not self.disabled:
             self._validate()
         else:
-            self.log("is disabled")
+            self.log(fcs("o[is disabled] will not process!"))
 
     def _parse_dest_path(self, path_str):
         if "$TV_TEMP" in path_str:
@@ -341,6 +341,7 @@ class ScheduledShowList(BaseLog):
             return None
         try:
             with open(file_path) as json_file:
+                self.log(f"loaded: i[{file_path}]")
                 return json.load(json_file)
         except Exception as error:
             print(error)
