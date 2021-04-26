@@ -1,13 +1,6 @@
-<html>
-<head>
-    <title>{{ web_title }}</title>
-    <link href="{{ url_for('css', path='/styles.css') }}" rel="stylesheet">
-</head>
-<body>
-<div class="title">{{ web_title }}</div><table style="width:50%">
-<hr>
-<a href="/">Back</a>
-<hr>
+{% extends "base.html" %}
+{% block title %}SHOW LISTING{% endblock %}
+{% block content %}
 <table style="width:100%">
     <tr>
         <th>Show</th>
@@ -16,7 +9,6 @@
         <th>URL</th>
     </tr>
     {% for show in show_list %}
-
     <tr>
         <td>{{ show.name }}</td>
         <td>{{ not show.disabled }}</td>
@@ -26,5 +18,4 @@
     {% endfor %}
 
 </table>
-</body>
-</html>
+{% endblock %}

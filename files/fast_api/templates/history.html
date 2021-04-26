@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}HISTORY{% endblock %}
+{% block content %}
+<div class="section_title">Finished files</div>
+<table style="width:100%">
+    <tr>
+        <th>Time</th>
+        <th>Show</th>
+        <th>File</th>
+    </tr>
+    {% for item in dl_items %}
+    <tr>
+        <td>{{ item.timestamp }}</td>
+        <td>{{ item.show_name }}</td>
+        <td>{{ item.file_path }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

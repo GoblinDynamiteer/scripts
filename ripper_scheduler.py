@@ -489,31 +489,8 @@ def get_cli_args():
     return args
 
 
-@fast_api_app.get("/reload", response_class=HTMLResponse)
-def web_show_list(request: Request):
-    show_list = SharedData().get_info(SharedDataKey.ShowList)
-    show_list.reload_json()
-    return web_root(request)
-
-
-@fast_api_app.get("/list", response_class=HTMLResponse)
-def web_show_list(request: Request):
-    title_str = f"{Path(__file__).name} WebInfo ShowList"
-    show_list: ScheduledShowList = SharedData().get_info(SharedDataKey.ShowList, default=None)
-    if show_list is not None:
-        show_items = sorted(show_list.all_shows(), key=lambda x: x.name)
-    else:
-        show_items = []
-    return templates.TemplateResponse("ripper_info_showlist.html",
-                                      {"request": request,
-                                       "show_list": show_items,
-                                       "web_title": title_str})
-
-
-@fast_api_app.get("/", response_class=HTMLResponse)
-def web_root(request: Request):
+def get_jinja_template_data():
     data = SharedData()
-    title_str = f"{Path(__file__).name} WebInfo"
     dl_items = data.get_info(SharedDataKey.DownloadedItems, default=[])
     secs_since_checkin = data.get_info(SharedDataKey.LastUpdateSecondsSince, default=100)
     if data.get_info(SharedDataKey.Status) == DownloaderStatus.Sleeping:
@@ -521,16 +498,48 @@ def web_root(request: Request):
     else:
         active = True
     next_timedelta = timedelta(seconds=data.get_info(SharedDataKey.NextShowSeconds, default=0))
-    return templates.TemplateResponse("ripper_info.html",
-                                      {"request": request,
-                                       "active": active,
-                                       "web_title": title_str,
-                                       "next_show": data.get_info(SharedDataKey.NextShow, default='-'),
-                                       "next_show_timedelta": next_timedelta,
-                                       # TODO pagination of dl_items
-                                       "dl_items": sorted(dl_items, reverse=True)[0:30],
-                                       "file_processed": data.get_info(SharedDataKey.FileName),
-                                       "status": data.get_info(SharedDataKey.Status)})
+    show_list: ScheduledShowList = SharedData().get_info(SharedDataKey.ShowList, default=None)
+    if show_list is not None:
+        show_items = sorted(show_list.all_shows(), key=lambda x: x.name)
+    else:
+        show_items = []
+    return {
+        "active": active,
+        "web_title": Path(__file__).name,
+        "next_show": data.get_info(SharedDataKey.NextShow, default='-'),
+        "next_show_timedelta": next_timedelta,
+        "dl_items": sorted(dl_items, reverse=True)[0:30],
+        "file_processed": data.get_info(SharedDataKey.FileName),
+        "show_list": show_items,
+        "status": data.get_info(SharedDataKey.Status)}
+
+
+@fast_api_app.get("/reload", response_class=HTMLResponse)
+def web_reload(request: Request):
+    show_list = SharedData().get_info(SharedDataKey.ShowList)
+    show_list.reload_json()
+    return web_root(request)
+
+
+@fast_api_app.get("/list", response_class=HTMLResponse)
+def web_show_list(request: Request):
+    data = get_jinja_template_data()
+    data["request"] = request
+    return templates.TemplateResponse("show_list.html", data)
+
+
+@fast_api_app.get("/history", response_class=HTMLResponse)
+def web_root(request: Request):
+    data = get_jinja_template_data()
+    data["request"] = request
+    return templates.TemplateResponse("history.html", data)
+
+
+@fast_api_app.get("/", response_class=HTMLResponse)
+def web_root(request: Request):
+    data = get_jinja_template_data()
+    data["request"] = request
+    return templates.TemplateResponse("base.html", data)
 
 
 def thread_downloader(cli_args):

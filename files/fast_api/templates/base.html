@@ -1,0 +1,32 @@
+<html>
+<head>
+    <title>{{ web_title }} WebUI: {% block title %}MAIN{% endblock %}</title>
+    <link href="{{ url_for('css', path='/styles.css') }}" rel="stylesheet">
+</head>
+<body>
+<div class="title">{{ web_title }}</div>
+<hr>
+<div class="status_title">Status:</div>
+<div class="status_value">{{ status.name }}</div>
+<br>
+<div class="status_title">Active:</div>
+<div class="status_value">{{ active }}</div>
+<br>
+{% if file_processed is not none %}
+<div class="status_title">Currently processing:</div>
+<div class="status_value">{{ file_processed }}</div>
+<br>
+{% endif %}
+<div class="status_title">Next:</div>
+<div class="status_value">{{ next_show }} in {{ next_show_timedelta }}</div>
+<br>
+<hr>
+| <a href="history">History</a> |
+<a href="list">Show List</a> |
+<a href="reload">Reload JSON</a> |
+<hr>
+{% block content %}
+
+{% endblock %}
+</body>
+</html>
