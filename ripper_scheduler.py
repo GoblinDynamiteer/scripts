@@ -18,7 +18,7 @@ from util import Singleton
 from util import BaseLog
 import dataclasses
 
-import config
+from config import ConfigurationManager
 
 from ripper import PlayRipperYoutubeDl
 from ripper import SubRipper
@@ -27,9 +27,6 @@ from ripper_helpers import EpisodeLister
 from printing import cstr, pfcs, fcs
 
 WEEK_IN_SECONDS = 60 * 60 * 24 * 7
-
-CFG = config.ConfigurationManager()
-
 
 def fast_api_static_dir():
     root_dir = Path(__file__).parent.resolve()
@@ -112,7 +109,7 @@ def get_now_color_str():
 
 
 def write_to_log(entry: DownloadedShowLogEntry):
-    path = Path(CFG.path("ripper_log"))
+    path = Path(ConfigurationManager().path("ripper_log"))
     if not path.exists() or not path.is_file():
         print(f"warning: could not write to log: {str(path)}")
         return
@@ -122,7 +119,7 @@ def write_to_log(entry: DownloadedShowLogEntry):
 
 def load_from_log():
     try:
-        path = Path(CFG.path("ripper_log"))
+        path = Path(ConfigurationManager().path("ripper_log"))
     except TypeError as _:
         return []
     except AttributeError as _:
@@ -197,10 +194,10 @@ class ScheduledShow(BaseLog):
 
     def _parse_dest_path(self, path_str):
         if "$TV_TEMP" in path_str:
-            tv_temp_path = Path(CFG.path("misc")) / "tv_temp"
+            tv_temp_path = Path(ConfigurationManager().path("misc")) / "tv_temp"
             return Path(path_str.replace("$TV_TEMP", str(tv_temp_path)))
         if "$TV" in path_str:
-            return Path(path_str.replace("$TV", str(CFG.path("tv"))))
+            return Path(path_str.replace("$TV", str(ConfigurationManager().path("tv"))))
         return Path(path_str)
 
     def _validate(self):
@@ -336,16 +333,19 @@ class ScheduledShowList(BaseLog):
 
     def _parse_json_schedule(self):
         file_path = self._cli_args.json_file
+        if file_path is None:
+            self.error("no ripper schedule file set!")
+            return None
         if not file_path.exists():
-            self.error(f"could not find file: e[{file_path}]")
+            self.error(fcs(f"could not find file: e[{file_path}]"))
             return None
         try:
             with open(file_path) as json_file:
-                self.log(f"loaded: i[{file_path}]")
+                self.log(fcs(f"loaded: i[{file_path}]"))
                 return json.load(json_file)
         except Exception as error:
             print(error)
-            self.error(f"could parse json file: e[{file_path}]")
+            self.error(fcs(f"could parse json file: e[{file_path}]"))
         return None
 
     def reload_json(self) -> bool:
@@ -484,7 +484,7 @@ def get_cli_args():
     parser.add_argument("--jsonfile",
                         dest="json_file",
                         type=Path,
-                        default=Path(Path(__file__)).parent / "ripper_schedule.json")
+                        default=ConfigurationManager().path("ripper_schedule"))
     args = parser.parse_args()
     return args
 
