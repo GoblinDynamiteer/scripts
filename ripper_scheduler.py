@@ -28,6 +28,7 @@ from printing import cstr, pfcs, fcs
 
 WEEK_IN_SECONDS = 60 * 60 * 24 * 7
 
+
 def fast_api_static_dir():
     root_dir = Path(__file__).parent.resolve()
     return root_dir / "files" / "fast_api"
@@ -172,6 +173,7 @@ class ScheduledShow(BaseLog):
         self.filter_dict = data.get("filter", {})
         self.url = data["url"]
         self.use_title = data.get("use_title", False)
+        self._force_dl = False
         if cli_args.simulate:
             self.disabled = random.randint(0, 100) > 90
         else:
@@ -207,6 +209,8 @@ class ScheduledShow(BaseLog):
     def download(self, force=False, simulate=False):
         if not force and not self.should_download():
             return False
+        if force:
+            self.log("forced download...")
         self.log(fcs(f"trying to download episodes for i[{self.name}]"))
         objects = self.get_url_objects()
         if not objects:
@@ -286,6 +290,20 @@ class ScheduledShow(BaseLog):
             return "N/A"
         return date_to_full_str(min([at.next_airdate() for at in self.airtimes]))
 
+    @property
+    def force_download(self):
+        state = self._force_dl
+        self._force_dl = False
+        self.log("clearing force download flag")
+        return state
+
+    @force_download.setter
+    def force_download(self, state: bool):
+        if state == self._force_dl:
+            return
+        self.log(f"setting force download flag: {state}")
+        self._force_dl = state
+
     def shortest_airtime(self):
         if not self.downloaded_today:
             return min([at.seconds_to() for at in self.airtimes])
@@ -354,6 +372,12 @@ class ScheduledShowList(BaseLog):
         self._disabled_list = []
         self._reloaded = True
         return self._init_shows()
+
+    def set_force_download(self):
+        self.log("queueing forced download of active shows")
+        for show in self._active_list:
+            show.force_download = True
+        self._reloaded = True
 
     @property
     def reloaded(self):
@@ -521,6 +545,13 @@ def web_reload(request: Request):
     return web_root(request)
 
 
+@fast_api_app.get("/force", response_class=HTMLResponse)
+def web_force(request: Request):
+    show_list = SharedData().get_info(SharedDataKey.ShowList)
+    show_list.set_force_download()
+    return web_root(request)
+
+
 @fast_api_app.get("/list", response_class=HTMLResponse)
 def web_show_list(request: Request):
     data = get_jinja_template_data()
@@ -529,7 +560,7 @@ def web_show_list(request: Request):
 
 
 @fast_api_app.get("/history", response_class=HTMLResponse)
-def web_root(request: Request):
+def web_history(request: Request):
     data = get_jinja_template_data()
     data["request"] = request
     return templates.TemplateResponse("history.html", data)
@@ -571,7 +602,8 @@ def thread_downloader(cli_args):
         log("checking shows...")
         sleep_to_next_airdate = True
         for show in show_list:
-            show.download(simulate=cli_args.simulate)
+            force = show.force_download
+            show.download(simulate=cli_args.simulate, force=force)
             SharedData().set_info(SharedDataKey.FileName, None)
             if show.should_download(print_to_log=False):
                 sleep_to_next_airdate = False
