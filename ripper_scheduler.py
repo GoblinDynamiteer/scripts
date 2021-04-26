@@ -294,7 +294,8 @@ class ScheduledShow(BaseLog):
     def force_download(self):
         state = self._force_dl
         self._force_dl = False
-        self.log("clearing force download flag")
+        if state:
+            self.log("clearing force download flag")
         return state
 
     @force_download.setter
