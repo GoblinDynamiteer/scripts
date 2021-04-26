@@ -1,21 +1,37 @@
 {% extends "base.html" %}
 {% block title %}SHOW LISTING{% endblock %}
 {% block content %}
+<div class="section_title">Active Shows</div>
 <table style="width:100%">
     <tr>
         <th>Show</th>
-        <th>Active</th>
+        <th>URL</th>
         <th>Next</th>
+    </tr>
+    {% for show in show_list %}
+    {% if not show.disabled %}
+    <tr>
+        <td>{{ show.name }}</td>
+        <td><a href="{{ show.url }}">{{ show.url }}</a></td>
+        <td>{{ show.next_airdate_str }}</td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+</table>
+<br>
+<div class="section_title">Disabled Shows</div>
+<table style="width:100%">
+    <tr>
+        <th>Show</th>
         <th>URL</th>
     </tr>
     {% for show in show_list %}
+    {% if show.disabled %}
     <tr>
         <td>{{ show.name }}</td>
-        <td>{{ not show.disabled }}</td>
-        <td>{{ show.next_airdate_str }}</td>
-        <td>{{ show.url }}</td>
+        <td><a href="{{ show.url }}">{{ show.url }}</a></td>
     </tr>
+    {% endif %}
     {% endfor %}
-
 </table>
 {% endblock %}
