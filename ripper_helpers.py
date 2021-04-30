@@ -327,7 +327,6 @@ class ViafreeEpisodeData(EpisodeData):
             return self.sub_url
         content_url = f"{self.CONT_URL_PREFIX}{self.episode_path}"
         res = SessionSingleton().get(content_url)
-        stream_url = ""
         try:
             stream_url = res.json()[
                 '_embedded']['viafreeBlocks'][0]['_embedded']['program']['_links']['streamLink']['href']
@@ -338,14 +337,35 @@ class ViafreeEpisodeData(EpisodeData):
             return ""
         res = SessionSingleton().get(stream_url)
         try:
-            sub_url = res.json()["embedded"]["subtitles"][0]["link"]["href"]
-            self.log(fcs("got subtitle url"), fcs(f"i[{sub_url}]"))
+            sub_url = self._find_sv_sub(res.json())
+            if not sub_url:
+                raise ValueError()
+            self.log(fcs("got sv subtitle url"), fcs(f"i[{sub_url}]"))
             self.sub_url = sub_url
-        except (KeyError, IndexError) as error:
+        except (KeyError, IndexError, ValueError) as error:
             self.log(fcs("failed to retrieve subtitle url from:"),
                      fcs(f"o[{stream_url}]"))
             return ""
         return self.sub_url
+
+    def _find_sv_sub(self, data: dict):
+        try:
+            _list = data["embedded"]["subtitles"]
+        except IndexError as error:
+            self.warn("could not find subtitle list for episode!")
+            return None
+        if not isinstance(_list, list):
+            self.warn('data["embedded"]["subtitles"] was not a list!')
+            return None
+        sv_url = None
+        for _sub_data in _list:
+            data = _sub_data.get("data", {})
+            lang = data.get("language", None)
+            if lang:
+                self.log(fcs(f"found sub for language: i[{lang}]"))
+            if lang == "sv":
+                sv_url = _sub_data.get("link", {}).get("href", None)
+        return sv_url
 
 
 class EpisodeLister(BaseLog):
