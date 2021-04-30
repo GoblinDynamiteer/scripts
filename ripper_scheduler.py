@@ -37,6 +37,7 @@ def fast_api_static_dir():
 fast_api_app = FastAPI()
 templates = Jinja2Templates(directory=str(fast_api_static_dir() / "templates"))
 fast_api_app.mount("/css", StaticFiles(directory=str(fast_api_static_dir() / "css")), name="css")
+fast_api_app.mount("/icons", StaticFiles(directory=str(fast_api_static_dir() / "icons")), name="icons")
 
 
 class TimeZoneInfo(tzinfo):
