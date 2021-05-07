@@ -10,11 +10,12 @@ from pathlib import Path
 
 from config import ConfigurationManager as cfg
 from util_tv import parse_season_episode, parse_season
-from printing import pfcs, cstr
+from printing import pfcs, cstr, print_line, Color
 from db_tv import EpisodeDatabaseSingleton, ShowDatabaseSingleton
-from util import Singleton, date_str_to_timestamp, now_timestamp
+from util import date_str_to_timestamp, now_timestamp
 from tvmaze import TvMazeData
-from util_movie import valid_letters as mov_letters
+from util_movie import valid_letters as mov_letters, get_movie_nfo_imdb_id
+from omdb import OMDb
 
 
 class RegexStr(Enum):
@@ -36,7 +37,7 @@ class SubtitleLang(Enum):
     Unknown = "unkown"
 
 
-class ListerItemTVMissingShowEpisode():
+class ListerItemTVMissingShowEpisode:
     def __init__(self, show_name, tvmaze_data):
         self.data = tvmaze_data
         self.season = tvmaze_data.get("season", 0)
@@ -47,13 +48,13 @@ class ListerItemTVMissingShowEpisode():
 
     def show_list(self):
         pfcs(f"  o[<< {self.name} >> MISSING]")
-        id_str = "id: " + cstr(f"{self.data.get('id', 0)}", "lblue")
-        aired_str = "aired: " + cstr(self.data.get("airdate"), "lblue")
-        name_str = "\"" + cstr(self.data.get("name"), "lblue") + "\""
+        id_str = "id: " + cstr(f"{self.data.get('id', 0)}", Color.LightBlue)
+        aired_str = "aired: " + cstr(self.data.get("airdate"), Color.LightBlue)
+        name_str = "\"" + cstr(self.data.get("name"), Color.LightBlue) + "\""
         print(f"      {name_str} {id_str} {aired_str}")
 
 
-class ListerItemTVShowEpisode():
+class ListerItemTVShowEpisode:
     def __init__(self, path, show_extras=False):
         self.show_name = path.parents[1].name
         self.path = path
@@ -70,10 +71,10 @@ class ListerItemTVShowEpisode():
             has = sub in self.subs
             if sub == SubtitleLang.Unknown:
                 if has:
-                    subs_str += cstr(sub.value + " ", "lyellow")
+                    subs_str += cstr(sub.value + " ", Color.LightYellow)
                 continue
             subs_str += cstr(sub.value + " ",
-                             "lgreen" if has else "dgrey")
+                             Color.LightGreen if has else Color.DarkGrey)
         pfcs(
             f"  i[{self.filename: <{self.row_len}}]\n      b[{se_str}] {subs_str}")
         if self.extras:
@@ -101,13 +102,13 @@ class ListerItemTVShowEpisode():
                 ep_maze_data = entry
                 break
         id_str = "id: " + cstr(f"{maze_id}",
-                               "lblue") if maze_id is not None else ""
-        aired_str = "aired: " + cstr(ep_maze_data.get("airdate"), "lblue")
-        name_str = "\"" + cstr(ep_maze_data.get("name"), "lblue") + "\""
+                               Color.LightBlue) if maze_id is not None else ""
+        aired_str = "aired: " + cstr(ep_maze_data.get("airdate"), Color.LightBlue)
+        name_str = "\"" + cstr(ep_maze_data.get("name"), Color.LightBlue) + "\""
         print(f"      {name_str} {id_str} {aired_str}")
 
 
-class ListerItemTVShowSeason():
+class ListerItemTVShowSeason:
     def __init__(self, path, episode_num, show_extras=False):
         self.season_num = parse_season(path.name)
         self.path = path
@@ -156,7 +157,7 @@ class ListerItemTVShowSeason():
             ep.show_list()
 
 
-class ListerItemTVShow():
+class ListerItemTVShow:
     def __init__(self, args: list, list_type: ListType, show_extras=False):
         self.show_path = None
         self.type = list_type
@@ -202,29 +203,56 @@ class ListerItemTVShow():
             season.show_list()
 
 
-class ListerItemMovieDir():
-    def __init__(self, args: list, show_extras=False):
-        self.args = args
-        self.filter = None
-        self.letter = self.determine_letter()
-        self.paths = self.determine_paths()
+class ListerItemMovie:
+    def __init__(self, path: Path):
+        self._path = path
+        self._imdb_id = self._get_imdbid()
+        self._omdb_result = OMDb().movie_search(imdb_id=self._imdb_id)
 
-    def determine_letter(self):
+    def _get_imdbid(self):
+        _id = get_movie_nfo_imdb_id(self._path.name)
+        return _id
+
+    def _print_data(self, title_str, data):
+        if not data:
+            return
+        print(cstr(f" {title_str}:".ljust(10, " "), Color.DarkGrey), data)
+
+    def print(self):
+        _path_str = cstr(str(self._path.parent.resolve()), Color.Grey)
+        _name_str = cstr(self._path.name, Color.LightGreen)
+        print(f"{_path_str}/{_name_str}")
+        if self._omdb_result.valid:
+            self._print_data("title", self._omdb_result.title)
+            self._print_data("year", self._omdb_result.year)
+            self._print_data("genre", self._omdb_result.genre)
+        print_line()
+
+
+class ListerItemMovieDir:
+    def __init__(self, args: list, show_extras=False):
+        self._args = args
+        self._show_extras = show_extras
+        self._filter = None
+        self._letter = self._determine_letter()
+        self._path_list = self.determine_paths()
+
+    def _determine_letter(self):
         try:
-            if self.args[0].upper() in mov_letters():
-                if len(self.args) > 1:
-                    self.filter = self.args[1:]
-                return self.args[0].upper()
+            if self._args[0].upper() in mov_letters():
+                if len(self._args) > 1:
+                    self._filter = self._args[1:]
+                return self._args[0].upper()
         except IndexError:
             return None
-        if self.args:
-            self.filter = self.args
+        if self._args:
+            self._filter = self._args
         return None
 
     def determine_paths(self):
         mov_path = Path(cfg().path("film"))
-        if self.letter:
-            paths = [mov_path / self.letter]
+        if self._letter:
+            paths = [mov_path / self._letter]
         else:
             paths = mov_path.iterdir()
         matches = []
@@ -235,17 +263,17 @@ class ListerItemMovieDir():
                 if not sub_path.is_dir():
                     continue
                 path_parts = sub_path.name.lower().split(".")
-                if self.filter:
-                    if all([x.lower() in path_parts for x in self.filter]):
+                if self._filter:
+                    if all([x.lower() in path_parts for x in self._filter]):
                         matches.append(sub_path)
                 else:
                     matches.append(sub_path)
         return matches
 
     def show_list(self):
-        # TODO: make class for each mov...
-        for p in self.paths:
-            print(p.name)
+        for path in self._path_list:
+            mov = ListerItemMovie(path)
+            mov.print()
 
 
 def re_list(re_str: RegexStr, str_list: list):
