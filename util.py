@@ -146,6 +146,8 @@ def parse_percent(string):
 
 def is_imdbid(string):
     "Return true if string contains an IMDB-id"
+    if string is None:
+        return False
     if parse_imdbid(string):
         return True
     return False
