@@ -12,7 +12,7 @@ import util
 import util_movie
 import util_tv
 from diskstation import is_ds_special_dir
-from omdb import movie_search
+from omdb import OMDb
 from printing import pfcs
 
 from db_mov import MovieDatabaseSingleton
@@ -47,32 +47,31 @@ def process_new_movie(movie_folder: str) -> dict:
     guessed_title = util_movie.determine_title(movie_folder)
     guessed_year = util_movie.parse_year(movie_folder)
     imdb_id_from_nfo = util_movie.get_movie_nfo_imdb_id(movie_folder)
-    json_data = {}
+    omdb = OMDb()
     if imdb_id_from_nfo:
         pfcs(
             f"searching OMDb for i[{movie_folder}] using b[{imdb_id_from_nfo}]")
-        json_data = movie_search(imdb_id_from_nfo)
+        result = omdb.movie_search(imdb_id=imdb_id_from_nfo)
     elif guessed_title:
         year_str = f" and b[{str(guessed_year)}]" if guessed_year else ""
         pfcs(
             f"searching OMDb for i[{movie_folder}] using b[{guessed_title}]{year_str}")
-        json_data = movie_search(guessed_title, year=guessed_year)
+        result = omdb.movie_search(title=guessed_title, year=guessed_year)
     else:
         pfcs(
             f"failed to determine title or id from w[{movie_folder}] for OMDb query")
         return {}
-    if "Title" in json_data:
-        data["title"] = json_data["Title"]
+    if result.title:
+        data["title"] = result.title
         pfcs(f" - got title:   g[{data['title']}]")
-    if "Year" in json_data:
-        year = json_data["Year"]
+    if result.year:
+        year = result.year
         year_now = datetime.now().year
         if util.is_valid_year(year, min_value=1920, max_value=year_now + 1):
             data["year"] = int(year)
             pfcs(f" - got year:    g[{str(data['year'])}]")
-    if "imdbID" in json_data:
-        imdb_id = json_data["imdbID"]
-        imdb_id = util.parse_imdbid(imdb_id)
+    if result.id:
+        imdb_id = util.parse_imdbid(result.id)
         if imdb_id:
             data["imdb"] = imdb_id
             pfcs(f" - got imdb-id: g[{imdb_id}]")
@@ -315,6 +314,7 @@ def movie_diagnostics_list_duplicates(filter_mov=None):
         print("found no duplicate movies")
         return
     print("found duplicate movies:")
+    omdb = OMDb()
     for imdb_id in duplicate_imdb:
         dup_mov = []
         for mov in duplicate_imdb[imdb_id]:
@@ -326,9 +326,9 @@ def movie_diagnostics_list_duplicates(filter_mov=None):
                 continue
             dup_mov.append(mov)
         if len(dup_mov) > 1:
-            resp = movie_search(imdb_id)
-            if "Title" in resp and "Year" in resp:
-                pfcs(f"g[{imdb_id}] (OMDb: b[{resp['Title']} - {resp['Year']}] )")
+            resp = omdb.movie_search(imdb_id=imdb_id)
+            if resp.title and resp.year:
+                pfcs(f"g[{imdb_id}] (OMDb: b[{resp.title} - {resp.year}] )")
             else:
                 print(imdb_id + ":")
             for mov in dup_mov:
