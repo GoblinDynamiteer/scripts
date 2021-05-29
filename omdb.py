@@ -70,7 +70,7 @@ class OMDb(BaseLog):
 
     def movie_search(self, title=None, imdb_id=None, year=None):
         if not title and not imdb_id:
-            return {}
+            return OMDbMovieSearchResult({})
         if util.is_imdbid(imdb_id):
             self._url_args["i"] = util.parse_imdbid(imdb_id)
         elif title:
