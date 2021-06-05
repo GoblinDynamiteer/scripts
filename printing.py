@@ -2,6 +2,7 @@
 
 import shutil
 from enum import Enum
+import os
 
 _COLOR_END = "\033[0m"
 _CLR_DICT = {"black": 0,
@@ -62,6 +63,10 @@ class Color(Enum):
     Red = _CLR_DICT["red"]
 
 
+def _is_win():
+    return os.name == "nt"
+
+
 def _to_index_str(color_value):
     if isinstance(color_value, int):
         return str(color_value)
@@ -81,6 +86,8 @@ def test_colors():
 
 
 def cstr(string, foreground, background=None, bold=False):
+    if _is_win():
+        return string
     _color_str = "\033[38;5;" + _to_index_str(foreground) + "m"
     if background:
         _color_str += "\033[48;5;" + _to_index_str(background) + "m"
@@ -102,17 +109,18 @@ def percentage_to_cstr(percentage: str) -> str:
     return cstr(percentage, Color.LightGreen)
 
 
-def print_color_format_string(string, format_chars=('[', ']'), show=True, end='\n', get_str=False):
+def print_color_format_string(string, format_chars=("[", "]"), show=True, end="\n", get_str=False):
     if len(format_chars) != 2 or not show:
         return
     for code, color_val in _FORMAT_CODES.items():
-        begin_code = code.replace('[', format_chars[0])
-        string = string.replace(
-            begin_code, "\033[38;5;" + str(color_val) + "m")
-    colored_str = string.replace(format_chars[1], _COLOR_END)
+        begin_code = code.replace("[", format_chars[0])
+        _rep = "\033[38;5;" + str(color_val) + "m" if not _is_win() else ""
+        string = string.replace(begin_code, _rep)
+    _rep = _COLOR_END if not _is_win() else ""
+    colored_str = string.replace(format_chars[1], _rep)
     if get_str:
         return colored_str
-    print(string.replace(format_chars[1], _COLOR_END), end=end)
+    print(colored_str, end=end)
 
 
 def pfcs(string, format_chars=('[', ']'), show=True, end='\n'):
