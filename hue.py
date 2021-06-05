@@ -6,6 +6,7 @@ import http.client
 import json
 import random
 import time
+import sys
 
 from argparse import ArgumentParser
 
@@ -13,6 +14,13 @@ from config import ConfigurationManager
 from enum import Enum
 from printing import pfcs
 from util import BaseLog
+
+try:
+    from PySide6.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QVBoxLayout
+    from PySide6.QtCore import *
+    QT_AVAILABLE = True
+except ImportError as _:
+    QT_AVAILABLE = False
 
 
 class Hue(Enum):
@@ -88,6 +96,13 @@ class LightBulb(BaseLog):
     def set_state(self, state: bool):
         self.on = state
 
+    def toggle(self):
+        _prev = self.on
+        _new = not _prev
+        self.log(f"toggling state: {_prev} --> {_new}")
+        self.on = _new
+        self.update()
+
     def set_color(self, color: Color):
         self.set_hue(color.hue)
         self.set_saturation(color.sat)
@@ -133,7 +148,7 @@ class LightBulb(BaseLog):
                 int(MAX_SATURATION * 0.8), MAX_SATURATION + 1)
             self.hue = new_hue
 
-    def update(self, transition_time):
+    def update(self, transition_time=None):
         body = {"on": self.on}
         print(f"setting \"{self.name}\":")
         print(f"state: {self.on}")
@@ -180,6 +195,10 @@ class Room(BaseLog):
     def light_count(self) -> int:
         return len(self._lights)
 
+    @property
+    def lights(self) -> list:
+        return self._lights
+
 
 class Bridge(BaseLog):
     class GroupType(Enum):
@@ -219,6 +238,12 @@ class Bridge(BaseLog):
         for _light in self.lights:
             if light_id == _light.id:
                 return _light
+        return None
+
+    def get_room_with_name(self, name: str) -> [Room, None]:
+        for _room in self.rooms:
+            if _room.name.lower() == name.lower():
+                return _room
         return None
 
     def _populate_lights(self):
@@ -285,10 +310,38 @@ def run_cli(args):
             bulb.print(short=True)
 
 
+class HueControlWindow(QWidget, BaseLog):
+    def __init__(self, bridge):
+        QWidget.__init__(self)
+        BaseLog.__init__(self, verbose=True)
+        self._bridge = bridge
+        self._room = bridge.get_room_with_name("sovrum")
+        self.button = QPushButton("TOGGLE TEST!")
+        self.layout = QVBoxLayout(self)
+        self.layout.addWidget(self.button)
+        self.button.clicked.connect(self.toggle)
+        self.set_log_prefix("HUE_CONTROL_WINDOW")
+
+    @Slot()
+    def toggle(self):
+        if not self._room:
+            self.log("no room....")
+        for light in self._room.lights:
+            light.toggle()
+
+
 def run_gui(args):
+    if not QT_AVAILABLE:
+        print("QT/GUI not available")
+        return
     bridge = get_bridge()
     if not bridge:
         return
+    app = QApplication([])
+    widget = HueControlWindow(bridge)
+    widget.resize(800, 600)
+    widget.show()
+    sys.exit(app.exec())
 
 
 def gen_args():
