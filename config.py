@@ -63,7 +63,7 @@ class ConfigurationManager(util.BaseLog, metaclass=util.Singleton):
                 break
         if value is None:
             self.log_warn(f"could not find key: {key},"
-                          f" returning defalt: {default}")
+                          f" returning default: {default}")
             return default
         for match, repl in self.REPLACEMENTS:
             value = value.replace(match, repl)
