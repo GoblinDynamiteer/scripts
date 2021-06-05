@@ -12,6 +12,7 @@ from argparse import ArgumentParser
 from config import ConfigurationManager
 from enum import Enum
 from printing import pfcs
+from util import BaseLog
 
 
 class Hue(Enum):
@@ -20,7 +21,7 @@ class Hue(Enum):
     FULL_BLUE = 0xb748
 
 
-class Color():
+class Color:
     def __init__(self, bri, hue, sat):
         self.bri = bri
         self.hue = hue
@@ -46,8 +47,9 @@ MAX_BRIGHTNESS = 254
 MIN_BRIGHTNESS = 1
 
 
-class LightBulb:
+class LightBulb(BaseLog):
     def __init__(self, bridge, light_id, json_data):
+        super().__init__(verbose=True)
         self.raw_data = json_data
         self.id = int(light_id)
         self.name = ""
@@ -58,6 +60,8 @@ class LightBulb:
         self.sat = None
         self.bridge = bridge
         self._parse_data()
+        self.set_log_prefix(f"LIGHT_{self.name.upper().replace(' ', '_')}")
+        self.log(f"init done, on: {self.on}")
 
     def _parse_data(self):
         state = self.raw_data.get("state", {})
@@ -148,12 +152,50 @@ class LightBulb:
         self.bridge.post_req(f"lights/{self.id}/state", body)
 
 
-class Bridge():
+class Room(BaseLog):
+    def __init__(self, bridge, json_data: dict):
+        super().__init__(verbose=True)
+        self._data = json_data
+        self._lights = []
+        self._bridge: Bridge = bridge
+        self.name = self._data.get("name", "N/A")
+        self.set_log_prefix(f"ROOM_{self.name.upper().replace(' ', '_')}")
+        self._init_lights()
+        self.log("init done")
+
+    def _init_lights(self):
+        for light_id in self._data.get("lights", []):
+            self.add_light(self._bridge.get_light_with_id(int(light_id)))
+
+    def add_light(self, light: [LightBulb, None]):
+        if light is None:
+            return
+        _id = light.id
+        if _id in [_light.id for _light in self._lights]:
+            return
+        self._lights.append(light)
+        self.log(f"added light {light.name} with id {light.id}")
+
+    @property
+    def light_count(self) -> int:
+        return len(self._lights)
+
+
+class Bridge(BaseLog):
+    class GroupType(Enum):
+        Zone = "Zone",
+        Room = "Room"
+
     def __init__(self, ip, key):
+        super().__init__(verbose=True)
         self.ip = ip
         self.key = key
         self.lights = []
+        self.rooms = []
+        self.zones = []
         self._populate_lights()
+        self._populate_groups()
+        self.log(f"init done -> num lights {len(self.lights)} num rooms: {len(self.rooms)}")
 
     def get_req(self, path: str) -> dict:
         url = f"https://{self.ip}/api/{self.key}/{path}"
@@ -173,9 +215,25 @@ class Bridge():
         conn.close()
         return json.loads(res)
 
+    def get_light_with_id(self, light_id: int) -> [LightBulb, None]:
+        for _light in self.lights:
+            if light_id == _light.id:
+                return _light
+        return None
+
     def _populate_lights(self):
         for key, val in self.get_req("lights").items():
             self.lights.append(LightBulb(self, key, val))
+
+    def _populate_groups(self):
+        for _grp in self.get_req("groups").values():
+            try:
+                _type = self.GroupType(_grp.get("type", None))
+            except ValueError as _:
+                continue
+            if _type == self.GroupType.Room:
+                _room = Room(self, _grp)
+                self.rooms.append(_room)
 
 
 def get_bridge() -> [Bridge, None]:
