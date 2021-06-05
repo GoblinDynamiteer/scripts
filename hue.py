@@ -231,10 +231,13 @@ def gen_args():
 
 def main():
     args = gen_args()
-    key = ConfigurationManager().get("hue_api_key")
-    hue_ip = ConfigurationManager().get("hue_ip", default="")
+    key = ConfigurationManager().get("hue_api_key", default=None)
+    hue_ip = ConfigurationManager().get("hue_ip", default=None)
     if not hue_ip:
         print("cannot load hue_ip from settings, aborting")
+        return
+    if not key:
+        print("cannot load hue_api_key from settings, aborting")
         return
     bridge = Bridge(hue_ip, key)
     for bulb in bridge.lights:
