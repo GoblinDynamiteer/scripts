@@ -2,7 +2,6 @@
 
 """ Philips Hue Tools """
 
-
 import http.client
 import json
 import random
@@ -47,7 +46,7 @@ MAX_BRIGHTNESS = 254
 MIN_BRIGHTNESS = 1
 
 
-class LightBulb():
+class LightBulb:
     def __init__(self, bridge, light_id, json_data):
         self.raw_data = json_data
         self.id = int(light_id)
@@ -179,67 +178,22 @@ class Bridge():
             self.lights.append(LightBulb(self, key, val))
 
 
-def gen_args():
-    parser = ArgumentParser("Hue Tools")
-    parser.add_argument("id",
-                        help="lightbulb id",
-                        nargs="?",
-                        default=-1,
-                        type=int)
-    parser.add_argument("--state",
-                        type=int,
-                        default=None)
-    parser.add_argument("--hue",
-                        type=int,
-                        default=None)
-    parser.add_argument("--saturation",
-                        "-s",
-                        type=int,
-                        dest="sat",
-                        default=None)
-    parser.add_argument("--color",
-                        "-c",
-                        type=str,
-                        choices=[x for x in COLORS],
-                        dest="color",
-                        default=None)
-    parser.add_argument("--brightness",
-                        "-b",
-                        type=int,
-                        dest="bri",
-                        default=None)
-    parser.add_argument("--transition-time",
-                        "-t",
-                        default=None,
-                        type=int,
-                        dest="delay",
-                        help="transition time in seconds")
-    parser.add_argument("--list",
-                        action="store_true",
-                        dest="list_lights")
-    parser.add_argument("--info",
-                        action="store_true",
-                        dest="print_info")
-    parser.add_argument("--info-color",
-                        action="store_true",
-                        dest="print_color")
-    parser.add_argument("--cycler",
-                        action="store_true",
-                        dest="run_cycler")
-    return parser.parse_args()
-
-
-def main():
-    args = gen_args()
+def get_bridge() -> [Bridge, None]:
     key = ConfigurationManager().get("hue_api_key", default=None)
     hue_ip = ConfigurationManager().get("hue_ip", default=None)
     if not hue_ip:
         print("cannot load hue_ip from settings, aborting")
-        return
+        return None
     if not key:
         print("cannot load hue_api_key from settings, aborting")
+        return None
+    return Bridge(hue_ip, key)
+
+
+def run_cli(args):
+    bridge = get_bridge()
+    if not bridge:
         return
-    bridge = Bridge(hue_ip, key)
     for bulb in bridge.lights:
         if bulb.id == args.id:
             if args.print_info:
@@ -271,6 +225,75 @@ def main():
                     return
         if args.list_lights:
             bulb.print(short=True)
+
+
+def run_gui(args):
+    bridge = get_bridge()
+    if not bridge:
+        return
+
+
+def gen_args():
+    parser = ArgumentParser("Hue Tools")
+    sub_parsers = parser.add_subparsers(required=False)
+    sub_gui = sub_parsers.add_parser("gui")
+    sub_gui.set_defaults(func=run_gui)
+    sub_cli = sub_parsers.add_parser("cli")
+    sub_cli.set_defaults(func=run_cli)
+    sub_cli.add_argument("id",
+                         help="lightbulb id",
+                         nargs="?",
+                         default=-1,
+                         type=int)
+    sub_cli.add_argument("--state",
+                         type=int,
+                         default=None)
+    sub_cli.add_argument("--hue",
+                         type=int,
+                         default=None)
+    sub_cli.add_argument("--saturation",
+                         "-s",
+                         type=int,
+                         dest="sat",
+                         default=None)
+    sub_cli.add_argument("--color",
+                         "-c",
+                         type=str,
+                         choices=[x for x in COLORS],
+                         dest="color",
+                         default=None)
+    sub_cli.add_argument("--brightness",
+                         "-b",
+                         type=int,
+                         dest="bri",
+                         default=None)
+    sub_cli.add_argument("--transition-time",
+                         "-t",
+                         default=None,
+                         type=int,
+                         dest="delay",
+                         help="transition time in seconds")
+    sub_cli.add_argument("--list",
+                         action="store_true",
+                         dest="list_lights")
+    sub_cli.add_argument("--info",
+                         action="store_true",
+                         dest="print_info")
+    sub_cli.add_argument("--info-color",
+                         action="store_true",
+                         dest="print_color")
+    sub_cli.add_argument("--cycler",
+                         action="store_true",
+                         dest="run_cycler")
+    return parser.parse_args()
+
+
+def main():
+    args = gen_args()
+    try:
+        args.func(args)
+    except AttributeError as _:
+        pass
 
 
 if __name__ == "__main__":
