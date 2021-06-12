@@ -17,7 +17,7 @@ from util import BaseLog
 
 try:
     from PySide6.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QVBoxLayout, QColorDialog, QGroupBox, \
-    QGridLayout
+    QGridLayout, QSlider
     from PySide6.QtCore import *
     QT_AVAILABLE = True
 except ImportError as _:
@@ -78,6 +78,7 @@ class LightBulb(BaseLog):
         self.product_id = self.raw_data.get("productid", "N/A")
         if state:
             self.on = state.get("on", False)
+            self.bri = state.get("bri", 0)
 
     def print(self, only_color_info=False, short=False):
         if short:
@@ -165,6 +166,10 @@ class LightBulb(BaseLog):
             body["transitiontime"] = transition_time * 10
             self.log(f"transition time: {transition_time}")
         self.bridge.post_req(f"lights/{self.id}/state", body)
+
+    @property
+    def brightness(self):
+        return self.bri
 
 
 class Room(BaseLog):
@@ -323,15 +328,63 @@ class LightControl(QWidget, BaseLog):
     def __init__(self, light: LightBulb):
         QWidget.__init__(self)
         BaseLog.__init__(self, verbose=True)
-        self._light = light
+        self._light: LightBulb = light
+        self._btn = QPushButton("--")
+        self._update_button()
+        self._btn.clicked.connect(self.toggle)
+        self._slider = QSlider(Qt.Orientation.Horizontal)
+        self._slider.setMaximum(MAX_BRIGHTNESS)
+        self._slider.setMinimum(MIN_BRIGHTNESS)
+        self._slider.setFixedWidth(250)
+        self._slider.valueChanged.connect(self._handle_slider_val)
+        self.set_log_prefix(f"CONTROL_{self._light.name.upper()}")
+        self._update_timer = QTimer()
+        self._update_timer.setInterval(100)
+        self._update_timer.timeout.connect(self._update_light)
+        self._update_timer.start()
+        self._update_slider()
+        self._need_update = False
+        self.log("init")
 
     @Slot()
     def toggle(self):
         self._light.toggle()
+        self._update_button()
+
+    @Slot()
+    def _handle_slider_val(self, value):
+        self._light.set_brightness(value)
+        self.log(f"brightness: {value}")
+        self._need_update = True
+
+    @Slot()
+    def _update_light(self):
+        if not self._need_update:
+            return
+        self.log("updating light")
+        self._light.update()
+        self._need_update = False
 
     @property
     def name(self):
         return self._light.name
+
+    @property
+    def button(self):
+        return self._btn
+
+    @property
+    def slider(self):
+        return self._slider
+
+    def _update_button(self):
+        self._btn.setText(f"Toggle {'OFF' if self._light.on else 'ON'}")
+
+    def _update_slider(self):
+        try:
+            self._slider.setValue(self._light.brightness)
+        except TypeError:
+            self.warn("light brightness is not int")
 
 
 class HueControlWindow(QWidget, BaseLog):
@@ -354,11 +407,9 @@ class HueControlWindow(QWidget, BaseLog):
             _lc = LightControl(_light)
             self._light_ctrl.append(_lc)
             _lbl = QLabel(f" > {_light.name}")
-            _btn = QPushButton("toggle")
-            _btn.clicked.connect(_lc.toggle)
-            _btn.setFixedWidth(200)
             _layout.addWidget(_lbl, _row_num, 0)
-            _layout.addWidget(_btn, _row_num, 1)
+            _layout.addWidget(_lc.button, _row_num, 1)
+            _layout.addWidget(_lc.slider, _row_num, 2)
             _row_num += 1
         _grp.setLayout(_layout)
         return _grp
@@ -384,7 +435,7 @@ def run_gui(args):
         bridge.disable_req()
     app = QApplication([])
     widget = HueControlWindow(bridge)
-    widget.resize(400, 600)
+    widget.resize(600, 600)
     widget.show()
     sys.exit(app.exec())
 
