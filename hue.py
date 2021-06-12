@@ -18,6 +18,7 @@ from util import BaseLog
 try:
     from PySide6.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QVBoxLayout, QColorDialog, QGroupBox, \
     QGridLayout, QSlider
+    from PySide6.QtGui import QColor
     from PySide6.QtCore import *
     QT_AVAILABLE = True
 except ImportError as _:
@@ -329,21 +330,15 @@ class LightControl(QWidget, BaseLog):
         QWidget.__init__(self)
         BaseLog.__init__(self, verbose=True)
         self._light: LightBulb = light
-        self._btn = QPushButton("--")
+        self._btn = self._init_toggle_button()
         self._update_button()
-        self._btn.clicked.connect(self.toggle)
-        self._slider = QSlider(Qt.Orientation.Horizontal)
-        self._slider.setMaximum(MAX_BRIGHTNESS)
-        self._slider.setMinimum(MIN_BRIGHTNESS)
-        self._slider.setFixedWidth(250)
-        self._slider.valueChanged.connect(self._handle_slider_val)
-        self.set_log_prefix(f"CONTROL_{self._light.name.upper()}")
-        self._update_timer = QTimer()
-        self._update_timer.setInterval(100)
-        self._update_timer.timeout.connect(self._update_light)
-        self._update_timer.start()
-        self._update_slider()
+        self._slider = self._init_brightness_slider()
+        self._update_timer = self._init_update_timer()
+        self._color_picker = self._init_color_picker()
+        self._cp_btn = QPushButton("Set Color")
+        self._cp_btn.clicked.connect(self._open_color_picker)
         self._need_update = False
+        self.set_log_prefix(f"CONTROL_{self._light.name.upper().replace(' ', '_')}")
         self.log("init")
 
     @Slot()
@@ -365,12 +360,22 @@ class LightControl(QWidget, BaseLog):
         self._light.update()
         self._need_update = False
 
+    @Slot()
+    def _handle_color_picker_changed(self, color: QColor):
+        self._light.set_hue(color.hue() * 257) # TODO: fix hue vals
+        self._light.set_saturation(color.saturation())
+        self._need_update = True
+
     @property
     def name(self):
         return self._light.name
 
     @property
-    def button(self):
+    def toggle_btn(self):
+        return self._cp_btn
+
+    @property
+    def show_color_picker_btn(self):
         return self._btn
 
     @property
@@ -380,11 +385,42 @@ class LightControl(QWidget, BaseLog):
     def _update_button(self):
         self._btn.setText(f"Toggle {'OFF' if self._light.on else 'ON'}")
 
-    def _update_slider(self):
+    def _init_toggle_button(self):
+        _btn = QPushButton("--")
+        _btn.clicked.connect(self.toggle)
+        return _btn
+
+    def _init_brightness_slider(self):
+        _slider = QSlider(Qt.Orientation.Horizontal)
+        _slider.setMaximum(MAX_BRIGHTNESS)
+        _slider.setMinimum(MIN_BRIGHTNESS)
+        _slider.setFixedWidth(250)
+        _slider.valueChanged.connect(self._handle_slider_val)
         try:
-            self._slider.setValue(self._light.brightness)
+            _slider.setValue(self._light.brightness)
         except TypeError:
             self.warn("light brightness is not int")
+        return _slider
+
+    def _init_update_timer(self):
+        _timer = QTimer()
+        _timer.setInterval(100)
+        _timer.timeout.connect(self._update_light)
+        _timer.start()
+        return _timer
+
+    def _init_color_picker(self):
+        _cp = QColorDialog()
+        _cp.currentColorChanged.connect(self._handle_color_picker_changed)
+        return _cp
+
+    @Slot()
+    def _open_color_picker(self):
+        self._color_picker.open()
+
+    @property
+    def color_picker(self):
+        return self._color_picker
 
 
 class HueControlWindow(QWidget, BaseLog):
@@ -408,8 +444,9 @@ class HueControlWindow(QWidget, BaseLog):
             self._light_ctrl.append(_lc)
             _lbl = QLabel(f" > {_light.name}")
             _layout.addWidget(_lbl, _row_num, 0)
-            _layout.addWidget(_lc.button, _row_num, 1)
-            _layout.addWidget(_lc.slider, _row_num, 2)
+            _layout.addWidget(_lc.toggle_btn, _row_num, 1)
+            _layout.addWidget(_lc.show_color_picker_btn, _row_num, 2)
+            _layout.addWidget(_lc.slider, _row_num, 3)
             _row_num += 1
         _grp.setLayout(_layout)
         return _grp
@@ -437,6 +474,7 @@ def run_gui(args):
     widget = HueControlWindow(bridge)
     widget.resize(600, 600)
     widget.show()
+
     sys.exit(app.exec())
 
 
