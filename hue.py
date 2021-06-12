@@ -16,7 +16,8 @@ from printing import pfcs
 from util import BaseLog
 
 try:
-    from PySide6.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QVBoxLayout
+    from PySide6.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QVBoxLayout, QColorDialog, QGroupBox, \
+    QGridLayout
     from PySide6.QtCore import *
     QT_AVAILABLE = True
 except ImportError as _:
@@ -150,20 +151,19 @@ class LightBulb(BaseLog):
 
     def update(self, transition_time=None):
         body = {"on": self.on}
-        print(f"setting \"{self.name}\":")
-        print(f"state: {self.on}")
+        self.log(f"state: {self.on}")
         if self.hue is not None:
             body["hue"] = self.hue
-            print(f"hue: {self.hue}")
+            self.log(f"hue: {self.hue}")
         if self.sat is not None:
             body["sat"] = self.sat
-            print(f"sat: {self.sat}")
+            self.log(f"sat: {self.sat}")
         if self.bri is not None:
             body["bri"] = self.bri
-            print(f"brightness: {self.bri}")
+            self.log(f"brightness: {self.bri}")
         if transition_time is not None:
             body["transitiontime"] = transition_time * 10
-            print(f"transition time: {transition_time}")
+            self.log(f"transition time: {transition_time}")
         self.bridge.post_req(f"lights/{self.id}/state", body)
 
 
@@ -212,9 +212,15 @@ class Bridge(BaseLog):
         self.lights = []
         self.rooms = []
         self.zones = []
+        self._skip_req = False
         self._populate_lights()
         self._populate_groups()
+        self.set_log_prefix(f"BRIDGE")
         self.log(f"init done -> num lights {len(self.lights)} num rooms: {len(self.rooms)}")
+
+    def disable_req(self):
+        self.log("skipping PUT requests")
+        self._skip_req = True
 
     def get_req(self, path: str) -> dict:
         url = f"https://{self.ip}/api/{self.key}/{path}"
@@ -227,6 +233,9 @@ class Bridge(BaseLog):
 
     def post_req(self, path, body: dict):
         url = f"https://{self.ip}/api/{self.key}/{path}"
+        self.log(f">> PUT {url} - {body}")
+        if self._skip_req:
+            return {}
         conn = http.client.HTTPConnection(self.ip, timeout=10)
         conn.request("PUT", url, json.dumps(body))
         result = conn.getresponse()
@@ -310,24 +319,58 @@ def run_cli(args):
             bulb.print(short=True)
 
 
+class LightControl(QWidget, BaseLog):
+    def __init__(self, light: LightBulb):
+        QWidget.__init__(self)
+        BaseLog.__init__(self, verbose=True)
+        self._light = light
+
+    @Slot()
+    def toggle(self):
+        self._light.toggle()
+
+    @property
+    def name(self):
+        return self._light.name
+
+
 class HueControlWindow(QWidget, BaseLog):
     def __init__(self, bridge):
         QWidget.__init__(self)
         BaseLog.__init__(self, verbose=True)
+        self.setWindowTitle("Hue Controller")
+        self._light_ctrl = []
         self._bridge = bridge
-        self._room = bridge.get_room_with_name("sovrum")
-        self.button = QPushButton("TOGGLE TEST!")
         self.layout = QVBoxLayout(self)
-        self.layout.addWidget(self.button)
-        self.button.clicked.connect(self.toggle)
+        for _room in self._bridge.rooms:
+            self.layout.addWidget(self._setup_room_widget(_room))
         self.set_log_prefix("HUE_CONTROL_WINDOW")
 
+    def _setup_room_widget(self, room: Room):
+        _grp = QGroupBox(title=room.name)
+        _layout = QGridLayout()
+        _row_num = 0
+        for _light in room.lights:
+            _lc = LightControl(_light)
+            self._light_ctrl.append(_lc)
+            _lbl = QLabel(f" > {_light.name}")
+            _btn = QPushButton("toggle")
+            _btn.clicked.connect(_lc.toggle)
+            _btn.setFixedWidth(200)
+            _layout.addWidget(_lbl, _row_num, 0)
+            _layout.addWidget(_btn, _row_num, 1)
+            _row_num += 1
+        _grp.setLayout(_layout)
+        return _grp
+
     @Slot()
-    def toggle(self):
-        if not self._room:
-            self.log("no room....")
-        for light in self._room.lights:
-            light.toggle()
+    def show_diag(self):
+        self._color_diag.setWindowFlag(Qt.WindowStaysOnTopHint)
+        self._color_diag.show()
+
+    @Slot()
+    def color_picker_color_changed(self, color):
+        print(color)
 
 
 def run_gui(args):
@@ -337,9 +380,11 @@ def run_gui(args):
     bridge = get_bridge()
     if not bridge:
         return
+    if args.skip_req:
+        bridge.disable_req()
     app = QApplication([])
     widget = HueControlWindow(bridge)
-    widget.resize(800, 600)
+    widget.resize(400, 600)
     widget.show()
     sys.exit(app.exec())
 
@@ -349,6 +394,7 @@ def gen_args():
     sub_parsers = parser.add_subparsers(required=False)
     sub_gui = sub_parsers.add_parser("gui")
     sub_gui.set_defaults(func=run_gui)
+    sub_gui.add_argument("--no-req", action="store_true", dest="skip_req")
     sub_cli = sub_parsers.add_parser("cli")
     sub_cli.set_defaults(func=run_cli)
     sub_cli.add_argument("id",
