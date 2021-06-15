@@ -1,11 +1,10 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 
 import configparser
 from pathlib import Path
 from enum import Enum
 
 import util
-import unittest
 
 
 class SettingKeys(Enum):
@@ -23,7 +22,7 @@ class SettingKeys(Enum):
     PATH_RESTORE = "path_rest"
     PATH_SCRIPTS = "path_scripts"
     PATH_COOKIES_TXT = "path_cookies_txt"
-    PATCH_ECONOMY_CSV = "path_economy_csv"
+    PATH_ECONOMY_CSV = "path_economy_csv"
     NAS_SHARE_MOUNT_PATH = "ds_mount_path"
     SMB_CREDENTIALS_REGULAR = "smb_credentials_reg"
     SMB_CREDENTIALS_DRB = "smb_credentials_drb"
@@ -31,6 +30,14 @@ class SettingKeys(Enum):
     API_KEY_HUE = "hue_api_key"
     IP_NAS = "ds_ip"
     IP_HUE = "hue_ip"
+    WB_SERVER_1 = "server1"
+    WB_SERVER_2 = "server2"
+    WB_USERNAME = "username"
+    WB_PASSWORD = "password"
+
+
+class SettingSection(Enum):
+    WB = "wb"
 
 
 class ConfigurationManager(util.BaseLog, metaclass=util.Singleton):
@@ -50,17 +57,24 @@ class ConfigurationManager(util.BaseLog, metaclass=util.Singleton):
             return self._load()
         return True
 
-    def get(self, key, convert=None, default=None):
+    def get(self, key, convert=None, section=None, default=None):
         if self.SETTINGS is None:
             if not self._load():
                 return default
         if isinstance(key, SettingKeys):
             key = key.value
+        if isinstance(section, SettingSection):
+            section = section.value
         value = None
-        for section in self.SETTINGS:
-            if key in self.SETTINGS[section]:
-                value = self.SETTINGS[section][key]
-                break
+        if section:
+            if section in self.SETTINGS:
+                if key in self.SETTINGS[section]:
+                    value = self.SETTINGS[section][key]
+        else:
+            for _section in self.SETTINGS:
+                if key in self.SETTINGS[_section]:
+                    value = self.SETTINGS[_section][key]
+                    break
         if value is None:
             self.log_warn(f"could not find key: {key},"
                           f" returning default: {default}")
