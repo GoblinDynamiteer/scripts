@@ -45,6 +45,9 @@ class SSHConnection(BaseLog):
 class Server(BaseLog):
     def __init__(self, hostname):
         super().__init__(verbose=True)
+        if not hostname:
+            self.error(f"invalid hostname: {hostname}")
+            raise ValueError("hostname not valid")
         self.set_log_prefix(f"{hostname.split('.')[0].upper()}")
         self._hostname = hostname
         self._ssh = SSHConnection()
@@ -79,7 +82,11 @@ class ServerHandler:
 def main():
     handler = ServerHandler()
     for _key in [SettingKeys.WB_SERVER_1, SettingKeys.WB_SERVER_2]:
-        handler.add(ConfigurationManager().get(key=_key, section=SettingSection.WB))
+        _hostname = ConfigurationManager().get(key=_key, section=SettingSection.WB)
+        if _hostname:
+            handler.add(_hostname)
+        else:
+            print(f"could not get hostname (key {_key.value}) from settings")
     handler.get_file_list()
 
 
