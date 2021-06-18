@@ -15,14 +15,10 @@ from enum import Enum
 from printing import pfcs
 from util import BaseLog
 
-try:
-    from PySide6.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QVBoxLayout, QColorDialog, QGroupBox, \
-    QGridLayout, QSlider
-    from PySide6.QtGui import QColor
-    from PySide6.QtCore import *
-    QT_AVAILABLE = True
-except ImportError as _:
-    QT_AVAILABLE = False
+from PySide6.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QVBoxLayout, QColorDialog, QGroupBox, \
+QGridLayout, QSlider
+from PySide6.QtGui import QColor
+from PySide6.QtCore import *
 
 
 class Hue(Enum):
@@ -462,9 +458,6 @@ class HueControlWindow(QWidget, BaseLog):
 
 
 def run_gui(args):
-    if not QT_AVAILABLE:
-        print("QT/GUI not available")
-        return
     bridge = get_bridge()
     if not bridge:
         return
