@@ -25,6 +25,15 @@ class FileListItem:
         self._sub_items = []
         _user = ConfigurationManager().get(key=SettingKeys.WB_USERNAME, section=SettingSection.WB)
         self._top_level = Path("/home/") / _user / "files"
+        self._index = 0
+
+    @property
+    def index(self) -> int:
+        return self._index
+
+    @index.setter
+    def index(self, index_val: int):
+        self._index = index_val
 
     def add_sub_item(self, item):
         self._sub_items.append(item)
@@ -82,6 +91,17 @@ class FileListItem:
             return f"{_ret}/"
         return _ret
 
+    def contains_videos(self) -> bool:
+        if self.is_file:
+            return False
+        if self._sub_items:
+            for item in self._sub_items:
+                if item.is_video:
+                    return True
+                if item.contains_videos():
+                    return True
+        return False
+
     @property
     def name(self) -> str:
         return self._path.name
@@ -93,10 +113,26 @@ class FileListItem:
     def path(self):
         return self._path
 
+    @property
+    def is_video(self) -> bool:
+        if self.is_dir:
+            return False
+        return self._path.suffix == ".mkv"
+
+    @property
+    def is_rar(self) -> bool:
+        if self.is_dir:
+            return False
+        return self._path.suffix == ".rar"
+
 
 class FileList:
-    def __init__(self):
+    def __init__(self, start_index=1):
         self._items: List[FileListItem] = []
+        self._index = start_index
+
+    def last_index(self) -> int:
+        return self._index
 
     def parse_find_d_output(self, lines: List[str]):
         for line in lines:
@@ -109,6 +145,7 @@ class FileList:
     def _add_item(self, item: FileListItem):
         if not item.valid:
             return
+        self.set_index(item)
         if item.is_top_level():
             self._items.append(item)
             return
@@ -117,6 +154,11 @@ class FileList:
             _parent.add_sub_item(item)
         else:
             self._items.append(item)
+
+    def set_index(self, item: FileListItem):
+        if item.is_dir or item.is_video:
+            item.index = self._index
+            self._index += 1
 
     def _get_parent_item(self, items: List[FileListItem], item: FileListItem) -> [FileListItem, None]:
         for _item in items:
@@ -131,10 +173,12 @@ class FileList:
             self.print_item(item)
 
     def print_item(self, item: FileListItem, indent=0):
-        prefix = "[DIR]" if item.is_dir else "[FIL]"
+        prefix = f"{item.index:03d} [DIR]" if item.is_dir else f"{item.index:03d} [FIL]"
         print(prefix + " " * indent, item.name)
-        for sub_item in item.sub_items():
-            self.print_item(sub_item, indent+4)
+        if item.contains_videos():
+            for sub_item in item.sub_items():
+                if sub_item.is_dir or sub_item.is_video:
+                    self.print_item(sub_item, indent+4)
 
 
 class SSHConnection(BaseLog):
@@ -181,6 +225,7 @@ class Server(BaseLog):
         self._hostname = hostname
         self._ssh = SSHConnection()
         self._connect()
+        self._file_list = None
 
     def _connect(self):
         if self._ssh.connected:
@@ -189,11 +234,13 @@ class Server(BaseLog):
         _pw = ConfigurationManager().get(SettingKeys.WB_PASSWORD, section=SettingSection.WB)
         self._ssh.connect(self._hostname, username=_user, password=_pw)
 
-    def list_files(self) -> [FileList, None]:
+    def get_file_list(self, start_index=1) -> [FileList, None]:
+        if self._file_list:
+            return self._file_list
         if not self._ssh.connected:
             self.error("cannot retrieve file list, not connected")
             return None
-        _file_list = FileList()
+        _file_list = FileList(start_index=start_index)
         _file_list.parse_find_d_output(self._ssh.run_command(r"find ~/files -type d"))
         _file_list.parse_find_f_output(self._ssh.run_command(r"find ~/files -type f"))
         _file_list.print()
@@ -202,15 +249,20 @@ class Server(BaseLog):
 
 class ServerHandler:
     def __init__(self):
-        self._servers = []
+        self._servers : List[Server] = []
 
     def add(self, hostname):
         self._servers.append(Server(hostname))
 
-    def get_file_list(self):
-        for _server in self._servers:
-            _server.list_files()
-
+    def print_file_list(self):
+        start_index = 1
+        file_lists = []
+        for server in self._servers:
+            file_list = server.get_file_list(start_index=start_index)
+            file_lists.append(file_list)
+            start_index = file_list.last_index() + 1
+        for file_list in file_lists:
+            file_list.print()
 
 def main():
     handler = ServerHandler()
@@ -220,7 +272,7 @@ def main():
             handler.add(_hostname)
         else:
             print(f"could not get hostname (key {_key.value}) from settings")
-    handler.get_file_list()
+    handler.print_file_list()
 
 
 if __name__ == "__main__":

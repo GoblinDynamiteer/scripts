@@ -95,11 +95,43 @@ class TestFileListItem:
         fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
         assert fi.valid is False
 
+    def test_is_video(self):
+        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.mkv"
+        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
+        assert fi.is_video is True
+        assert fi.is_rar is False
+        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
+        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
+        assert fi.is_video is False
+
+    def test_is_rar(self):
+        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.rar"
+        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
+        assert fi.is_rar is True
+        assert fi.is_video is False
+        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
+        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
+        assert  fi.is_rar is False
+
+    def test_contains_videos(self):
+        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
+        fi_parent = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
+        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.mkv"
+        fi_sub = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
+        fi_parent.add_sub_item(fi_sub)
+        assert fi_parent.contains_videos()
+
+    def test_index(self):
+        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
+        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
+        fi.index = 123
+        assert fi.index == 123
+
     def test_sub_items(self):
         _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
         fi_parent = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
         _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.rar"
-        fi_sub = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
+        fi_sub = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
         fi_parent.add_sub_item(fi_sub)
         _sub = list(fi_parent.sub_items())
         assert len(_sub) == 1
