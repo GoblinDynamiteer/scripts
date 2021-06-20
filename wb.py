@@ -40,7 +40,6 @@ def ls_remote_items(filter_re: str = "", use_cached_if_new=False, server=Server.
     file_name = Path(__file__).resolve().parent / CACHED_WB_LIST_FILENAME
     file_list = []
     if use_cached_if_new:
-        saved_stamp = 0
         with open(file_name, "r") as list_file:
             saved_stamp = int(list_file.readline())
             if abs(saved_stamp - util.now_timestamp() < (60 * 5)):
@@ -135,7 +134,7 @@ def filter_using_get_arg_indexes(items: list, indexes: str) -> list:
         return []
 
 
-def download(item: dict, extr: bool = False, serer=Server.WB1):
+def download(item: dict, extr: bool = False, server=Server.WB1, limit=None):
     file_name = item["name"]
     repl_list = [(" ", r"\ "),  # TODO: use escaped for all?
                  ("'", "*"),
@@ -148,7 +147,8 @@ def download(item: dict, extr: bool = False, serer=Server.WB1):
     print(f'downloading: {cstr(file_name, "orange")}')
     conf = config.ConfigurationManager()
     dl_dir = conf.get("path_download")
-    command = f'scp -r {serer.value}:"~/files/{file_name}" "{dl_dir}"'
+    limit_str = f"-l {limit} " if limit is not None else ""
+    command = f'scp {limit_str}-r {server.value}:"~/files/{file_name}" "{dl_dir}"'
     local_command(command, hide_output=False)
     # only run extract if dest was default dl dir
     if extr:
@@ -159,7 +159,7 @@ def download(item: dict, extr: bool = False, serer=Server.WB1):
         extract.extract_item(path_for_extract_cmd)
 
 
-def wb_download_items(items: list, indexes: str, extr=False, server=Server.WB1):
+def wb_download_items(items: list, indexes: str, extr=False, server=Server.WB1, limit=None):
     "Downloads the items passed, based on indexes, to dest_dir"
     items_to_dl = filter_using_get_arg_indexes(items, indexes)
     if not items_to_dl:
@@ -167,7 +167,7 @@ def wb_download_items(items: list, indexes: str, extr=False, server=Server.WB1):
     print("Will download the following:")
     for item in items_to_dl:
         pfcs(f" - g[{item['name']}]")
-    [download(item, extr=extr, serer=server) for item in items_to_dl]
+    [download(item, extr=extr, server=server, limit=limit) for item in items_to_dl]
 
 
 def wb_scp_torrents(server=Server.WB1):
@@ -193,38 +193,33 @@ def wb_scp_torrents(server=Server.WB1):
 
 def get_cli_args():
     parser = argparse.ArgumentParser(description="wb tool")
-    parser.add_argument(
-        "command",
-        type=str,
-        choices=["list", "new", "download", "get", "send"])
-    parser.add_argument(
-        "--get",
-        type=str,
-        default="-1",
-        help="items to download. indexes"
-    )
-    parser.add_argument(
-        "--filter",
-        "-f",
-        type=str,
-        default="",
-        help="Filter items to be downloaded/listed, regex"
-    )
-    parser.add_argument(
-        "--extract",
-        "-e",
-        action="store_true",
-        help="Run extract after download",
-        dest="extract"
-    )
-    parser.add_argument(
-        "--server",
-        "-s",
-        default=Server.WB1,
-        type=Server,
-        help="select server",
-        dest="server"
-    )
+    parser.add_argument("command",
+                        type=str,
+                        choices=["list", "new", "download", "get", "send"])
+    parser.add_argument("--get",
+                        type=str,
+                        default="-1",
+                        help="items to download. indexes")
+    parser.add_argument("--filter",
+                        "-f",
+                        type=str,
+                        default="",
+                        help="Filter items to be downloaded/listed, regex")
+    parser.add_argument("--extract",
+                        "-e",
+                        action="store_true",
+                        help="Run extract after download",
+                        dest="extract")
+    parser.add_argument("--server",
+                        "-s",
+                        default=Server.WB1,
+                        type=Server,
+                        help="select server",
+                        dest="server")
+    parser.add_argument("--limit",
+                        default=None,
+                        type=int,
+                        help="download speed limit in Kbit/s")
     return parser.parse_args()
 
 
