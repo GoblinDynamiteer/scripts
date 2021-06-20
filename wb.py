@@ -230,7 +230,7 @@ def main():
     elif args.command in ["download", "get"]:
         items = ls_remote_items(
             args.filter, use_cached_if_new=True, server=args.server)
-        wb_download_items(items, args.get, args.extract, server=args.server)
+        wb_download_items(items, args.get, args.extract, server=args.server, limit=args.limit)
     elif args.command == "send":
         wb_scp_torrents()
     else:
