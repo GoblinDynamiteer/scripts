@@ -57,13 +57,13 @@ class BaseLog():
     def warn(self, warn_str):
         self.log_warn(warn_str)
 
-    def log_error(self, err_str):
+    def log_error(self, err_str, error_prefix="error"):
         if not self.print_log:
             return
-        print(self._prefix_str(), fcs("e[error]"), err_str)
+        print(self._prefix_str(), fcs(f"e[{error_prefix}]"), err_str)
 
-    def error(self, err_str):
-        self.log_error(err_str)
+    def error(self, err_str, error_prefix="error"):
+        self.log_error(err_str, error_prefix)
 
     def _prefix_str(self):
         return cstr(f"({self.log_prefix})", self._log_prefix_color)
