@@ -2,137 +2,71 @@ from wb_new import *
 
 from config import ConfigurationManager
 
+from pytest import fixture
+
+
+@fixture(scope="session", autouse=True)
+def set_config(tmpdir_factory):
+    _file = Path(tmpdir_factory.mktemp("settings").join("_settings.txt"))
+    with open(_file, "w") as settings_file:
+        settings_file.write("\n".join(["[wb]", "username=johndoe"]))
+    ConfigurationManager().set_config_file(_file)
+
+
+class TestHelperMethods:
+    def test_gen_find_cmd(self):
+        _expected = r'find /home/johndoe/files \( -iname "*.mkv" -o -iname "*.rar" \)' \
+                    r' -printf "%T@ | %s | %p\n" | sort -n'
+        assert gen_find_cmd(["mkv", "rar"]) == _expected
+
 
 class TestFileListItem:
-    def test_is_x(self):
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
-        assert fi.is_file is False
-        assert fi.is_dir is True
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.rar"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
-        assert fi.is_file is True
-        assert fi.is_dir is False
+    def test_parse_valid_episode(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/Show.S04.1080p.WEB.H264-GROUPNAME/" \
+                r"Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME.mkv"
+        _item = FileListItem(_line)
+        assert _item.valid is True
+        assert _item.name == "Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME.mkv"
+        assert _item.size == 4025725826
+        assert _item.timestamp == 1623879181
+        assert _item.path == Path(
+            r"/home/johndoe/files/Show.S04.1080p.WEB.H264-GROUPNAME/"
+            r"Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME.mkv"
+        )
 
-    def test_parent(self):
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
-        assert fi.parent() == Path("/home/user/files/")
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.rar"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
-        assert fi.parent() == Path("/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/")
+    def test_parse_invalid_movie_sample(self):
+        _line = r"1611998314.0000000000 | 45986355 | " \
+                r"/home/johndoe/files/The.Movie.2021.1080p.WEB.H264-GROUPNAME/Sample/" \
+                r"the.movie.2021.1080p.web.h264-grp-sample.mkv"
+        _item = FileListItem(_line)
+        assert _item.valid is False
 
-    def test_is_parent_of(self):
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
-        fi_parent = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.rar"
-        fi_child = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
-        assert fi_parent.is_parent_of(fi_child) is True
+    def test_parse_invalid_lines(self):
+        _line = r"1611998314.0000000000 45986355 | " \
+                r"/home/johndoe/files/SomeFile.mkv"
+        _item = FileListItem(_line)
+        assert _item.valid is False
+        _line = r"1611998314.0000000000 | 45986355 | " \
+                r"not_correct_path"
+        _item = FileListItem(_line)
+        assert _item.valid is False
+        _line = r"1611998314.0000000000 | xxxxx | " \
+                r"/home/johndoe/files/SomeFile.mkv"
+        _item = FileListItem(_line)
+        assert _item.valid is False
+        _line = r"xxxxx | 45986355 | " \
+                r"/home/johndoe/files/SomeFile.mkv"
+        _item = FileListItem(_line)
+        assert _item.valid is False
 
-    def test_is_top_level(self, tmp_path):
-        _file = tmp_path / "_settings.txt"
-        with open(_file, "w") as settings_file:
-            settings_file.write("\n".join(["[wb]", "username=donald"]))
-        ConfigurationManager().set_config_file(_file)
-        _find_str = "/home/donald/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
-        assert fi.is_top_level() is True
-
-    def test_assert_top_dir_is_invalid(self, tmp_path):
-        _file = tmp_path / "_settings.txt"
-        with open(_file, "w") as settings_file:
-            settings_file.write("\n".join(["[wb]", "username=ronald"]))
-        ConfigurationManager().set_config_file(_file)
-        _find_str = "/home/ronald/files/"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
-        assert fi.valid is False
-
-    def test_valid_file(self):
-        _find_str = "/home/donald/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.rar"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
-        assert fi.valid is True
-        _find_str = "/home/donald/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.nfo"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
-        assert fi.valid is False
-
-    def test_string_scrubbing(self):
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.rar\n "
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
-        assert fi.valid is True
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.r00\n "
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
-        assert fi.valid is False
-
-    def test_parent_invalid(self):
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/Sample/sample.mkv"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
-        assert fi.valid is False
-
-    def test_is_relative_of(self):
-        _base_str = "/home/user/files/Some.Kind.of.Show.S02.1080p.WEB.h264-COOLGRP/"
-        fi_base = FileListItem(_base_str, item_type=FileListItem.ItemType.Dir)
-        _sub_dir_str = _base_str + "Some.Kind.of.Show.S02E01.1080p.WEB.h264-COOLGRP/"
-        fi_sub_dir = FileListItem(_sub_dir_str, item_type=FileListItem.ItemType.Dir)
-        _file_str = _sub_dir_str + "skoss02e01-clgrp.rar"
-        fi_file = FileListItem(_file_str, item_type=FileListItem.ItemType.File)
-        assert fi_sub_dir.is_parent_of(fi_file)
-        assert fi_base.is_relative_of(fi_file)
-
-    def test_str_remove_prefix(self, tmp_path):
-        _file = tmp_path / "_settings.txt"
-        with open(_file, "w") as settings_file:
-            settings_file.write("\n".join(["[wb]", "username=donald"]))
-        ConfigurationManager().set_config_file(_file)
-        _find_str = "/home/donald/files/Some.Kind.of.Show.S02.1080p.WEB.h264-COOLGRP/"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
-        assert str(fi) == "Some.Kind.of.Show.S02.1080p.WEB.h264-COOLGRP/"
-
-    def test_valid_dir(self):
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
-        assert fi.valid is True
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/Sample"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
-        assert fi.valid is False
-
-    def test_is_video(self):
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.mkv"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
-        assert fi.is_video is True
-        assert fi.is_rar is False
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
-        assert fi.is_video is False
-
-    def test_is_rar(self):
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.rar"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
-        assert fi.is_rar is True
-        assert fi.is_video is False
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
-        assert  fi.is_rar is False
-
-    def test_contains_videos(self):
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
-        fi_parent = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.mkv"
-        fi_sub = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
-        fi_parent.add_sub_item(fi_sub)
-        assert fi_parent.contains_videos()
-
-    def test_index(self):
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
-        fi = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
-        fi.index = 123
-        assert fi.index == 123
-
-    def test_sub_items(self):
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP"
-        fi_parent = FileListItem(_find_str, item_type=FileListItem.ItemType.Dir)
-        _find_str = "/home/user/files/Some.Kind.of.Movie.2021.1080p.WEB.h264-COOLGRP/smkm-clgrp.rar"
-        fi_sub = FileListItem(_find_str, item_type=FileListItem.ItemType.File)
-        fi_parent.add_sub_item(fi_sub)
-        _sub = list(fi_parent.sub_items())
-        assert len(_sub) == 1
-        assert _sub[0] is fi_sub
+    def test_set_index(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/Show.S04.1080p.WEB.H264-GROUPNAME/" \
+                r"Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME.mkv"
+        _item = FileListItem(_line)
+        assert _item.index is None
+        _item.index = 0
+        assert _item.index == 0
+        _item.index = 999
+        assert _item.index == 999

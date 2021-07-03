@@ -10,104 +10,70 @@ from config import ConfigurationManager, SettingSection, SettingKeys
 from paramiko.client import SSHClient, AutoAddPolicy
 
 
-class FileListItem:
-    class ItemType(Enum):
-        Dir = "directory"
-        File = "File"
+def get_remote_files_path() -> Path:
+    _username = ConfigurationManager().get(SettingKeys.WB_USERNAME, section=SettingSection.WB)
+    return Path(f"/home/{_username}/files/")
 
-    _ignore_dirs = ["Sample", "Proof", "Subs"]
-    _valid_file_ext = [".mkv", ".rar"]
 
-    def __init__(self, string: str, item_type: ItemType):
-        self._type = item_type
+def gen_find_cmd(extensions: List[str]):
+    _files_path = get_remote_files_path()
+    _cmd_str = f"find {_files_path} \\("
+    for _ix, _ext in enumerate(extensions, 0):
+        if _ix:
+            _cmd_str += " -o"
+        _cmd_str += f" -iname \"*.{_ext}\""
+    return _cmd_str + " \\) -printf \"%T@ | %s | %p\\n\" | sort -n"
+
+
+class FileListItem(BaseLog):
+    _ignore = ["sample", "subs"]
+
+    def __init__(self, string: str):
+        BaseLog.__init__(self, verbose=True)
+        self.set_log_prefix("ITEM")
         self._raw = string.replace("\n", "").strip()
-        self._path = Path(self._raw)
-        self._sub_items = []
-        _user = ConfigurationManager().get(key=SettingKeys.WB_USERNAME, section=SettingSection.WB)
-        self._top_level = Path("/home/") / _user / "files"
-        self._index = 0
+        self._index = None
+        self._parse()
+
+    def _parse(self):
+        self.log(f"parsing {self._raw}")
+        self._valid = False
+        try:
+            _stamp, _bytes, _path = self._raw.split(" | ")
+        except ValueError as _:
+            self.error(f"could not split line: {self._raw}",
+                       error_prefix="parse_error")
+            return
+        self._path = Path(_path)
+        _files_path = get_remote_files_path()
+        if not self._path.is_relative_to(_files_path):
+            self.error(f"path {self._path} is not relative to: {_files_path}",
+                       error_prefix="parse_error")
+            return
+        if not _bytes.isdigit():
+            self.error(f"bytes value: {_bytes} is not an integer!",
+                       error_prefix="parse_error")
+            return
+        self._bytes = int(_bytes)
+        try:
+            self._timestamp = int(_stamp.split(".")[0])
+        except ValueError as _:
+            self.error(f"could not parse timestamp from: {_stamp}",
+                       error_prefix="parse_error")
+            return
+        self._valid = True
 
     @property
-    def index(self) -> int:
+    def index(self) -> [int, None]:
         return self._index
 
     @index.setter
     def index(self, index_val: int):
         self._index = index_val
 
-    def add_sub_item(self, item):
-        self._sub_items.append(item)
-
-    def sub_items(self):
-        for item in self._sub_items:
-            yield item
-
-    def is_parent_of(self, other: "FileListItem"):
-        if other.is_top_level():
-            return False
-        if self.is_file:
-            return False
-        return self._path == other.parent()
-
-    def is_relative_of(self, other: "FileListItem"):
-        if other.is_top_level():
-            return False
-        if self.is_file:
-            return False
-        try:
-            return other.path.is_relative_to(self._path)
-        except AttributeError as _:
-            pass
-        return str(other).startswith(str(self))
-
-    def is_top_level(self):
-        return self._path.parent == self._top_level
-
-    @property
-    def is_dir(self):
-        return self._type == self.ItemType.Dir
-
-    @property
-    def is_file(self):
-        return self._type == self.ItemType.File
-
-    @property
-    def valid(self):
-        if self.is_dir:
-            if self._path == self._top_level:
-                return False
-            if self._path.name in self._ignore_dirs:
-                return False
-        if self.is_file:
-            if self._path.suffix not in self._valid_file_ext:
-                return False
-            if self.parent().name in self._ignore_dirs:
-                return False
-        return True
-
-    def __str__(self):
-        _ret = str(self._path).replace(f"{self._top_level}/", "")
-        if self.is_dir and not _ret.endswith("/"):
-            return f"{_ret}/"
-        return _ret
-
-    def contains_videos(self) -> bool:
-        if self.is_file:
-            return False
-        if self._sub_items:
-            for item in self._sub_items:
-                if item.is_video:
-                    return True
-                if item.contains_videos():
-                    return True
-        return False
-
     @property
     def name(self) -> str:
         return self._path.name
-
-    def parent(self):
-        return self._path.parent
 
     @property
     def path(self):
@@ -115,15 +81,27 @@ class FileListItem:
 
     @property
     def is_video(self) -> bool:
-        if self.is_dir:
-            return False
         return self._path.suffix == ".mkv"
 
     @property
     def is_rar(self) -> bool:
-        if self.is_dir:
-            return False
         return self._path.suffix == ".rar"
+
+    @property
+    def size(self) -> int:
+        return self._bytes
+
+    @property
+    def timestamp(self) -> int:
+        return self._timestamp
+
+    @property
+    def valid(self):
+        if not self._valid:
+            return False
+        if any([_i in self.name for _i in self._ignore]):
+            return False
+        return True
 
 
 class FileList:
@@ -134,51 +112,20 @@ class FileList:
     def last_index(self) -> int:
         return self._index
 
-    def parse_find_d_output(self, lines: List[str]):
+    def parse_find_cmd_output(self, lines: List[str]):
         for line in lines:
-            self._add_item(FileListItem(line, item_type=FileListItem.ItemType.Dir))
-
-    def parse_find_f_output(self, lines: List[str]):
-        for line in lines:
-            self._add_item(FileListItem(line, item_type=FileListItem.ItemType.File))
-
-    def _add_item(self, item: FileListItem):
-        if not item.valid:
-            return
-        self.set_index(item)
-        if item.is_top_level():
-            self._items.append(item)
-            return
-        _parent = self._get_parent_item(self._items, item)
-        if _parent is not None:
-            _parent.add_sub_item(item)
-        else:
-            self._items.append(item)
-
-    def set_index(self, item: FileListItem):
-        if item.is_dir or item.is_video:
-            item.index = self._index
-            self._index += 1
-
-    def _get_parent_item(self, items: List[FileListItem], item: FileListItem) -> [FileListItem, None]:
-        for _item in items:
-            if _item.is_parent_of(item):
-                return _item
-            if _item.is_relative_of(item):
-                return self._get_parent_item(list(_item.sub_items()), item)
-        return None
+            _item = FileListItem(line)
+            if _item.valid:
+                _item.index = self._index
+                self._index += 1
+                self._items.append(_item)
 
     def print(self):
         for item in self._items:
             self.print_item(item)
 
-    def print_item(self, item: FileListItem, indent=0):
-        prefix = f"{item.index:03d} [DIR]" if item.is_dir else f"{item.index:03d} [FIL]"
-        print(prefix + " " * indent, item.name)
-        if item.contains_videos():
-            for sub_item in item.sub_items():
-                if sub_item.is_dir or sub_item.is_video:
-                    self.print_item(sub_item, indent+4)
+    def print_item(self, item: FileListItem):
+        print(item.index, item.path)
 
 
 class SSHConnection(BaseLog):
@@ -241,8 +188,8 @@ class Server(BaseLog):
             self.error("cannot retrieve file list, not connected")
             return None
         _file_list = FileList(start_index=start_index)
-        _file_list.parse_find_d_output(self._ssh.run_command(r"find ~/files -type d"))
-        _file_list.parse_find_f_output(self._ssh.run_command(r"find ~/files -type f"))
+        _cmd = gen_find_cmd(extensions=["mkv", "rar"])
+        _file_list.parse_find_cmd_output(self._ssh.run_command(_cmd))
         _file_list.print()
         return _file_list
 
@@ -263,6 +210,7 @@ class ServerHandler:
             start_index = file_list.last_index() + 1
         for file_list in file_lists:
             file_list.print()
+
 
 def main():
     handler = ServerHandler()
