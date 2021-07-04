@@ -2,9 +2,12 @@
 
 from pathlib import Path
 from typing import List
+import re
 from enum import Enum
 
 from util import BaseLog
+from util_movie import is_movie
+from util_tv import is_episode
 from config import ConfigurationManager, SettingSection, SettingKeys
 
 from paramiko.client import SSHClient, AutoAddPolicy
@@ -26,13 +29,20 @@ def gen_find_cmd(extensions: List[str]):
 
 
 class FileListItem(BaseLog):
-    _ignore = ["sample", "subs"]
+    class MediaType(Enum):
+        Movie = "movie"
+        Episode = "episode"
+        Unknown = "unknown"
 
-    def __init__(self, string: str):
+    _ignore = ["sample", "subs", "subpack"]
+
+    def __init__(self, string: str, server_id: str = ""):
         BaseLog.__init__(self, verbose=True)
         self.set_log_prefix("ITEM")
         self._raw = string.replace("\n", "").strip()
         self._index = None
+        self._server_id = server_id
+        self._type = None
         self._parse()
 
     def _parse(self):
@@ -67,6 +77,19 @@ class FileListItem(BaseLog):
             return
         self._valid = True
 
+    def _determine_type(self):
+        self._type = self.MediaType.Unknown
+        if is_movie(self.name):
+            self._type = self.MediaType.Movie
+        elif is_episode(self.name):
+            self._type = self.MediaType.Episode
+        elif self._path.parent != get_remote_files_path():
+            _parent_name = self._path.parent.name
+            if is_movie(_parent_name):
+                self._type = self.MediaType.Movie
+            elif is_episode(_parent_name):
+                self._type = self.MediaType.Episode
+
     @property
     def index(self) -> [int, None]:
         return self._index
@@ -82,6 +105,18 @@ class FileListItem(BaseLog):
     @property
     def path(self):
         return self._path
+
+    @property
+    def is_movie(self):
+        if self._type is None:
+            self._determine_type()
+        return self._type == self.MediaType.Movie
+
+    @property
+    def is_tvshow(self):
+        if self._type is None:
+            self._determine_type()
+        return self._type == self.MediaType.Episode
 
     @property
     def is_video(self) -> bool:
@@ -100,36 +135,52 @@ class FileListItem(BaseLog):
         return self._timestamp
 
     @property
+    def server_id(self) -> str:
+        return self._server_id
+
+    @property
     def valid(self):
         if not self._valid:
             return False
         if any([_i in self.name for _i in self._ignore]):
             return False
+        if self.is_rar:
+            _match = re.search(r"\.part\d{2}\.rar", self._path.name)
+            if _match:
+                return self._path.name.endswith("part01.rar")
+            if "subpack" in self._path.parent.name.lower():
+                return False
         return True
 
 
 class FileList:
-    def __init__(self, start_index=1):
+    def __init__(self):
         self._items: List[FileListItem] = []
-        self._index = start_index
+        self._sorted = False
 
-    def last_index(self) -> int:
-        return self._index
-
-    def parse_find_cmd_output(self, lines: List[str]):
+    def parse_find_cmd_output(self, lines: List[str], server_id: str):
         for line in lines:
-            _item = FileListItem(line)
+            _item = FileListItem(line, server_id)
             if _item.valid:
-                _item.index = self._index
-                self._index += 1
                 self._items.append(_item)
 
     def print(self):
+        if not self._sorted:
+            self._sort()
         for item in self._items:
             self.print_item(item)
 
     def print_item(self, item: FileListItem):
-        print(item.index, item.path)
+        print(item.index, item.server_id, item.path)
+
+    def empty(self):
+        return len(self._items) == 0
+
+    def _sort(self):
+        self._sorted = True
+        self._items.sort(key=lambda x: x.timestamp)
+        for _ix, _item in enumerate(self._items, 1):
+            _item.index = _ix
 
 
 class SSHConnection(BaseLog):
@@ -176,7 +227,6 @@ class Server(BaseLog):
         self._hostname = hostname
         self._ssh = SSHConnection()
         self._connect()
-        self._file_list = None
 
     def _connect(self):
         if self._ssh.connected:
@@ -185,35 +235,35 @@ class Server(BaseLog):
         _pw = ConfigurationManager().get(SettingKeys.WB_PASSWORD, section=SettingSection.WB)
         self._ssh.connect(self._hostname, username=_user, password=_pw)
 
-    def get_file_list(self, start_index=1) -> [FileList, None]:
-        if self._file_list:
-            return self._file_list
+    def list_files(self) -> [FileList, None]:
         if not self._ssh.connected:
             self.error("cannot retrieve file list, not connected")
             return None
-        _file_list = FileList(start_index=start_index)
         _cmd = gen_find_cmd(extensions=["mkv", "rar"])
-        _file_list.parse_find_cmd_output(self._ssh.run_command(_cmd))
-        _file_list.print()
-        return _file_list
+        return self._ssh.run_command(_cmd)
+
+    @property
+    def hostname(self):
+        return self._hostname
 
 
 class ServerHandler:
     def __init__(self):
         self._servers : List[Server] = []
+        self._file_list: FileList = FileList()
 
     def add(self, hostname):
         self._servers.append(Server(hostname))
 
     def print_file_list(self):
-        start_index = 1
-        file_lists = []
+        if self._file_list.empty():
+            self._init_file_list()
+        self._file_list.print()
+
+    def _init_file_list(self):
         for server in self._servers:
-            file_list = server.get_file_list(start_index=start_index)
-            file_lists.append(file_list)
-            start_index = file_list.last_index() + 1
-        for file_list in file_lists:
-            file_list.print()
+            self._file_list.parse_find_cmd_output(
+                server.list_files(), server_id=server.hostname)
 
 
 def main():
