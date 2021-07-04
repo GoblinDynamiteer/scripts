@@ -6,7 +6,6 @@ import os
 import re
 from pathlib import Path
 
-import db_mov
 import util
 import util_tv
 from cache import MovieCache
@@ -135,6 +134,7 @@ def movie_path(movie_dir_name: str):
 
 
 def find_deleted_movies():
+    import db_mov
     db = db_mov.MovieDatabase()
     for m in db.all():
         if not exists(m):
