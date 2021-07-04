@@ -46,7 +46,11 @@ class FileListItem(BaseLog):
             return
         self._path = Path(_path)
         _files_path = get_remote_files_path()
-        if not self._path.is_relative_to(_files_path):
+        if hasattr(self._path, "is_relative_to"):
+            is_rel = self._path.is_relative_to(_files_path)
+        else:
+            is_rel = str(self._path).startswith(str(_files_path))
+        if not is_rel:
             self.error(f"path {self._path} is not relative to: {_files_path}",
                        error_prefix="parse_error")
             return
