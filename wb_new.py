@@ -9,6 +9,7 @@ from util import BaseLog
 from util_movie import is_movie
 from util_tv import is_episode
 from config import ConfigurationManager, SettingSection, SettingKeys
+from printing import pfcs
 
 from paramiko.client import SSHClient, AutoAddPolicy
 
@@ -26,6 +27,11 @@ def gen_find_cmd(extensions: List[str]):
             _cmd_str += " -o"
         _cmd_str += f" -iname \"*.{_ext}\""
     return _cmd_str + " \\) -printf \"%T@ | %s | %p\\n\" | sort -n"
+
+
+def print_item(item: "FileListItem"):
+    _name = item.parent_name or item.path.stem
+    pfcs(f"i<[{item.index:04d}]> {_name}", format_chars=("<", ">"))
 
 
 class FileListItem(BaseLog):
@@ -46,7 +52,7 @@ class FileListItem(BaseLog):
         self._parse()
 
     def _parse(self):
-        self.log(f"parsing {self._raw}")
+        # self.log(f"parsing {self._raw}")
         self._valid = False
         try:
             _stamp, _bytes, _path = self._raw.split(" | ")
@@ -103,6 +109,12 @@ class FileListItem(BaseLog):
         return self._path.name
 
     @property
+    def parent_name(self) -> [str, None]:
+        if self._path.parent != get_remote_files_path():
+            return self._path.parent.name
+        return None
+
+    @property
     def path(self):
         return self._path
 
@@ -117,6 +129,12 @@ class FileListItem(BaseLog):
         if self._type is None:
             self._determine_type()
         return self._type == self.MediaType.Episode
+
+    @property
+    def media_type(self):
+        if self._type is None:
+            self._determine_type()
+        return self._type
 
     @property
     def is_video(self) -> bool:
@@ -168,10 +186,7 @@ class FileList:
         if not self._sorted:
             self._sort()
         for item in self._items:
-            self.print_item(item)
-
-    def print_item(self, item: FileListItem):
-        print(item.index, item.server_id, item.path)
+            print_item(item)
 
     def empty(self):
         return len(self._items) == 0

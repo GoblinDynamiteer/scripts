@@ -163,6 +163,7 @@ class TestFileListItem:
         assert _item.is_video is True
         assert _item.is_movie is False
         assert _item.is_tvshow is True
+        assert _item.media_type == FileListItem.MediaType.Episode
 
     def test_is_episode_mkv(self):
         _line = r"1623879181.7519188610 | 4025725826 | " \
@@ -172,3 +173,18 @@ class TestFileListItem:
         assert _item.is_video is True
         assert _item.is_movie is False
         assert _item.is_tvshow is True
+        assert _item.media_type == FileListItem.MediaType.Episode
+
+    def test_parent_name_season_pack(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/Show.S04.iNTERNAL.1080p.WEB.H264-GROUPNAME/" \
+                r"Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME/" \
+                r"show.s04e02.1080p.web-grpname.mkv"
+        _item = FileListItem(_line)
+        assert _item.parent_name == "Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME"
+
+    def test_parent_name_episode_mkv(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME.mkv"
+        _item = FileListItem(_line)
+        assert _item.parent_name is None
