@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+from argparse import ArgumentParser
 from pathlib import Path
 from typing import List
 import re
@@ -12,6 +12,7 @@ from config import ConfigurationManager, SettingSection, SettingKeys
 from printing import pfcs, fcs
 
 from paramiko.client import SSHClient, AutoAddPolicy
+from scp import SCPClient, SCPException
 
 
 def get_remote_files_path() -> Path:
@@ -57,7 +58,6 @@ class FileListItem(BaseLog):
         self._parse()
 
     def _parse(self):
-        # self.log(f"parsing {self._raw}")
         self._valid = False
         try:
             _stamp, _bytes, _path = self._raw.split(" | ")
@@ -178,6 +178,9 @@ class FileListItem(BaseLog):
                 return False
         return True
 
+    def download(self, dest_path=Path):
+        pass
+
 
 class FileList:
     def __init__(self):
@@ -206,18 +209,27 @@ class FileList:
             _item.index = _ix
 
 
-class SSHConnection(BaseLog):
+class Connection(BaseLog):
     def __init__(self):
         super().__init__(verbose=True)
-        self._client = SSHClient()
-        self._client.set_missing_host_key_policy(AutoAddPolicy())
+        self._ssh_client = SSHClient()
+        self._ssh_client.set_missing_host_key_policy(AutoAddPolicy())
         self._connected = False
+        self._scp = None
+
+    def _init_scp(self) -> bool:
+        if not self._connected:
+            self.error("need to be connected to init SCP")
+            return False
+        self._scp = SCPClient(self._ssh_client.get_transport())
+        self.log("SCP initialized")
+        return True
 
     def connect(self, hostname, username=None, password=None):
         self.set_log_prefix(f"SSH_CONN_{hostname.split('.')[0].upper()}")
         self.log(f"connecting to {hostname}...")
         try:
-            self._client.connect(hostname, username=username, password=password)
+            self._ssh_client.connect(hostname, username=username, password=password)
             self._connected = True
             self.log("OK")
         except Exception as error:
@@ -227,7 +239,7 @@ class SSHConnection(BaseLog):
     def run_command(self, command):
         if not self._connected:
             return None
-        _, stdout, _ = self._client.exec_command(command)
+        _, stdout, _ = self._ssh_client.exec_command(command)
         try:
             return stdout.readlines()
         except AttributeError as _:
@@ -239,6 +251,13 @@ class SSHConnection(BaseLog):
     def connected(self):
         return self._connected
 
+    @property
+    def scp(self) -> [None, SCPClient]:
+        if not self._scp:
+            if not self._init_scp():
+                return None
+        return self._scp
+
 
 class Server(BaseLog):
     def __init__(self, hostname):
@@ -248,7 +267,7 @@ class Server(BaseLog):
             raise ValueError("hostname not valid")
         self.set_log_prefix(f"{hostname.split('.')[0].upper()}")
         self._hostname = hostname
-        self._ssh = SSHConnection()
+        self._ssh = Connection()
         self._connect()
 
     def _connect(self):
@@ -272,7 +291,7 @@ class Server(BaseLog):
 
 class ServerHandler:
     def __init__(self):
-        self._servers : List[Server] = []
+        self._servers: List[Server] = []
         self._file_list: FileList = FileList()
 
     def add(self, hostname):
@@ -288,8 +307,27 @@ class ServerHandler:
             self._file_list.parse_find_cmd_output(
                 server.list_files(), server_id=server.hostname)
 
+    def download(self, index: int) -> bool:
+        pass
+
+
+def get_args():
+    _parser = ArgumentParser("WB Handler")
+    _parser.add_argument("--download",
+                         "-d",
+                         default="",
+                         dest="download_items",
+                         help="item(s) to download, can be index or name.")
+    _parser.add_argument("--list",
+                         "-l",
+                         action="store_true",
+                         dest="list_items",
+                         help="list items on WB server(s)")
+    return _parser.parse_args()
+
 
 def main():
+    args = get_args()
     handler = ServerHandler()
     for _key in [SettingKeys.WB_SERVER_1, SettingKeys.WB_SERVER_2]:
         _hostname = ConfigurationManager().get(key=_key, section=SettingSection.WB)
@@ -297,7 +335,10 @@ def main():
             handler.add(_hostname)
         else:
             print(f"could not get hostname (key {_key.value}) from settings")
-    handler.print_file_list()
+    if not args.download_items or args.list_items:
+        handler.print_file_list()
+    elif args.download_items:
+        print("downloading", args.download_items)
 
 
 if __name__ == "__main__":
