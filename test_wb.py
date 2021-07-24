@@ -82,6 +82,21 @@ class TestFileListItem:
             _item = FileListItem(_line.format(part_num))
             assert _item.valid is False
 
+    def test_parse_invalid_rar_not_part001(self):
+        _line = r"1611998314.0000000000 | 50000000 | " \
+                r"/home/johndoe/files/Some.Cool.Movie.2007.1080p.BluRay.DTS.x264-Grp/" \
+                r"some.cool.movie.2007.1080p.bluray.dts.x264-grp.part{:03d}.rar"
+        for part_num in range(2, 100):
+            _item = FileListItem(_line.format(part_num))
+            assert _item.valid is False
+
+    def test_parse_invalid_sample_dir(self):
+        _line = r"1611998314.0000000000 | 50000000 | " \
+                r"/home/johndoe/files/Some.Cool.Movie.2007.1080p.BluRay.DTS.x264-Grp/" \
+                r"Sample/smpl.mkv"
+        _item = FileListItem(_line)
+        assert _item.valid is False
+
     def test_set_index(self):
         _line = r"1623879181.7519188610 | 4025725826 | " \
                 r"/home/johndoe/files/Show.S04.1080p.WEB.H264-GROUPNAME/" \

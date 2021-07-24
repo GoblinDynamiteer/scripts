@@ -9,7 +9,7 @@ from util import BaseLog
 from util_movie import is_movie
 from util_tv import is_episode
 from config import ConfigurationManager, SettingSection, SettingKeys
-from printing import pfcs
+from printing import pfcs, fcs
 
 from paramiko.client import SSHClient, AutoAddPolicy
 
@@ -31,7 +31,12 @@ def gen_find_cmd(extensions: List[str]):
 
 def print_item(item: "FileListItem"):
     _name = item.parent_name or item.path.stem
-    pfcs(f"i<[{item.index:04d}]> {_name}", format_chars=("<", ">"))
+    _type_str = fcs("o[UNKN]")
+    if item.is_movie:
+        _type_str = fcs("b[MOVI]")
+    elif item.is_tvshow:
+        _type_str = fcs("p[SHOW]")
+    pfcs(f"i<[{item.index:04d}]> [{_type_str}] {_name}", format_chars=("<", ">"))
 
 
 class FileListItem(BaseLog):
@@ -160,13 +165,16 @@ class FileListItem(BaseLog):
     def valid(self):
         if not self._valid:
             return False
-        if any([_i in self.name for _i in self._ignore]):
+        if any([_i in self.name.lower() for _i in self._ignore]):
             return False
         if self.is_rar:
-            _match = re.search(r"\.part\d{2}\.rar", self._path.name)
+            _match = re.search(r"\.part\d{2,3}\.rar", self._path.name)
             if _match:
                 return self._path.name.endswith("part01.rar")
             if "subpack" in self._path.parent.name.lower():
+                return False
+        if self.is_video:
+            if "sample" in self._path.parent.name.lower():
                 return False
         return True
 
