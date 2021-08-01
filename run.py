@@ -176,7 +176,7 @@ def wget(url: str, destination: Path, create_dirs=True, overwrite=True, debug_pr
                 f"created directory w[{destination.parent}]", show=debug_print)
     command = shlex.split(f"wget -O {destination} \"{url}\"")
     process = subprocess.Popen(
-        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     dest_name = util.shorten_string(
         destination.name, util.terminal_width() - 5 - 12)  # minus "downloading " and percentage
     while process.poll() is None:
