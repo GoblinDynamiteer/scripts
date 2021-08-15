@@ -203,3 +203,17 @@ class TestFileListItem:
                 r"/home/johndoe/files/Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME.mkv"
         _item = FileListItem(_line)
         assert _item.parent_name is None
+
+    def test_parent_is_season_dir(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/Show.S04.iNTERNAL.1080p.WEB.H264-GROUPNAME/" \
+                r"show.s04e02.1080p.web-grpname.mkv"
+        _item = FileListItem(_line)
+        assert _item.parent_is_season_dir is True
+
+    def test_parent_is_not_season_dir(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME/" \
+                r"show.s04e02.1080p.web-grpname.mkv"
+        _item = FileListItem(_line)
+        assert _item.parent_is_season_dir is False

@@ -7,7 +7,7 @@ from enum import Enum
 
 from util import BaseLog
 from util_movie import is_movie
-from util_tv import is_episode
+from util_tv import is_episode, is_season
 from config import ConfigurationManager, SettingSection, SettingKeys
 from printing import pfcs, fcs
 
@@ -37,6 +37,8 @@ def print_item(item: "FileListItem"):
         _type_str = fcs("b[MOVI]")
     elif item.is_tvshow:
         _type_str = fcs("p[SHOW]")
+        if item.parent_is_season_dir:
+            _name = item.path.stem
     pfcs(f"i<[{item.index:04d}]> [{_type_str}] {_name}", format_chars=("<", ">"))
 
 
@@ -118,6 +120,12 @@ class FileListItem(BaseLog):
         if self._path.parent != get_remote_files_path():
             return self._path.parent.name
         return None
+
+    @property
+    def parent_is_season_dir(self) -> bool:
+        if self.parent_name:
+            return is_season(self.parent_name)
+        return False
 
     @property
     def path(self):
@@ -317,7 +325,7 @@ def get_args():
                          "-d",
                          default="",
                          dest="download_items",
-                         help="item(s) to download, can be index or name.")
+                         help="item(s) to download, can be index(es) or name.")
     _parser.add_argument("--list",
                          "-l",
                          action="store_true",
