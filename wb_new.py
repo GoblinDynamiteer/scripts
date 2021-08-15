@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from argparse import ArgumentParser
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import List
 import re
 from enum import Enum
@@ -15,9 +15,9 @@ from paramiko.client import SSHClient, AutoAddPolicy
 from scp import SCPClient, SCPException
 
 
-def get_remote_files_path() -> Path:
+def get_remote_files_path() -> PurePosixPath:
     _username = ConfigurationManager().get(SettingKeys.WB_USERNAME, section=SettingSection.WB)
-    return Path(f"/home/{_username}/files/")
+    return PurePosixPath(f"/home/{_username}/files/")
 
 
 def gen_find_cmd(extensions: List[str]):
