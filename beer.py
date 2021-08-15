@@ -55,7 +55,7 @@ def parse_arg_sorting(arg_sort):
         return None
 
 
-class Beer():
+class Beer:
     def __init__(self, name, brewery="Unknown", alc=0.0, beer_type="Unknown"):
         self.name = name
         self.brewery = brewery
@@ -71,8 +71,8 @@ class Beer():
         return f"{filenameify(self.brewery)}-{filenameify(self.name)}{extension}"
 
 
-class CheckIn():
-    class Location():
+class CheckIn:
+    class Location:
         def __init__(self, venue=None, city=None):
             self.venue = venue
             self.city = city
@@ -100,7 +100,7 @@ class CheckIn():
         return fcs(f"dg[{self.date}]")
 
 
-class BeerList():
+class BeerList:
     class Sorting(Enum):
         Checkins = "checkins"
         BreweryName = "brewery"
@@ -196,7 +196,7 @@ def init_list(untappd_data):
     for check_in in untappd_data:
         beer_name = check_in.get("beer_name", "")
         brewery = check_in.get("brewery_name", "")
-        alc = float(check_in.get(("beer_abv"), 0.0))
+        alc = float(check_in.get("beer_abv", 0.0))
         beer_type = check_in.get("beer_type")
         city = check_in.get("venue_city", "")
         if city == "":
