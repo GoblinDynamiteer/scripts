@@ -65,7 +65,7 @@ class FileListItem(BaseLog):
             self.error(f"could not split line: {self._raw}",
                        error_prefix="parse_error")
             return
-        self._path = Path(_path)
+        self._path = PurePosixPath(_path)
         _files_path = get_remote_files_path()
         if hasattr(self._path, "is_relative_to"):
             is_rel = self._path.is_relative_to(_files_path)

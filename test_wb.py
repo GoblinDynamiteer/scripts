@@ -30,7 +30,7 @@ class TestFileListItem:
         assert _item.name == "Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME.mkv"
         assert _item.size == 4025725826
         assert _item.timestamp == 1623879181
-        assert _item.path == Path(
+        assert _item.path == PurePosixPath(
             r"/home/johndoe/files/Show.S04.1080p.WEB.H264-GROUPNAME/"
             r"Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME.mkv"
         )
