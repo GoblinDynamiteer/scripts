@@ -14,11 +14,32 @@ def set_config(tmpdir_factory):
         settings_file.write("\n".join(["[wb]", "username=johndoe"]))
     ConfigurationManager().set_config_file(_file)
 
+
 class TestHelperMethods:
     def test_gen_find_cmd(self):
         _expected = r'find /home/johndoe/files \( -iname "*.mkv" -o -iname "*.rar" \)' \
                     r' -printf "%T@ | %s | %p\n" | sort -n'
         assert gen_find_cmd(["mkv", "rar"]) == _expected
+
+    def test_parse_download_arg(self):
+        arg = "1,2,3"
+        assert parse_download_arg(arg) == [1, 2, 3]
+        arg = "222-225"
+        assert parse_download_arg(arg) == [222, 223, 224, 225]
+        arg = "666,222-225"
+        assert parse_download_arg(arg) == [666, 222, 223, 224, 225]
+        arg = "666,222-225,2-3"
+        assert parse_download_arg(arg) == [666, 222, 223, 224, 225, 2, 3]
+        arg = "Show.S06E02"
+        assert parse_download_arg(arg) == ["Show.S06E02"]
+        arg = "Show.S06E02,2"
+        assert parse_download_arg(arg) == ["Show.S06E02", 2]
+        arg = "Show.S06E02,2-5"
+        assert parse_download_arg(arg) == ["Show.S06E02", 2, 3, 4, 5]
+        arg = "124-123"  # invalid range
+        assert parse_download_arg(arg) == []
+        arg = "124-123,111-115"  # invalid range + valid range
+        assert parse_download_arg(arg) == [111, 112, 113, 114, 115]
 
 
 class TestFileListItem:

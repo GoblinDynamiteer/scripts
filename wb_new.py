@@ -42,6 +42,21 @@ def print_item(item: "FileListItem"):
     pfcs(f"i<[{item.index:04d}]> [{_type_str}] {_name}", format_chars=("<", ">"))
 
 
+def parse_download_arg(download_arg: str):
+    _ret = []
+    _splits = download_arg.split(",")
+    for _str in _splits:
+        if _str.isnumeric():
+            _ret.append(int(_str))
+        elif "-" in _str:
+            if _str.replace("-", "").isnumeric():
+                _start, _end = [int(ix) for ix in _str.split("-")]
+                _ret.extend(range(_start, _end+1))
+        else:
+            _ret.append(_str)
+    return _ret
+
+
 class FileListItem(BaseLog):
     class MediaType(Enum):
         Movie = "movie"
@@ -186,8 +201,10 @@ class FileListItem(BaseLog):
                 return False
         return True
 
-    def download(self, dest_path=Path):
-        pass
+    def download(self, dest_path=Path) -> bool:
+        #TODO: download instead of print
+        print_item(self)
+        return False
 
 
 class FileList:
@@ -351,8 +368,14 @@ class ServerHandler:
             self._file_list.parse_find_cmd_output(
                 server.list_files(), server_id=server.hostname)
 
-    def download(self, index: int) -> bool:
-        pass
+    def download(self, key: [int, str]) -> bool:
+        if self._file_list.empty():
+            self._init_file_list()
+        _item = self._file_list.get(key)
+        if not _item:
+            print(f"could not retrieve item with key: {key}")
+            return False
+        return _item.download()
 
 
 def get_args():
@@ -382,7 +405,9 @@ def main():
     if not args.download_items or args.list_items:
         handler.print_file_list()
     elif args.download_items:
-        print("downloading", args.download_items)
+        _keys = parse_download_arg(args.download_items)
+        for _key in _keys:
+            handler.download(_key)
 
 
 if __name__ == "__main__":
