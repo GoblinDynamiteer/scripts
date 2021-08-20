@@ -1,3 +1,5 @@
+import pytest
+
 from wb_new import *
 
 from config import ConfigurationManager
@@ -11,7 +13,6 @@ def set_config(tmpdir_factory):
     with open(_file, "w") as settings_file:
         settings_file.write("\n".join(["[wb]", "username=johndoe"]))
     ConfigurationManager().set_config_file(_file)
-
 
 class TestHelperMethods:
     def test_gen_find_cmd(self):
@@ -217,3 +218,73 @@ class TestFileListItem:
                 r"show.s04e02.1080p.web-grpname.mkv"
         _item = FileListItem(_line)
         assert _item.parent_is_season_dir is False
+
+
+class TestFileList:
+    TEMPLATE_SHOW = r"{} | {} | " \
+                    r"/home/johndoe/files/Show.{}.1080p.WEB.H264-GROUPNAME.mkv"
+    TEMPLATE_MOV = r"{} | {} | " \
+                   r"/home/johndoe/files/{}.720p.WEB.H264-GROUPNAME.mkv"
+
+    def test_parse(self):
+        _find_output = [self.TEMPLATE_SHOW.format("1", "100000", "S01E01"),
+                        self.TEMPLATE_SHOW.format("2", "100000", "S01E02"),
+                        self.TEMPLATE_MOV.format("3", "100000", "CoolMovie")]
+        _list = FileList()
+        _list.parse_find_cmd_output(_find_output, "server1")
+        _items = _list.items()
+        assert len(_items) == 3
+        _item1 = _items[0]
+        _item2 = _items[1]
+        _item3 = _items[2]
+        assert _item1.name == "Show.S01E01.1080p.WEB.H264-GROUPNAME.mkv"
+        assert _item1.server_id == "server1"
+        assert _item2.name == "Show.S01E02.1080p.WEB.H264-GROUPNAME.mkv"
+        assert _item3.name == "CoolMovie.720p.WEB.H264-GROUPNAME.mkv"
+
+    def test_get_by_index(self):
+        _find_output = [self.TEMPLATE_SHOW.format("1", "100000", "S01E01"),
+                        self.TEMPLATE_SHOW.format("2", "100000", "S01E02")]
+        _list = FileList()
+        _list.parse_find_cmd_output(_find_output, "server1")
+        _items = _list.items()
+        _item1 = _items[0]
+        _item2 = _items[1]
+        assert _list.get(1) == _item1
+        assert _list.get(2) == _item2
+
+    def test_get_by_name_string(self):
+        _find_output = [self.TEMPLATE_SHOW.format("1", "100000", "S01E01"),
+                        self.TEMPLATE_SHOW.format("2", "100000", "S01E02")]
+        _list = FileList()
+        _list.parse_find_cmd_output(_find_output, "server1")
+        _items = _list.items()
+        _item1 = _items[0]
+        _item2 = _items[1]
+        assert _list.get("Show.S01E01.1080p.WEB.H264-GROUPNAME.mkv") == _item1
+        assert _list.get("Show.S01E02.1080p.WEB.H264-GROUPNAME.mkv") == _item2
+
+    def test_get_assert_raises_exception(self):
+        _find_output = [self.TEMPLATE_SHOW.format("1", "100000", "S01E01"),
+                        self.TEMPLATE_SHOW.format("2", "100000", "S01E02")]
+        _list = FileList()
+        _list.parse_find_cmd_output(_find_output, "server1")
+        with pytest.raises(TypeError):
+            _list.get(123.123)
+
+    def test_get_with_regex(self):
+        _find_output = [self.TEMPLATE_SHOW.format("1", "100000", "S01E01"),
+                        self.TEMPLATE_SHOW.format("2", "100000", "S01E02"),
+                        self.TEMPLATE_MOV.format("3", "100000", "CoolMovie")]
+        _list = FileList()
+        _list.parse_find_cmd_output(_find_output, "server1")
+        _items = _list.items()
+        _show_item1 = _items[0]
+        _show_item2 = _items[1]
+        _movie_item = _items[2]
+        assert _list.get_regex("^Show.S01.+")[0] == _show_item1
+        assert _list.get_regex("^Show.S01.+")[1] == _show_item2
+        assert _list.get_regex("^Show.S01E02.+")[0] == _show_item2
+        assert _list.get_regex("^CoolMovie.+")[0] == _movie_item
+        assert _list.get_regex(r"^.+\.mkv")[2] == _movie_item
+        assert _list.get_regex("NON_MATCHING") == []
