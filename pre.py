@@ -6,12 +6,58 @@ import json
 import re
 import sys
 from pathlib import Path
+import abc
 
 import requests
 from config import ConfigurationManager
 from vid import VideoFileMetadata
 
 from printing import cstr, print_line
+
+
+class PreSearch(abc.ABC):
+    def __init__(self, query: str = ""):
+        self._query: str = query
+        self._results = []
+
+    @abc.abstractmethod
+    def search(self) -> bool:
+        return False
+
+    def get_results(self, match=None) -> list:
+        if match is not None:
+            if not isinstance(match, str):
+                return []
+            return [r for r in self._results if match in r]
+        return self._results
+
+    def set_query(self, query: str):
+        self._query = query
+
+
+class PreDbLiveSearch(PreSearch):
+    URL = "https://api.predb.live/api/search"
+
+    def search(self) -> bool:
+        if not self._query:
+            return False
+        resp = requests.post(self.URL, json={"input": self._query, "page": 1})
+        if resp.status_code != 200 or not resp.json().get("success", False):
+            return False
+        _data = resp.json().get("data", {})
+        if not _data:
+            return False
+        return self._parse_response(_data)
+
+    def _parse_response(self, result_data: dict) -> bool:
+        _values = result_data.get("values", [])
+        if not _values:
+            return False
+        for result in _values:
+            _name = result.get("name", "")
+            if _name:
+                self._results.append(_name)
+        return True if self._results else False
 
 
 def run_replace_list_on_query(query_string):
@@ -28,39 +74,17 @@ def run_replace_list_on_query(query_string):
     return query_string
 
 
-def pre_search(query: str) -> [list, False]:
-    json_response = requests.get(
-        f"https://predb.ovh/api/v1/?q={query}&count=50")
-    try:
-        data = json.loads(json_response.text)
-        if data.get("status", "") == "error":
-            print(f"got error: {data.get('message', 'N/A')}")
-            return False
-        rows = data["data"]["rows"]
-    except json.decoder.JSONDecodeError:
-        print(f"got json decoder error! on query: {query}")
-        print(json_response)
-        return False
-    return [row["name"] for row in rows]
-
-
-def pre_search_from_file(file_path: Path, use_replacement_list=True, use_metadata=False) -> str:
+def query_from_path(file_path: Path, use_replacement_list=True, use_metadata=False) -> str:
     file_name = run_replace_list_on_query(
         file_path.name) if use_replacement_list else file_path.name
-    split_filename = file_name.split('.')
+    split_filename = file_name.split(".")
     query = f'{" ".join(split_filename)}'
     if use_metadata:
         metadata = VideoFileMetadata(file_path)
         if metadata.title:
             if " - " in metadata.title:
                 query = metadata.title.split(" - ")[1]
-    results = pre_search(query)
-    if results:
-        for result in results:
-            if "1080p" in result:  # prefer 1080p results
-                return result
-        return results[0]
-    return ""
+    return query
 
 
 def print_rename_info(src, dst, line=False):
@@ -80,51 +104,60 @@ def get_args():
     parser.add_argument("--suffix", type=str, help="add suffix", default="")
     parser.add_argument("-f", "--file", help="use file search mode", action="store_true")
     parser.add_argument("-r", "--rename", help="rename file", action="store_true")
-    parser.add_argument("-p", "--use-parent", action="store_true", dest="use_parent")
     parser.add_argument("--use-metadata", "-m", action="store_true", dest="use_metadata")
     return parser.parse_args()
+
+
+def handle_file(cli_args):
+    if "*" in cli_args.query:
+        items = glob.glob(cli_args.query)
+    elif "," in cli_args.query:
+        items = cli_args.query.split(",")
+    else:
+        items = [cli_args.query]
+    count = len(items)
+    for item in items:
+        _path = Path(item).resolve()
+        query = query_from_path(_path, use_metadata=cli_args.use_metadata)
+        if not query:
+            print(f"could not generate query for filename: {_path.name}")
+        _search = PreDbLiveSearch(query)
+        if not _search.search():
+            if cli_args.rename:
+                print(f"could not find release, not renaming file {item}")
+                continue
+            else:
+                print(f"could not find release using query: {query}")
+                continue
+        if cli_args.rename:
+            if not _path.exists():
+                print(f"found release but {_path} does not exist, will not rename...")
+                continue
+            _results = _search.get_results(match="1080p")
+            if not _results:
+                print(f"could not find any 1080p releases for {_path.name}")
+            new_file_name = _results[0]
+            if not new_file_name.endswith(_path.suffix):
+                new_file_name = new_file_name + _path.suffix
+            _path.rename(new_file_name)
+            print_rename_info(_path, new_file_name, line=count > 1)
+        else:
+            print("results:")
+            for _result in _search.get_results():
+                print(_result)
 
 
 def main():
     args = get_args()
     if args.file:
-        if "*" in args.query:
-            items = glob.glob(args.query)
-        elif "," in args.query:
-            items = args.query.split(",")
-        else:
-            items = [args.query]
-        count = len(items)
-        for item in items:
-            file_name = Path(item).resolve()
-            if args.use_parent:
-                sys.exit()
-            ret = pre_search_from_file(
-                file_name, use_metadata=args.use_metadata)
-            if not ret:
-                if args.rename:
-                    print(f"could not find release, not renaming file {item}")
-                    sys.exit(1)
-                else:
-                    print("could not find release")
-                    sys.exit(1)
-            print(ret + args.suffix)
-            if args.rename:
-                if not file_name.exists():
-                    print(f"found release but {file_name} does not exist, will not rename...")
-                    sys.exit(1)
-                new_file_name = ret
-                if not ret.endswith(file_name.suffix):
-                    new_file_name = ret + file_name.suffix
-                file_name.rename(new_file_name)
-                print_rename_info(file_name, new_file_name, line=count > 1)
+        handle_file(cli_args=args)
     else:
-        ret = pre_search(args.query)
-        if not ret:
-            print("could not find release")
-        else:
-            for name in ret:
+        _search = PreDbLiveSearch(args.query)
+        if _search.search():
+            for name in _search.get_results():
                 print(name + args.suffix)
+        else:
+            print("could not find release")
 
 
 if __name__ == "__main__":
