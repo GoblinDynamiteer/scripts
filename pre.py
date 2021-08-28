@@ -10,8 +10,8 @@ import abc
 import requests
 from config import ConfigurationManager
 from vid import VideoFileMetadata
-
-from printing import cstr, print_line, Color
+from util import BaseLog
+from printing import cstr, print_line, Color, fcs
 
 
 class PreSearch(abc.ABC):
@@ -34,29 +34,43 @@ class PreSearch(abc.ABC):
         self._query = query
 
 
-class PreDbLiveSearch(PreSearch):
+class PreDbLiveSearch(PreSearch, BaseLog):
     URL = "https://api.predb.live/api/search"
+
+    def __init__(self, query: str = "", verbose=False):
+        PreSearch.__init__(self, query)
+        BaseLog.__init__(self, verbose=verbose)
+        self.set_log_prefix("PREDB_LIVE")
 
     def search(self) -> bool:
         if not self._query:
+            self.error("search: query missing")
             return False
+        self.log(fcs(f"search: using query i[{self._query}]"))
         resp = requests.post(self.URL, json={"input": self._query, "page": 1})
         if resp.status_code != 200 or not resp.json().get("success", False):
+            self.error("search: post request failed")
             return False
         _data = resp.json().get("data", {})
         if not _data:
+            self.error("search: no data in result")
             return False
         return self._parse_response(_data)
 
     def _parse_response(self, result_data: dict) -> bool:
         _values = result_data.get("values", [])
         if not _values:
+            self.error("search: no data in result")
             return False
         for result in _values:
             _name = result.get("name", "")
             if _name:
                 self._results.append(_name)
-        return True if self._results else False
+        if self._results:
+            self.log(f"search: got {len(self._results)} result(s)")
+            return True
+        self.warn("search: no results")
+        return False
 
 
 def run_replace_list_on_query(query_string):
@@ -102,10 +116,13 @@ def get_args():
     parser.add_argument("-f", "--file", help="use file search mode", action="store_true")
     parser.add_argument("-r", "--rename", help="rename file", action="store_true")
     parser.add_argument("--use-metadata", "-m", action="store_true", dest="use_metadata")
+    parser.add_argument("--verbose", "-v", action="store_true", help="verbose logging")
     return parser.parse_args()
 
 
 def handle_file(cli_args):
+    log = BaseLog(verbose=True)
+    log.set_log_prefix("FILE")
     if "*" in cli_args.query:
         items = glob.glob(cli_args.query)
     elif "," in cli_args.query:
@@ -117,31 +134,31 @@ def handle_file(cli_args):
         _path = Path(item).resolve()
         query = query_from_path(_path, use_metadata=cli_args.use_metadata)
         if not query:
-            print(f"could not generate query for filename: {_path.name}")
-        _search = PreDbLiveSearch(query)
+            log.error(f"could not generate query for filename: {_path.name}")
+        _search = PreDbLiveSearch(query, verbose=cli_args.verbose)
         if not _search.search():
             if cli_args.rename:
-                print(f"could not find release, not renaming file {item}")
+                log.warn(f"could not find release, not renaming file {item}")
                 continue
             else:
-                print(f"could not find release using query: {query}")
+                log.warn(f"could not find release using query: {query}")
                 continue
         if cli_args.rename:
             if not _path.exists():
-                print(f"found release but {_path} does not exist, will not rename...")
+                log.warn(f"found release but {_path} does not exist, will not rename...")
                 continue
             _results = _search.get_results(match="1080p")
             if not _results:
-                print(f"could not find any 1080p releases for {_path.name}")
+                log.warn(f"could not find any 1080p releases for {_path.name}")
             new_file_name = _results[0]
             if not new_file_name.endswith(_path.suffix):
                 new_file_name = new_file_name + _path.suffix
             _path.rename(new_file_name)
             print_rename_info(_path, new_file_name, line=count > 1)
         else:
-            print("results:")
+            log.log("results:")
             for _result in _search.get_results():
-                print(_result)
+                print(" " * 5, _result)
 
 
 def main():
@@ -149,7 +166,7 @@ def main():
     if args.file:
         handle_file(cli_args=args)
     else:
-        _search = PreDbLiveSearch(args.query)
+        _search = PreDbLiveSearch(args.query, args.verbose)
         if _search.search():
             for name in _search.get_results():
                 print(name + args.suffix)
