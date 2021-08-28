@@ -4,7 +4,6 @@ import argparse
 import glob
 import json
 import re
-import sys
 from pathlib import Path
 import abc
 
@@ -12,7 +11,7 @@ import requests
 from config import ConfigurationManager
 from vid import VideoFileMetadata
 
-from printing import cstr, print_line
+from printing import cstr, print_line, Color
 
 
 class PreSearch(abc.ABC):
@@ -88,12 +87,10 @@ def query_from_path(file_path: Path, use_replacement_list=True, use_metadata=Fal
 
 
 def print_rename_info(src, dst, line=False):
-    src_c = cstr(str(src), "orange")
-    dst_c = cstr(str(dst), "lgreen")
     print("renamed:")
-    print(" " * 5, src_c,)
+    print(" " * 5, cstr(str(src), Color.Orange))
     print(cstr("--->", "grey"))
-    print(" " * 5, dst_c)
+    print(" " * 5, cstr(str(dst), Color.LightGreen))
     if line:
         print_line()
 
