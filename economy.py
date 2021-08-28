@@ -158,7 +158,9 @@ def get_args():
     parser.add_argument("--verbose",
                         action="store_true")
     parser.add_argument("command",
+                        nargs="?",
                         help=f"valid: {[x.value for x in Command]}",
+                        default=Command.Info,
                         type=Command)
     return parser.parse_args()
 
@@ -178,13 +180,16 @@ def backup_csv(cli_args):
     log.log(f"backed up: {csv_file_path} --> {dest}")
 
 
-def read_csv(cli_args) -> list:
-    log = MainLog(cli_args.verbose)
+def read_csv(cli_args) -> [list, None]:
+    log = MainLog(True)
     csv_path = config.ConfigurationManager().get(
         config.SettingKeys.PATH_ECONOMY_CSV, convert=Path)
+    if csv_path is None:
+        log.log_warn(f"csv path not set in settings file!")
+        return None
     if not csv_path.is_file():
         log.log_warn(f"not such file: {csv_path}")
-        return {}
+        return None
     with open(csv_path, mode="r", newline="") as csvfile:
         reader = csv.DictReader(csvfile)
         return [r for r in reader]
@@ -213,7 +218,7 @@ def update_csv(cli_args):
 
 def print_info(cli_args):
     data = read_csv(cli_args)
-    if data == {}:
+    if not data:
         print("no data available!")
         return
     account_list = AccountList(data)
