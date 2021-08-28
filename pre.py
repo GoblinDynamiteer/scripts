@@ -22,7 +22,10 @@ CFG = config.ConfigurationManager()
 def run_replace_list_on_query(query_string):
     replace_file_path = Path(CFG.path("scripts")) / 'pre_replace.json'
     with open(replace_file_path) as replace_fp:
-        for string, replacement in json.load(replace_fp).items():
+        _list = json.load(replace_fp)
+        if not _list:
+            return query_string
+        for string, replacement in _list.items():
             if '^' in string:
                 query_string = re.sub(string, replacement, query_string)
             else:
@@ -30,12 +33,15 @@ def run_replace_list_on_query(query_string):
     return query_string
 
 
-def pre_search(query: str) -> list:
+def pre_search(query: str) -> [list, False]:
     """ runs a pre search, returns list matched names """
     json_response = requests.get(
         f"https://predb.ovh/api/v1/?q={query}&count=50")
     try:
         data = json.loads(json_response.text)
+        if data.get("status", "") == "error":
+            print(f"got error: {data.get('message', 'N/A')}")
+            return False
         rows = data['data']['rows']
     except json.decoder.JSONDecodeError:
         print(f"got json decoder error! on query: {query}")
