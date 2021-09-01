@@ -62,11 +62,26 @@ def apply_filter(ep_list: list, filter_type: str, filter_val: str):
             except ValueError:
                 continue
         elif filter_type == "episode":
-            try:
-                if int(filter_val) == ep_item.episode_num:
+            if isinstance(filter_val, str):
+                match = re.search(r"\d{1,3}", filter_val)
+                if not match:
+                    continue
+                if filter_val.startswith(">"):
+                    _val = int(match.group(0))
+                    if ep_item.episode_num > _val:
+                        filtered_list.append(ep_item)
+                elif filter_val.startswith("<"):
+                    _val = int(match.group(0))
+                    if ep_item.episode_num < _val:
+                        filtered_list.append(ep_item)
+                elif int(filter_val) == ep_item.episode_num:
                     filtered_list.append(ep_item)
-            except ValueError:
-                continue
+            else:
+                try:
+                    if int(filter_val) == ep_item.episode_num:
+                        filtered_list.append(ep_item)
+                except ValueError:
+                    continue
         elif filter_type == "title":
             title = ep_item.title.lower()
             if filter_val.startswith("!"):
