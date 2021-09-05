@@ -32,6 +32,7 @@ class AllowedDuplicate(Enum):
     EngAndSeDub = ".SE.ENG."
     EngAndFiAndSeDub = ".EN.FI.SE."
     NordicDubs = "NORDiC"
+    SpecialEdition = "Special.Edition"
     RogueCut = ".THE.ROGUE.CUT."  # Special cut for one movie
     EncoreEdition = ".Encore.Edition."  # Special cut for one movie
     BlackAndChromeEdition = ".Black.and.Chrome.Edition."  # Special cut for one movie
