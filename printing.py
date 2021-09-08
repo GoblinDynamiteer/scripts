@@ -43,6 +43,7 @@ _FORMAT_CODES = {
     "o[": 214,  # orange
     "d[": 239,  # dark /grey
     "y[": 229,  # yellow
+    "r[": _CLR_DICT["red"],
     "w[": _CLR_DICT["warning"],
     "p[": _CLR_DICT["purple"]}
 
