@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
+
 from argparse import ArgumentParser
 from pathlib import Path, PurePosixPath
 from typing import List
 import re
 from enum import Enum
 
-from util import BaseLog
+from base_log import BaseLog
 from util_movie import is_movie
 from util_tv import is_episode, is_season
 from config import ConfigurationManager, SettingSection, SettingKeys
-from printing import pfcs, fcs
+from printout import pfcs, fcs
 
 from paramiko.client import SSHClient, AutoAddPolicy
 from scp import SCPClient, SCPException

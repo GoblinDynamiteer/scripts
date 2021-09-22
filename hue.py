@@ -1,7 +1,5 @@
 #!/usr/bin/env python3.8
 
-""" Philips Hue Tools """
-
 import http.client
 import json
 import random
@@ -12,11 +10,11 @@ from argparse import ArgumentParser
 
 from config import ConfigurationManager
 from enum import Enum
-from printing import pfcs
-from util import BaseLog
+from printout import pfcs
+from base_log import BaseLog
 
 from PySide6.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QVBoxLayout, QColorDialog, QGroupBox, \
-QGridLayout, QSlider
+    QGridLayout, QSlider
 from PySide6.QtGui import QColor
 from PySide6.QtCore import *
 
@@ -358,7 +356,7 @@ class LightControl(QWidget, BaseLog):
 
     @Slot()
     def _handle_color_picker_changed(self, color: QColor):
-        self._light.set_hue(color.hue() * 257) # TODO: fix hue vals
+        self._light.set_hue(color.hue() * 257)  # TODO: fix hue vals
         self._light.set_saturation(color.saturation())
         self._need_update = True
 

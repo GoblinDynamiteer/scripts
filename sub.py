@@ -16,7 +16,7 @@ import run
 import util
 import util_movie
 import util_tv
-from printing import cstr, pcstr, pfcs, print_line, fcs
+from printout import cstr, pcstr, pfcs, print_line, fcs
 
 
 class SubtitleMediaType(IntEnum):

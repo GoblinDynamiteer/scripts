@@ -1,6 +1,4 @@
-#!/usr/bin/env python3.7
-
-'''Movie Database handler'''
+#!/usr/bin/env python3
 
 import argparse
 import os
@@ -8,14 +6,14 @@ from datetime import datetime
 
 import config
 import db_json
-import printing
+import printout
 import util
 import util_movie
-from printing import pfcs
+from printout import pfcs
 
 CFG = config.ConfigurationManager()
 MOVIE_DATABASE_PATH = CFG.get('path_movdb')
-CSTR = printing.to_color_str
+CSTR = printout.to_color_str
 
 
 def _to_text(movie_folder, movie_data, use_removed_date=False):

@@ -7,7 +7,8 @@ import urllib.request
 from argparse import ArgumentParser
 
 import util
-from util import BaseLog, Singleton
+from base_log import BaseLog
+from singleton import Singleton
 from config import ConfigurationManager
 
 

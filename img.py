@@ -1,10 +1,10 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 
 """ Image Tools """
 
 from enum import IntEnum
 
-from printing import pfcs
+from printout import pfcs
 from pathlib import Path
 import util
 

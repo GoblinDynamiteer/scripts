@@ -1,6 +1,4 @@
-#!/usr/bin/env python3.7
-
-"""Scan for media"""
+#!/usr/bin/env python3
 
 import argparse
 from pathlib import Path
@@ -13,7 +11,7 @@ import util_movie
 import util_tv
 from diskstation import is_ds_special_dir
 from omdb import OMDb
-from printing import pfcs
+from printout import pfcs
 
 from db_mov import MovieDatabaseSingleton
 from db_tv import ShowDatabaseSingleton, EpisodeDatabaseSingleton

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 
 import argparse
 import csv
@@ -8,8 +8,9 @@ from datetime import datetime
 import shutil
 
 import config
-from printing import print_line, pfcs, fcs
-from util import BaseLog, now_timestamp
+from printout import print_line, fcs
+from util import now_timestamp
+from base_log import BaseLog
 
 DATE_FMT = r"%Y-%m-%d"
 

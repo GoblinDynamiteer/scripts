@@ -5,7 +5,7 @@ import os
 import sys
 import platform
 import config
-from printing import cstr, pcstr
+from printout import cstr, pcstr
 from run import local_command
 
 CONFIG = config.ConfigurationManager()

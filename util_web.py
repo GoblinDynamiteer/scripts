@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 
 import argparse
 import os
@@ -17,7 +17,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 import util_movie
 import run
-from printing import pcstr, cstr
+from printout import pcstr, cstr
 
 
 class FirefoxBrowser():

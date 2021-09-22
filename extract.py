@@ -1,6 +1,5 @@
-#!/usr/bin/python3.6
+#!/usr/bin/python3
 
-'Extract/move releases'
 
 import argparse
 import glob
@@ -13,7 +12,7 @@ import run
 import util
 import util_movie
 import util_tv
-from printing import cstr, pfcs
+from printout import cstr, pfcs
 
 OPJ = os.path.join
 CFG = config.ConfigurationManager()

@@ -1,12 +1,10 @@
-#!/usr/bin/env python3.6
-
-'''JSON Database handler'''
+#!/usr/bin/env python3
 
 import json
 import os
 import shutil
 
-from printing import cstr
+from printout import cstr
 import util
 from config import ConfigurationManager
 
@@ -14,8 +12,6 @@ CFG = ConfigurationManager()
 
 
 class JSONDatabase(object):
-    ''' A simple json database '''
-
     def __init__(self, database_file_path, debug_print: bool = False):
         self.json = None
         self.db_file_path = database_file_path
@@ -47,7 +43,6 @@ class JSONDatabase(object):
                 print('could not save database')
 
     def _backup(self):
-        ''' Backup json file '''
         timestamp = util.now_timestamp()
         backup_path = CFG.get('path_backup')
         db_filename = util.filename_of_path(self.db_file_path)
@@ -61,19 +56,16 @@ class JSONDatabase(object):
             print(f'backed up to {cstr(destination, "green")}')
 
     def save(self):
-        ''' Save database file '''
         self._backup()
         self._save_database_file()
 
     def set_valid_keys(self, key_list):
-        ''' Sets allowed keys '''
         self.valid_keys = key_list
         self.primary_key = key_list[0]
         for key in key_list:
             self.key_types[key] = None
 
     def set_key_type(self, key, data_type):
-        ''' Constrict key data type '''
         if key not in self.valid_keys:
             print(f'{cstr(key, "red")} is not a valid key!')
             return False
@@ -83,7 +75,6 @@ class JSONDatabase(object):
         self.key_types[key] = data_type
 
     def update(self, primary_key, data, value):
-        ''' Updates data for an entry '''
         if primary_key not in self.json:
             print(
                 f'can\'t update {cstr(f"{primary_key}", "orange")} not in db')
@@ -114,7 +105,6 @@ class JSONDatabase(object):
         return sorted_dict
 
     def get(self, primary_key, data):
-        ''' Retrieve data '''
         try:
             return self.json[primary_key][data]
         except KeyError:
@@ -124,7 +114,6 @@ class JSONDatabase(object):
             return None
 
     def exists(self, primary_key):
-        ''' Check if key exists in database '''
         return primary_key in self.json
 
     def all(self):
@@ -138,7 +127,6 @@ class JSONDatabase(object):
             yield key
 
     def find(self, key, value):
-        ' return a list of primary key values where key matches value'
         ret_list = []
         if not key in self.valid_keys:
             return ret_list
@@ -147,7 +135,6 @@ class JSONDatabase(object):
         return ret_list
 
     def find_duplicates(self, key):
-        'Finds keys with duplicate values, returns a dict as {value: [primary_key_val, ..]}'
         ret_list = []
         if not key in self.valid_keys:
             return ret_list
@@ -162,7 +149,6 @@ class JSONDatabase(object):
         return duplicates
 
     def insert(self, data: dict):
-        ''' Insert data '''
         keys = list(data.keys())
         if self.primary_key not in keys:
             print(

@@ -1,4 +1,4 @@
-#!/usr/bin/python3.8
+#!/usr/bin/python3
 
 import json
 import re
@@ -13,8 +13,9 @@ from argparse import ArgumentParser
 from requests import Session
 
 from config import ConfigurationManager
-from printing import fcs, pfcs
-from util import Singleton, BaseLog
+from printout import fcs, pfcs
+from singleton import Singleton
+from base_log import BaseLog
 
 VALID_FILTER_KEYS = ["season", "episode", "title", "date"]
 

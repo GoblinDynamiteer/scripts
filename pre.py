@@ -10,8 +10,8 @@ import abc
 import requests
 from config import ConfigurationManager
 from vid import VideoFileMetadata
-from util import BaseLog
-from printing import cstr, print_line, Color, fcs
+from base_log import BaseLog
+from printout import cstr, print_line, Color, fcs
 
 
 class PreSearch(abc.ABC):

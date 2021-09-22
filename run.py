@@ -5,11 +5,11 @@ import shlex
 import subprocess
 from pathlib import Path
 
-import printing
-from printing import pfcs
+import printout
+from printout import pfcs
 import util
 
-CSTR = printing.to_color_str
+CSTR = printout.to_color_str
 
 
 def local_command(command, hide_output: bool = True, print_info: bool = True) -> bool:

@@ -14,8 +14,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from util import Singleton
-from util import BaseLog
+from singleton import Singleton
+from base_log import BaseLog
 import dataclasses
 
 from config import ConfigurationManager
@@ -24,7 +24,7 @@ from ripper import PlayRipperYoutubeDl
 from ripper import SubRipper
 from ripper import retrive_sub_url
 from ripper_helpers import EpisodeLister
-from printing import cstr, pfcs, fcs
+from printout import cstr, pfcs, fcs
 
 WEEK_IN_SECONDS = 60 * 60 * 24 * 7
 

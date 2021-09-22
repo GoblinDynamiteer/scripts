@@ -8,7 +8,7 @@ from threading import Lock, Thread
 import db_json
 import util
 from config import ConfigurationManager
-from printing import cstr
+from printout import cstr
 
 CACHE_DB_MOV_PATH = ConfigurationManager().get('path_mov_cachedb')
 CACHE_DB_TV_PATH = ConfigurationManager().get('path_tv_cachedb')

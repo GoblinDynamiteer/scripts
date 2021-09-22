@@ -7,7 +7,7 @@ import argparse
 import re
 from pathlib import Path
 
-from printing import to_color_str, print_line
+from printout import to_color_str, print_line
 
 UNIDECODE_LIB_AVAILABLE = False
 try:

@@ -1,6 +1,6 @@
-#!/usr/bin/python3.8
+#!/usr/bin/python3
 
-from printing import fcs
+from printout import fcs
 from run import local_command
 
 from argparse import ArgumentParser

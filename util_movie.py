@@ -11,7 +11,7 @@ import util_tv
 from cache import MovieCache
 from config import ConfigurationManager
 
-from printing import pfcs
+from printout import pfcs
 
 VALID_LETTERS = {'#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
                  'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'VW', 'X', 'Y', 'Z'}

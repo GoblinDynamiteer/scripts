@@ -12,7 +12,7 @@ from pathlib import Path
 
 import db_json
 import lister
-import printing
+import printout
 import tvmaze
 import util
 import util_movie
@@ -195,7 +195,7 @@ class TestDb(unittest.TestCase):
 class TestStrOut(unittest.TestCase):
 
     def test_to_color_str(self):
-        self.assertEqual(printing.to_color_str("ToColor", "red"),
+        self.assertEqual(printout.to_color_str("ToColor", "red"),
                          "\033[38;5;196mToColor\033[0m")
 
 

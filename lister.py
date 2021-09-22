@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 
 """list various things"""
 
@@ -10,7 +10,7 @@ from pathlib import Path
 
 from config import ConfigurationManager as cfg
 from util_tv import parse_season_episode, parse_season
-from printing import pfcs, cstr, print_line, Color
+from printout import pfcs, cstr, print_line, Color
 from db_tv import EpisodeDatabaseSingleton, ShowDatabaseSingleton
 from util import date_str_to_timestamp, now_timestamp
 from tvmaze import TvMazeData

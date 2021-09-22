@@ -9,15 +9,15 @@ from datetime import datetime
 
 import config
 import db_json
-import printing
+import printout
 import util
 import util_tv
-from printing import pfcs
+from printout import pfcs
 
 CFG = config.ConfigurationManager()
 EPISODE_DATABASE_PATH = CFG.get('path_epdb')
 SHOW_DATABASE_PATH = CFG.get('path_showdb')
-CSTR = printing.to_color_str
+CSTR = printout.to_color_str
 
 
 def _to_text(episode_filename, episode_data, use_removed_date=False):

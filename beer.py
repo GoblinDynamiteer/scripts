@@ -7,7 +7,7 @@ from datetime import datetime
 from hashlib import sha1
 from enum import Enum
 
-from printing import pfcs, fcs
+from printout import pfcs, fcs
 
 UNTAPPD_DATETIME_FMT = r"%Y-%m-%d %H:%M:%S"
 ARG_DATE_FMT = r"%Y-%m-%d"

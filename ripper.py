@@ -16,11 +16,11 @@ from enum import Enum
 from pathlib import Path
 from urllib.request import urlopen
 
-import printing
+import printout
 import rename
 import run
 from config import ConfigurationManager
-from printing import cstr, fcs, pfcs
+from printout import cstr, fcs, pfcs
 from ripper_helpers import EpisodeLister, SessionSingleton
 
 SIM_STR = r"(SIMULATE)"
@@ -421,7 +421,7 @@ class PlayRipperYoutubeDl():
             pass
 
 
-CSTR = printing.to_color_str
+CSTR = printout.to_color_str
 MAIN_LOG_PREFIX = fcs("i[(MAIN)]")
 
 
