@@ -1,20 +1,14 @@
 #!/usr/bin/python3
 
-"Rip things from various websites, call script with URL"
-
 import argparse
 import json
 import os
-import queue
 import re
-import shlex
-import subprocess
 import sys
 import time
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from urllib.request import urlopen
 
 import printout
 import rename
@@ -57,7 +51,7 @@ class YoutubeDLFormats(Enum):
         return YoutubeDLFormats.Best
 
 
-class SubRipper():
+class SubRipper:
     SIM_STR = f"i[{SIM_STR}] o[SUBDL]"
     LOG_PREFIX = "SUBRIP"
 
@@ -237,7 +231,7 @@ class SubRipper():
             sub_output_file.write(sub_contents.encode("utf-8"))
 
 
-class PlayRipperYoutubeDl():
+class PlayRipperYoutubeDl:
     SIM_STR = f"i[{SIM_STR}] p[YTDL]"
     LOG_PREFIX = fcs("i[(YTDL)]")
 
@@ -265,17 +259,20 @@ class PlayRipperYoutubeDl():
         self.download_succeeded = False
 
         if "discoveryplus" in self.url:
-            file_path = ConfigurationManager().path("cookies_txt")
-            if not Path(file_path).exists():
-                file_path = Path(__file__).resolve().parent / "cookies.txt"
-            if not Path(file_path).exists():
-                self.log(fcs("e[error]: could not load cookies for discoveryplus"))
-            else:
-                self.log(fcs("loading o[cookie.txt] for discoveryplus"))
-                self.options["cookiefile"] = str(file_path)
+            self._setup_discovery()
 
         self.log(fcs(f"using url p[{self.url}]"))
         self.retrieve_info()
+
+    def _setup_discovery(self):
+        file_path = ConfigurationManager().path("cookies_txt")
+        if not Path(file_path).exists():
+            file_path = Path(__file__).resolve().parent / "cookies.txt"
+        if not Path(file_path).exists():
+            self.log(fcs("e[error]: could not load cookies for discoveryplus"))
+        else:
+            self.log(fcs("loading o[cookie.txt] for discoveryplus"))
+            self.options["cookiefile"] = str(file_path)
 
     def log(self, info_str):
         if not self.print_log:
@@ -321,7 +318,6 @@ class PlayRipperYoutubeDl():
             pfcs(f"{self.SIM_STR} setting download succeded: "
                  f"{self.download_succeeded}")
             return str(self.get_dest_path())
-        return None
 
     def file_already_exists(self):
         path = self.get_dest_path()
