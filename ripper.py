@@ -10,21 +10,19 @@ from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 
-import printout
 import rename
 import run
 from config import ConfigurationManager
-from printout import cstr, fcs, pfcs
+from printout import cstr, fcs, pfcs, Color
 from ripper_helpers import EpisodeLister, SessionSingleton
-
-SIM_STR = r"(SIMULATE)"
+from base_log import BaseLog
+from singleton import Singleton
 
 try:
     import youtube_dl
 except ImportError:
     print("youtube-dl lib is required ")
     sys.exit(1)
-
 
 if run.program_exists("svtplay-dl"):
     SVTPLAY_DL_AVAILABLE = True
@@ -51,17 +49,22 @@ class YoutubeDLFormats(Enum):
         return YoutubeDLFormats.Best
 
 
-class SubRipper:
-    SIM_STR = f"i[{SIM_STR}] o[SUBDL]"
-    LOG_PREFIX = "SUBRIP"
+class RipperLog(BaseLog, metaclass=Singleton):
+    def __init__(self, verbose=False):
+        BaseLog().__init__(verbose=verbose)
+        self.set_log_prefix("RIPPER")
 
+
+class SubRipper(BaseLog):
     def __init__(self, sub_url, video_file_path, sim=False, verbose=False):
+        super().__init__(verbose=verbose)
+        self.set_log_prefix("SUB_DOWNLOAD")
+        if sim:
+            self.set_log_prefix_2("SIMULATED")
         self.url = sub_url
         self.print_log = verbose
         self.video_file_path = video_file_path
         self.simulate = sim
-        if sim:
-            pfcs(f"{self.SIM_STR} init")
         self.filename = self.determine_file_name()
         self.dest_path = Path(self.video_file_path).parent
         self.download_succeeded = False
@@ -104,14 +107,13 @@ class SubRipper:
         if destination_path:
             self.dest_path = destination_path
         if self.file_already_exists():
-            pfcs(f"subtitle already exists: o[{self.filename}], skipping")
+            self.log_fs(f"subtitle already exists: o[{self.filename}], skipping")
             return None
         if self.simulate:
-            pfcs(f"{self.SIM_STR} downloading")
-            pfcs(f"{self.SIM_STR} dest: {self.get_dest_path()}")
+            self.log("downloading")
+            self.log(f"dest: {self.get_dest_path()}")
             self.download_succeeded = True
-            pfcs(f"{self.SIM_STR} setting download succeded: "
-                 f"{self.download_succeeded}")
+            self.log(f"setting download succeeded: {self.download_succeeded}")
             return str(self.get_dest_path())
         if isinstance(self.url, list):
             self.download_vtt_fragments_as_srt()
@@ -123,11 +125,10 @@ class SubRipper:
             self.download_with_svtplaydl()
         if self.get_dest_path().is_file():
             self.download_succeeded = True
-            print(
-                f"downloaded subtitle: {CSTR(f'{self.get_dest_path()}', 'lblue')}")
+            self.log_fs(f"downloaded subtitle: lb[{self.get_dest_path()}]")
             return self.get_dest_path()
         else:
-            self.log(fcs("subtitle download e[failed]!"))
+            self.error_fs("subtitle download e[failed]!")
             return None
 
     def download_with_svtplaydl(self):
@@ -143,21 +144,9 @@ class SubRipper:
 
     def download_with_curl(self):
         command = f"curl {self.url} > {self.get_dest_path()}"
-        self.log(f"running: {cstr(command, 'lgreen')}")
+        self.log_fs(f"running: lg[{command}]")
         if not run.local_command(command, hide_output=True, print_info=False):
             self.download_succeeded = False
-
-    def log(self, info_str, info_str_line2="", repeat=False):
-        if not self.print_log:
-            return
-        if repeat:
-            print(fcs(f"\ri[({self.LOG_PREFIX})]"), info_str, end="")
-        else:
-            print(fcs(f"i[({self.LOG_PREFIX})]"), info_str)
-        # TODO: fix repeat with line 2
-        if info_str_line2:
-            spaces = " " * len(f"({self.LOG_PREFIX}) ")
-            print(f"{spaces}{info_str_line2}")
 
     def _convert_vtt_seg_to_srt(self, text):
         lines = text.splitlines()
@@ -188,12 +177,12 @@ class SubRipper:
             if merged != "":
                 merged += "\n" * 2
             merged += str(self.srt_index) + "\n" + \
-                srt_dur + "\n" + lines[line_index+1]
-            self.log(f"added srt index {self.srt_index}", repeat=True)
+                      srt_dur + "\n" + lines[line_index + 1]
+            self.log(f"added srt index {self.srt_index}")
             self.srt_index += 1
             try:
-                if lines[line_index+2] != "":
-                    merged += "\n" + lines[line_index+2]
+                if lines[line_index + 2] != "":
+                    merged += "\n" + lines[line_index + 2]
             except IndexError:
                 break
             line_index += 1
@@ -212,7 +201,7 @@ class SubRipper:
             if edited is None:
                 if self.print_log:
                     print()
-                self.log("failed to merge vtt subtitles, aborting")
+                self.error("failed to merge vtt subtitles, aborting")
                 return False
             if edited != "":
                 sub_contents += edited
@@ -231,20 +220,19 @@ class SubRipper:
             sub_output_file.write(sub_contents.encode("utf-8"))
 
 
-class PlayRipperYoutubeDl:
-    SIM_STR = f"i[{SIM_STR}] p[YTDL]"
-    LOG_PREFIX = fcs("i[(YTDL)]")
-
+class PlayRipperYoutubeDl(BaseLog):
     def __init__(self, url, ep_data=None, dest=None, use_title=False, sim=False, verbose=False):
+        super().__init__(verbose=verbose)
+        self.set_log_prefix("YOUTUBE_DL")
+        if sim:
+            self.set_log_prefix_2("SIMULATED")
+        self._first_progress_print = True
         self.ep_data = ep_data
         self.print_log = verbose
         self.url = url
         self.dest_path = dest
         self.format = None
         self.simulate = sim
-        if sim:
-            self.log("using simulation (not downloading)")
-            pfcs(f"{self.SIM_STR} init")
         self.options = {
             "format": YoutubeDLFormats.Best.value,
             "logger": self.Logger(),
@@ -257,11 +245,9 @@ class PlayRipperYoutubeDl:
         self.info = None
         self.filename = ""
         self.download_succeeded = False
-
         if "discoveryplus" in self.url:
             self._setup_discovery()
-
-        self.log(fcs(f"using url p[{self.url}]"))
+        self.log_fs(f"using url p[{self.url}]")
         self.retrieve_info()
 
     def _setup_discovery(self):
@@ -274,19 +260,14 @@ class PlayRipperYoutubeDl:
             self.log(fcs("loading o[cookie.txt] for discoveryplus"))
             self.options["cookiefile"] = str(file_path)
 
-    def log(self, info_str):
-        if not self.print_log:
-            return
-        print(self.LOG_PREFIX, info_str)
-
     def download(self, destination_path=None):
         if not self.info:
-            print("no video info available, skipping download!")
+            self.warn("no video info available, skipping download!", force=True)
             return None
         if destination_path:
             self.dest_path = destination_path
         if self.file_already_exists():
-            pfcs(f"file already exists: o[{self.filename}], skipping")
+            self.log(f"file already exists: o[{self.filename}], skipping", force=True)
             return None
         if not self.simulate:
             self.log(fcs(f"downloading to: p[{self.dest_path}]"))
@@ -312,11 +293,10 @@ class PlayRipperYoutubeDl:
             self.log(fcs("e[failed download!]"))
             return None
         else:
-            pfcs(f"{self.SIM_STR} downloading")
-            pfcs(f"{self.SIM_STR} dest: {self.get_dest_path()}")
+            self.log("downloading")
+            self.log(f"dest: {self.get_dest_path()}")
             self.download_succeeded = True
-            pfcs(f"{self.SIM_STR} setting download succeded: "
-                 f"{self.download_succeeded}")
+            self.log(f"setting download succeeded: {self.download_succeeded}")
             return str(self.get_dest_path())
 
     def file_already_exists(self):
@@ -335,12 +315,18 @@ class PlayRipperYoutubeDl:
 
     def hooks(self, event):
         if event["status"] == "finished":
-            print("\nDone downloading! Now converting or downloading audio.")
+            print()
+            self.log("Done downloading! Now converting or downloading audio.")
         if event["status"] == "downloading":
-            percentage = cstr(event["_percent_str"].lstrip(), "lgreen")
-            file_name = cstr(Path(event["filename"]).name, "lblue")
-            print(f"\rDownloading: {file_name} ({percentage} "
-                  f"- {event['_eta_str']})    ", end="")
+            self._print_progress(event)
+
+    def _print_progress(self, event):
+        percentage = cstr(event["_percent_str"].lstrip(), Color.LightGreen)
+        file_name = cstr(Path(event["filename"]).name, Color.LightBlue)
+        if self._first_progress_print:
+            self.log(f"Downloading: {file_name} ")
+            self._first_progress_print = False
+        print(f"\r >> ({percentage}) - {event['_eta_str']})    ", end="")
 
     def retrieve_info(self):
         self.log("attempting to retrieve video info using youtube-dl...")
@@ -417,35 +403,24 @@ class PlayRipperYoutubeDl:
             pass
 
 
-CSTR = printout.to_color_str
-MAIN_LOG_PREFIX = fcs("i[(MAIN)]")
-
-
-def log_main(info_str):
-    print(MAIN_LOG_PREFIX, info_str)
-
-
 def retrive_sub_url(data_obj, verbose=False):
     count = 0
     sub_url = ""
+    _log = RipperLog(verbose)
     while not sub_url:
         sub_url = data_obj.subtitle_url()
         if sub_url:
-            if verbose:
-                log_main("successfully retrieved subtitle url")
+            _log.log("successfully retrieved subtitle url")
             return sub_url
         else:
-            if verbose:
-                log_main("failed to retrieve subtitle url")
+            _log.log("failed to retrieve subtitle url")
             count += 1
             if count > 5:
-                if verbose:
-                    log_main(
-                        "could retrieve subtitle url, skipping sub download")
+                _log.log("could retrieve subtitle url, skipping sub download")
                 return ""
             if verbose:
                 # Could be done in bg when processing others
-                log_main("sleeping 10 seconds...")
+                _log.log("sleeping 10 seconds...")
             time.sleep(10)
 
 
@@ -467,6 +442,7 @@ def get_args():
 
 
 def download_episodes(episode_list, cli_args):
+    _log = RipperLog()
     first = True
     for ep in episode_list:
         if not first:
@@ -502,11 +478,9 @@ def download_episodes(episode_list, cli_args):
                 ep, str) else retrive_sub_url(ep, cli_args.verb)
             if cli_args.verb:
                 if isinstance(subtitle_url, list) and subtitle_url != []:
-                    log_main(
-                        fcs(f"using url(s) for subtitles: o[{subtitle_url[0]}]..."))
+                    _log.log_fs(f"using url(s) for subtitles: o[{subtitle_url[0]}]...", force=True)
                 else:
-                    log_main(
-                        fcs(f"using url for subtitles: o[{subtitle_url}]"))
+                    _log.log_fs(f"using url for subtitles: o[{subtitle_url}]", force=True)
             sub_ripper = SubRipper(
                 subtitle_url,
                 str(file_name),
@@ -514,8 +488,7 @@ def download_episodes(episode_list, cli_args):
                 verbose=cli_args.verb)
             if sub_ripper.file_already_exists():
                 if cli_args.verb:
-                    log_main(
-                        fcs(f"subtitle already exists: i[{sub_ripper.get_dest_path()}]"))
+                    _log.log_fs(f"subtitle already exists: i[{sub_ripper.get_dest_path()}]")
                 continue
             sub_ripper.download()
 
