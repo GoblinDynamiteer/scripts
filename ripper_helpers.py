@@ -347,7 +347,7 @@ class ViafreeEpisodeData(EpisodeData):
             stream_url = res.json()[
                 '_embedded']['viafreeBlocks'][0]['_embedded']['program']['_links']['streamLink']['href']
             self.log(fcs("got stream url"), fcs(f"i[{stream_url}]"))
-        except KeyError as error:
+        except KeyError as _:
             self.log(fcs("failed to retrieve stream url from:"),
                      fcs(f"o[{content_url}]"))
             return ""
@@ -358,7 +358,7 @@ class ViafreeEpisodeData(EpisodeData):
                 raise ValueError()
             self.log(fcs("got sv subtitle url"), fcs(f"i[{sub_url}]"))
             self.sub_url = sub_url
-        except (KeyError, IndexError, ValueError) as error:
+        except (KeyError, IndexError, ValueError) as _:
             self.log(fcs("failed to retrieve subtitle url from:"),
                      fcs(f"o[{stream_url}]"))
             return ""
@@ -385,12 +385,13 @@ class ViafreeEpisodeData(EpisodeData):
 
 
 class EpisodeLister(BaseLog):
-    def __init__(self, url, verbose=False):
+    def __init__(self, url, verbose=False, save_json_data=False):
         super().__init__(verbose=verbose)
         self.set_log_prefix("EPISODE_LISTER")
         self.url = url
         self.ep_list = []
         self.filter = {}
+        self._save_json_data = save_json_data
 
     def set_filter(self, **kwargs):
         for key, val in kwargs.items():
@@ -409,24 +410,24 @@ class EpisodeLister(BaseLog):
         return self.ep_list
 
     @staticmethod
-    def get_lister(url, verbose_logging=False):
+    def get_lister(url, verbose_logging=False, save_json_data=False):
         matches = {"viafree.se": ViafreeEpisodeLister,
                    "tv4play.se": Tv4PlayEpisodeLister,
                    "discoveryplus.se": DPlayEpisodeLister,
                    "svtplay.se": SVTPlayEpisodeLister}
         for site, lister in matches.items():
             if site in url:
-                return lister(url, verbose=verbose_logging)
+                return lister(url, verbose=verbose_logging, save_json_data=save_json_data)
         raise ValueError(f"unsupported site: {url}")
 
 
 class SVTPlayEpisodeLister(EpisodeLister):
     REGEX = r"application\/json\">(.*\}\})<\/script><script "
 
-    def __init__(self, url, verbose=False):
-        super().__init__(url, verbose)
+    def __init__(self, url, **kwargs):
+        super().__init__(url, **kwargs)
         self.set_log_prefix("SVTPLAY_LISTER")
-        if not "svtplay.se" in url:
+        if "svtplay.se" not in url:
             print("cannot handle non-svtplay.se urls!")
 
     def get_episodes(self, revered_order=False, limit=None):
@@ -532,14 +533,12 @@ class Tv4PlayEpisodeLister(EpisodeLister):
     REGEXES = [r"application\/json\">(.*\})<\/script><script ",
                r"application\/json\">(.*\}\})<\/script><script "]
 
-    def __init__(self, url, verbose=False):
-        super().__init__(url, verbose)
+    def __init__(self, url, **kwargs):
+        super().__init__(url, **kwargs)
         self.set_log_prefix("TV4PLAY_LISTER")
         if not "tv4play.se" in url:
             print("cannot handle non-tv4play.se urls!")
-        self.url = url
         self.session = Session()
-        self.filter = {}
 
     def get_episodes(self, revered_order=False, limit=None):
         if self.ep_list:
@@ -555,11 +554,14 @@ class Tv4PlayEpisodeLister(EpisodeLister):
             print(f"can't find episodes @ {self.url}")
             return []
         json_data = json.loads(match.group(1))
-        program_data = None
+        if self._save_json_data:
+            filename = f"tv4_json_output_{datetime.now()}.json"
+            with open(filename, "w") as _file:
+                json.dump(json_data, _file, sort_keys=True, indent=4)
+                print(f"dumped json data to {filename:}")
         try:
             program_data = json_data["props"]["pageProps"]["initialApolloState"]
         except KeyError:
-            program_data = None
             self.log("[props][pageProps][initialApolloState] not present in json")
             try:
                 program_data = json_data["props"]["apolloState"]
@@ -585,8 +587,8 @@ class Tv4PlayEpisodeLister(EpisodeLister):
 class DPlayEpisodeLister(EpisodeLister):
     API_URL = "https://disco-api.discoveryplus.se"
 
-    def __init__(self, url, verbose=False):
-        super().__init__(url, verbose)
+    def __init__(self, url, **kwargs):
+        super().__init__(url, **kwargs)
         self.set_log_prefix("DPLAY_LISTER")
         if not "discoveryplus.se" in url:
             print("cannot handle non discoveryplus.se urls!")
@@ -657,8 +659,8 @@ class DPlayEpisodeLister(EpisodeLister):
 
 
 class ViafreeEpisodeLister(EpisodeLister):
-    def __init__(self, url, verbose=False):
-        super().__init__(url, verbose)
+    def __init__(self, url, **kwargs):
+        super().__init__(url, **kwargs)
         self.set_log_prefix("VIAFREE_LISTER")
         if not "viafree" in url:
             print("cannot handle non-viafree.se urls!")
@@ -723,67 +725,8 @@ class ViafreeEpisodeLister(EpisodeLister):
         return best_data
 
 
-class TestEpisodeLister(unittest.TestCase):
-    URL_TV4 = r"https://www.tv4play.se/program/idol"
-    URL_VIAFREE = r"https://www.viafree.se/program/livsstil/lyxfallan"
-    URL_SVTPLAY = r"https://www.svtplay.se/skavlan"
-    URL_INVALID = r"http://www.somerandomsite.se/tvshow/"
-    URL_DPLAY = r"https://www.dplay.se/program/alla-mot-alla-med-filip-och-fredrik"
-
-    def setUp(self):
-        warnings.simplefilter("ignore", category=ResourceWarning)
-
-    def test_get_lister_viafree(self):
-        lister = EpisodeLister.get_lister(self.URL_VIAFREE)
-        self.assertTrue(isinstance(lister, ViafreeEpisodeLister))
-
-    def test_get_lister_tv4play(self):
-        lister = EpisodeLister.get_lister(self.URL_TV4)
-        self.assertTrue(isinstance(lister, Tv4PlayEpisodeLister))
-
-    def test_get_lister_dplay(self):
-        lister = EpisodeLister.get_lister(self.URL_DPLAY)
-        self.assertTrue(isinstance(lister, DPlayEpisodeLister))
-
-    def test_get_lister_svtplay(self):
-        lister = EpisodeLister.get_lister(self.URL_SVTPLAY)
-        self.assertTrue(isinstance(lister, SVTPlayEpisodeLister))
-
-    def test_get_lister_unsupported(self):
-        with self.assertRaises(Exception):
-            EpisodeLister.get_lister(self.URL_INVALID)
-
-    def test_get_episodes_svtplay(self):
-        lister = EpisodeLister.get_lister(self.URL_SVTPLAY)
-        self.assertGreater(len(lister.get_episodes()), 0)
-
-    def test_get_episodes_viafree(self):
-        lister = EpisodeLister.get_lister(self.URL_VIAFREE)
-        self.assertGreater(len(lister.get_episodes()), 0)
-
-    def test_get_episodes_tv4play(self):
-        lister = EpisodeLister.get_lister(self.URL_TV4)
-        self.assertGreater(len(lister.get_episodes()), 0)
-
-    def test_get_episodes_dplay(self):
-        lister = EpisodeLister.get_lister(self.URL_DPLAY)
-        self.assertGreater(len(lister.get_episodes()), 0)
-
-
-class TestEpisodeData(unittest.TestCase):
-    def test_subtitle_url_implemented(self):
-        for data_class in EpisodeData.get_availabe_classes():
-            data = data_class()
-            try:
-                data.subtitle_url()
-            except NotImplementedError:
-                self.fail(
-                    f"{data.__class__.__name__} has not implemented subtitle_url")
-
-
 def get_args():
     parser = ArgumentParser("ripper helper")
-    parser.add_argument("--test", dest="run_tests", action="store_true")
     parser.add_argument("--url", type=str)
     parser.add_argument("--verbose", action="store_true")
     return parser.parse_args()
@@ -791,9 +734,6 @@ def get_args():
 
 def main():
     args = get_args()
-    if args.run_tests:
-        print("running unit tests")
-        unittest.main(argv=[__file__])
     if args.url:
         lister = EpisodeLister.get_lister(args.url, args.verbose)
         for episode in lister.get_episodes():

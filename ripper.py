@@ -440,6 +440,7 @@ def get_args():
     parser.add_argument("--filter", "-f", type=str, default="")
     parser.add_argument("--simulate", action="store_true", help="run tests")
     parser.add_argument("--verbose", "-v", action="store_true", dest="verb")
+    parser.add_argument("--save-json-to-file", "-j", action="store_true", dest="save_debug_json")
     return parser.parse_args()
 
 
@@ -517,12 +518,10 @@ def main():
                 sys.exit(1)
         wanted_last = int(args.get_last)
         try:
-            lister = EpisodeLister.get_lister(
-                urls[0], verbose_logging=args.verb)
+            lister = EpisodeLister.get_lister(urls[0], verbose_logging=args.verb, save_json_data=args.save_debug_json)
             if filter_dict:
                 lister.set_filter(**filter_dict)
-            episodes = lister.get_episodes(
-                revered_order=True, limit=wanted_last)
+            episodes = lister.get_episodes(revered_order=True, limit=wanted_last)
         except ValueError as error:
             pfcs("e[failed] to list episodes")
             pfcs(f"e[error]: {error}")

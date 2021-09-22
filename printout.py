@@ -36,6 +36,7 @@ _FORMAT_CODES = {
     "mg[": 243,  # medium grey
     "dg[": 239,  # dark grey
     "lg[": 252,  # light grey
+    "lb[" : 74, # light blue
     "e[": 196,  # error
     "g[": 154,  # green
     "b[": 74,  # blue
