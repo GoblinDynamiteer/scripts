@@ -4,6 +4,9 @@ import configparser
 from pathlib import Path
 from enum import Enum
 
+from base_log import BaseLog
+from singleton import Singleton
+
 import util
 
 
@@ -40,7 +43,7 @@ class SettingSection(Enum):
     WB = "wb"
 
 
-class ConfigurationManager(util.BaseLog, metaclass=util.Singleton):
+class ConfigurationManager(BaseLog, metaclass=Singleton):
     SETTINGS = None
     FILE_NAME = "settings.ini"
     BASE_DIR = Path(__file__).resolve().parent
