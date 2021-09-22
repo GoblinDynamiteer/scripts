@@ -22,8 +22,8 @@ from config import ConfigurationManager
 
 from ripper import PlayRipperYoutubeDl
 from ripper import SubRipper
-from ripper import retrive_sub_url
-from ripper_helpers import EpisodeLister
+from ripper import retrieve_sub_url
+from ripper_helpers.ripper_helpers import ListerFactory
 from printout import cstr, pfcs, fcs
 
 WEEK_IN_SECONDS = 60 * 60 * 24 * 7
@@ -254,7 +254,7 @@ class ScheduledShow(BaseLog):
                     self.log(fcs(f"i[{existing.name}] already exists, skipping sub dl..."))
                     print_separator()
                     continue
-                sub_rip = SubRipper(retrive_sub_url(obj), str(file_path), verbose=True)
+                sub_rip = SubRipper(retrieve_sub_url(obj), str(file_path), verbose=True)
                 if not sub_rip.file_already_exists():
                     self.log(fcs(f"trying to download subtitles: i[{sub_rip.filename}]"))
                     try:
@@ -317,7 +317,7 @@ class ScheduledShow(BaseLog):
         return min(at_list) if at_list else WEEK_IN_SECONDS
 
     def get_url_objects(self):
-        lister = EpisodeLister.get_lister(self.url, verbose_logging=True)
+        lister = ListerFactory().get_lister(self.url, verbose_logging=True)
         if self.filter_dict:
             lister.set_filter(**self.filter_dict)
         return lister.get_episodes(revered_order=True, limit=5)

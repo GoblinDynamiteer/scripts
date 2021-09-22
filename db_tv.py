@@ -14,6 +14,8 @@ import util
 import util_tv
 from printout import pfcs
 
+from singleton import Singleton
+
 CFG = config.ConfigurationManager()
 EPISODE_DATABASE_PATH = CFG.get('path_epdb')
 SHOW_DATABASE_PATH = CFG.get('path_showdb')
@@ -141,7 +143,7 @@ class EpisodeDatabase(db_json.JSONDatabase):
             print(CSTR('could not save removed.txt', 'red'))
 
 
-class ShowDatabaseSingleton(metaclass=util.Singleton):
+class ShowDatabaseSingleton(metaclass=Singleton):
     _db = ShowDatabase()
 
     def db(self):
@@ -151,7 +153,7 @@ class ShowDatabaseSingleton(metaclass=util.Singleton):
         return self._db.get(show_name, "tvmaze")
 
 
-class EpisodeDatabaseSingleton(metaclass=util.Singleton):
+class EpisodeDatabaseSingleton(metaclass=Singleton):
     _db = EpisodeDatabase()
 
     def db(self):

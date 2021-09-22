@@ -6,8 +6,13 @@ from datetime import datetime
 import pytest
 
 from ripper_scheduler import ScheduledShowList, get_cli_args
-from ripper_helpers import EpisodeLister, ViafreeEpisodeLister, Tv4PlayEpisodeLister, DPlayEpisodeLister, \
-    SVTPlayEpisodeLister
+
+from ripper_helpers.lister.discovery import DPlayEpisodeLister
+from ripper_helpers.lister.svtplay import SVTPlayEpisodeLister
+from ripper_helpers.lister.tv4 import Tv4PlayEpisodeLister
+from ripper_helpers.lister.viafree import ViafreeEpisodeLister
+from ripper_helpers.lister.episode_lister import EpisodeLister
+from ripper_helpers.ripper_helpers import ListerFactory
 
 DATA = [
     {
@@ -91,31 +96,31 @@ class TestEpisodeLister:
     URL_DISCOVERY = r"https://www.discoveryplus.se/program/alla-mot-alla-med-filip-och-fredrik"
 
     def test_get_lister_viafree(self):
-        lister = EpisodeLister.get_lister(self.URL_VIAFREE)
+        lister = ListerFactory().get_lister(self.URL_VIAFREE)
         assert isinstance(lister, ViafreeEpisodeLister) is True
 
     def test_get_lister_tv4play(self):
-        lister = EpisodeLister.get_lister(self.URL_TV4)
+        lister = ListerFactory().get_lister(self.URL_TV4)
         assert isinstance(lister, Tv4PlayEpisodeLister) is True
 
     def test_get_lister_dplay(self):
-        lister = EpisodeLister.get_lister(self.URL_DISCOVERY)
+        lister = ListerFactory().get_lister(self.URL_DISCOVERY)
         assert isinstance(lister, DPlayEpisodeLister) is True
 
     def test_get_lister_svtplay(self):
-        lister = EpisodeLister.get_lister(self.URL_SVTPLAY)
+        lister = ListerFactory().get_lister(self.URL_SVTPLAY)
         assert isinstance(lister, SVTPlayEpisodeLister) is True
 
     def test_get_lister_invalid(self):
         with pytest.raises(ValueError):
-            EpisodeLister.get_lister(self.URL_INVALID)
+            ListerFactory().get_lister(self.URL_INVALID)
 
     def test_get_lister_svtplay_verbose(self):
-        lister = EpisodeLister.get_lister(self.URL_SVTPLAY, verbose_logging=True)
+        lister = ListerFactory().get_lister(self.URL_SVTPLAY, verbose=True)
         assert isinstance(lister, SVTPlayEpisodeLister) is True
         assert lister.verbose is True
 
     def test_get_lister_svtplay_save_json(self):
-        lister = EpisodeLister.get_lister(self.URL_SVTPLAY, save_json_data=True)
+        lister = ListerFactory().get_lister(self.URL_SVTPLAY, save_json_data=True)
         assert isinstance(lister, SVTPlayEpisodeLister) is True
         assert lister._save_json_data is True

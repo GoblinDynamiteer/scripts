@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.8
 
 import argparse
 import json
@@ -14,7 +14,8 @@ import rename
 import run
 from config import ConfigurationManager
 from printout import cstr, fcs, pfcs, Color
-from ripper_helpers import EpisodeLister, SessionSingleton
+from ripper_helpers.ripper_helpers import ListerFactory
+from ripper_helpers.lister.session import SessionSingleton
 from base_log import BaseLog
 from singleton import Singleton
 
@@ -24,7 +25,7 @@ except ImportError:
     print("youtube-dl lib is required ")
     sys.exit(1)
 
-if run.program_exists("svtplay-dl"):
+if run.program_exists("svtplay.py-dl"):
     SVTPLAY_DL_AVAILABLE = True
 else:
     SVTPLAY_DL_AVAILABLE = False
@@ -44,14 +45,14 @@ class YoutubeDLFormats(Enum):
 
     @staticmethod
     def preferred_format(url):
-        if any(x in url for x in ["discoveryplus", "viafree"]):
+        if any(x in url for x in ["discoveryplus", "viafree.py"]):
             return YoutubeDLFormats.BestMP4M4A
         return YoutubeDLFormats.Best
 
 
 class RipperLog(BaseLog, metaclass=Singleton):
     def __init__(self, verbose=False):
-        BaseLog().__init__(verbose=verbose)
+        BaseLog.__init__(self, verbose=verbose)
         self.set_log_prefix("RIPPER")
 
 
@@ -132,14 +133,14 @@ class SubRipper(BaseLog):
             return None
 
     def download_with_svtplaydl(self):
-        command = f'svtplay-dl -S --force-subtitle -o "{self.get_dest_path()}" {self.url}'
+        command = f'svtplay.py-dl -S --force-subtitle -o "{self.get_dest_path()}" {self.url}'
         dual_srt_filename = self.get_dest_path().name + ".srt"
         dual_srt_extension_path = Path(self.dest_path) / dual_srt_filename
-        if dual_srt_extension_path.exists():  # svtplay-dl might add ext.
+        if dual_srt_extension_path.exists():  # svtplay.py-dl might add ext.
             pass
         elif not run.local_command(command, hide_output=True, print_info=False):
             self.download_succeeded = False
-        if dual_srt_extension_path.exists():  # svtplay-dl adds srt extension?
+        if dual_srt_extension_path.exists():  # svtplay.py-dl adds srt extension?
             dual_srt_extension_path.rename(self.get_dest_path())
 
     def download_with_curl(self):
@@ -399,16 +400,17 @@ class PlayRipperYoutubeDl(BaseLog):
         def debug(self, msg):
             if "download" in msg:
                 return
-            self.log(msg)
+            #self.log(msg)
 
         def warning(self, msg):
-            self.warn(msg)
+            pass
+            #self.warn(msg)
 
 
-def retrive_sub_url(data_obj, verbose=False):
+def retrieve_sub_url(data_obj):
     count = 0
     sub_url = ""
-    _log = RipperLog(verbose)
+    _log = RipperLog()
     while not sub_url:
         sub_url = data_obj.subtitle_url()
         if sub_url:
@@ -420,9 +422,8 @@ def retrive_sub_url(data_obj, verbose=False):
             if count > 5:
                 _log.log("could retrieve subtitle url, skipping sub download")
                 return ""
-            if verbose:
-                # Could be done in bg when processing others
-                _log.log("sleeping 10 seconds...")
+            # Could be done in bg when processing others
+            _log.log("sleeping 10 seconds...")
             time.sleep(10)
 
 
@@ -435,17 +436,19 @@ def get_args():
     parser.add_argument("--sub-only", "-s",
                         action="store_true", dest="sub_only")
     parser.add_argument("--get-last", default=0, dest="get_last")
+    parser.add_argument("--by-date", action="store_true", dest="get_last_by_airdate")
     parser.add_argument("--download-last-first", "-u",
                         action="store_false", dest="use_ep_order")
     parser.add_argument("--filter", "-f", type=str, default="")
     parser.add_argument("--simulate", action="store_true", help="run tests")
     parser.add_argument("--verbose", "-v", action="store_true", dest="verb")
     parser.add_argument("--save-json-to-file", "-j", action="store_true", dest="save_debug_json")
+    parser.add_argument("--get-clips", "-c", action="store_true", dest="download_clips")
     return parser.parse_args()
 
 
 def download_episodes(episode_list, cli_args):
-    _log = RipperLog()
+    _log = RipperLog(verbose=cli_args.verb)
     first = True
     for ep in episode_list:
         if not first:
@@ -477,8 +480,7 @@ def download_episodes(episode_list, cli_args):
         if get_subs or cli_args.sub_only:
             if not file_name:
                 file_name = ripper.get_dest_path()
-            subtitle_url = url if isinstance(
-                ep, str) else retrive_sub_url(ep, cli_args.verb)
+            subtitle_url = url if isinstance(ep, str) else retrieve_sub_url(ep)
             if cli_args.verb:
                 if isinstance(subtitle_url, list) and subtitle_url != []:
                     _log.log_fs(f"using url(s) for subtitles: o[{subtitle_url[0]}]...", force=True)
@@ -518,9 +520,16 @@ def main():
                 sys.exit(1)
         wanted_last = int(args.get_last)
         try:
-            lister = EpisodeLister.get_lister(urls[0], verbose_logging=args.verb, save_json_data=args.save_debug_json)
+            lister = ListerFactory().get_lister(
+                urls[0],
+                verbose=args.verb,
+                save_json_data=args.save_debug_json,
+                get_clips=args.download_clips
+            )
             if filter_dict:
                 lister.set_filter(**filter_dict)
+            if args.get_last_by_airdate:
+                lister.set_sort_by_date()
             episodes = lister.get_episodes(revered_order=True, limit=wanted_last)
         except ValueError as error:
             pfcs("e[failed] to list episodes")
