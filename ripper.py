@@ -390,17 +390,19 @@ class PlayRipperYoutubeDl(BaseLog):
         file_name += f".{ext}"
         return rename.rename_string(file_name, space_replace_char=".")
 
-    class Logger(object):
-        "Logger for youtube-dl"
+    class Logger(BaseLog):
+        def __init__(self):
+            super().__init__(verbose=True)
+            self.set_log_prefix("YOUTUBE_DL_LOG")
+            self.set_prefix_color(Color.Pink)
 
         def debug(self, msg):
-            pass
+            if "download" in msg:
+                return
+            self.log(msg)
 
         def warning(self, msg):
-            pass
-
-        def error(self, msg):
-            pass
+            self.warn(msg)
 
 
 def retrive_sub_url(data_obj, verbose=False):
