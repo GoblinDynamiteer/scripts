@@ -17,6 +17,7 @@ import util
 import util_movie
 import util_tv
 from printout import cstr, pcstr, pfcs, print_line, fcs
+from base_log import BaseLog
 
 
 class SubtitleMediaType(IntEnum):
@@ -94,7 +95,7 @@ class Subtitle():
         return self.matching_media[0][1]
 
 
-class SubSceneSubtitle(util.BaseLog):
+class SubSceneSubtitle(BaseLog):
     BASE_URL = r"https://subscene.com"
 
     class SpanIndex(Enum):
@@ -105,7 +106,7 @@ class SubSceneSubtitle(util.BaseLog):
         super().__init__(verbose)
         self.set_log_prefix("SUB_RESULT")
         self.soup = soup
-        self.release = release_str
+        self.release = release_str.replace(r"/", "")
         self.verbose = verbose
         self.title = None
         self.url = None
@@ -188,7 +189,7 @@ class SubSceneSubtitle(util.BaseLog):
         print("Similarity:", cstr(self.similarity, sim_color))
 
 
-class SubSceneSearchResult(util.BaseLog):
+class SubSceneSearchResult(BaseLog):
     BASE_URL = r"https://subscene.com"
 
     class MatchType(Enum):
@@ -291,7 +292,7 @@ class SubSceneSearchResult(util.BaseLog):
         return url
 
 
-class SubScene(util.BaseLog):
+class SubScene(BaseLog):
     URL_SEARCH = r"https://subscene.com/subtitles/searchbytitle"
 
     def __init__(self, search_str=None, verbose=False):
