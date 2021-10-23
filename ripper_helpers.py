@@ -530,7 +530,8 @@ class SVTPlayEpisodeLister(EpisodeLister):
 
 
 class Tv4PlayEpisodeLister(EpisodeLister):
-    REGEXES = [r"application\/json\">(.*\})<\/script><script ",
+    REGEXES = [r"application\/json\">(.*\})<\/script><\/body><\/html>",
+               r"application\/json\">(.*\})<\/script><script ",
                r"application\/json\">(.*\}\})<\/script><script "]
 
     def __init__(self, url, **kwargs):
