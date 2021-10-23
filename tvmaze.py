@@ -8,6 +8,8 @@ import urllib.request
 
 import util
 
+from singleton import Singleton
+
 URL = "http://api.tvmaze.com"
 
 # TODO: refactor / move all methods into TvMazeData class
@@ -67,7 +69,7 @@ def episode_search(show_name: str, season: int, episode: int, show_maze_id: int 
     return _tvmaze_search(url)
 
 
-class TvMazeData(metaclass=util.Singleton):
+class TvMazeData(metaclass=Singleton):
     "TVMaze data holder, only executes a new search if needed"
     DATA = {}
 

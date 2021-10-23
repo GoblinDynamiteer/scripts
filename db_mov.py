@@ -11,6 +11,8 @@ import util
 import util_movie
 from printout import pfcs
 
+from singleton import Singleton
+
 CFG = config.ConfigurationManager()
 MOVIE_DATABASE_PATH = CFG.get('path_movdb')
 CSTR = printout.to_color_str
@@ -118,7 +120,7 @@ class MovieDatabase(db_json.JSONDatabase):
                 yield item
 
 
-class MovieDatabaseSingleton(metaclass=util.Singleton):
+class MovieDatabaseSingleton(metaclass=Singleton):
     _db = MovieDatabase()
 
     def db(self):
