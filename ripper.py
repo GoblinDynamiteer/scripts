@@ -51,7 +51,7 @@ class YoutubeDLFormats(Enum):
 
 class RipperLog(BaseLog, metaclass=Singleton):
     def __init__(self, verbose=False):
-        BaseLog().__init__(verbose=verbose)
+        BaseLog.__init__(self, verbose=verbose)
         self.set_log_prefix("RIPPER")
 
 
