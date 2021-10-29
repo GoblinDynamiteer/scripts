@@ -38,6 +38,9 @@ def get_args():  # TODO: hack to make it work, create new Settings class or simi
 class GuiSettings:
     dl_dir: str = ""
 
+    def to_dict(self) -> dict:
+        return {"gui": {"dl_dir": self.dl_dir}}
+
 
 def load_settings() -> GuiSettings:
     _file = Path(__file__).parent / "ripper_settings.json"
@@ -46,12 +49,18 @@ def load_settings() -> GuiSettings:
         return GuiSettings(dl_dir=_settings.get("gui", {}).get("dl_dir", ""))
 
 
+def save_settings(settings: GuiSettings):
+    _file = Path(__file__).parent / "ripper_settings.json"
+    with open(_file, "w") as fp:
+        json.dump(settings.to_dict(), fp, indent=4)
+
+
 class Window(QWidget, BaseLog):
     def __init__(self):
         QWidget.__init__(self)
         BaseLog.__init__(self, verbose=True)
         self.setWindowTitle("Ripper! ;D")
-        self._args = get_args()
+        self._settings: GuiSettings = load_settings()
         self._grid = QGridLayout()
         self.button_change_style = QPushButton("Change Style")
         self._url_input = QLineEdit()
@@ -80,8 +89,7 @@ class Window(QWidget, BaseLog):
         self._btn_dest.clicked.connect(self._select_dest)
 
     def _update_dest(self):
-        _settings: GuiSettings = load_settings()
-        self._lbl_dest.setText(f"dest: {_settings.dl_dir}")
+        self._lbl_dest.setText(f"dest: {self._settings.dl_dir}")
 
     @Slot()
     def _select_dest(self):
@@ -90,8 +98,11 @@ class Window(QWidget, BaseLog):
         _dialog.exec()
         _selected = _dialog.selectedFiles()
         if _selected:
-            self._args.dir = _selected[0]
+            if _selected[0] == self._settings.dl_dir:
+                return
+            self._settings.dl_dir = _selected[0]
             self._update_dest()
+            save_settings(self._settings)
 
     @Slot()
     def _list_eps(self):
@@ -106,7 +117,9 @@ class Window(QWidget, BaseLog):
     def _download(self):
         _selected = [i.text() for i in self._list.selectedItems()]
         _eps_to_dl = [e for e in self._ep_list if str(e) in _selected]
-        download_episodes(_eps_to_dl, self._args)
+        _args = get_args()
+        _args.dir = self._settings.dl_dir  # TODO: done use args..
+        download_episodes(_eps_to_dl, _args)
 
     def _add_to_list(self):
         for ep in self._ep_list:
