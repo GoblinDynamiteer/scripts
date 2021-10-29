@@ -1,7 +1,11 @@
+from pathlib import Path
 from typing import List
 import sys
 import argparse
 import os
+import json
+
+from dataclasses import dataclass
 
 from PySide6.QtWidgets import QWidget, QApplication, QPushButton, QGridLayout, QStyleFactory, QLineEdit, QListWidget, \
     QListWidgetItem, QFileDialog, QLabel
@@ -28,6 +32,18 @@ def get_args():  # TODO: hack to make it work, create new Settings class or simi
     parser.add_argument("--verbose", "-v", action="store_true", dest="verb")
     parser.add_argument("--save-json-to-file", "-j", action="store_true", dest="save_debug_json")
     return parser.parse_args()
+
+
+@dataclass
+class GuiSettings:
+    dl_dir: str = ""
+
+
+def load_settings() -> GuiSettings:
+    _file = Path(__file__).parent / "ripper_settings.json"
+    with open(_file, "r") as fp:
+        _settings = json.load(fp)
+        return GuiSettings(dl_dir=_settings.get("gui", {}).get("dl_dir", ""))
 
 
 class Window(QWidget, BaseLog):
@@ -64,7 +80,8 @@ class Window(QWidget, BaseLog):
         self._btn_dest.clicked.connect(self._select_dest)
 
     def _update_dest(self):
-        self._lbl_dest.setText(f"dest: {self._args.dir}")
+        _settings: GuiSettings = load_settings()
+        self._lbl_dest.setText(f"dest: {_settings.dl_dir}")
 
     @Slot()
     def _select_dest(self):
