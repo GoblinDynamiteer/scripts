@@ -5,10 +5,10 @@ import argparse
 import os
 import json
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from PySide6.QtWidgets import QWidget, QApplication, QPushButton, QGridLayout, QStyleFactory, QLineEdit, QListWidget, \
-    QListWidgetItem, QFileDialog, QLabel
+    QListWidgetItem, QFileDialog, QLabel, QComboBox
 from PySide6.QtCore import Slot
 
 from ripper import download_episodes
@@ -37,16 +37,20 @@ def get_args():  # TODO: hack to make it work, create new Settings class or simi
 @dataclass
 class GuiSettings:
     dl_dir: str = ""
+    history_url: List[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
-        return {"gui": {"dl_dir": self.dl_dir}}
+        return {"gui": {"dl_dir": self.dl_dir,
+                        "history": self.history_url}}
 
 
 def load_settings() -> GuiSettings:
     _file = Path(__file__).parent / "ripper_settings.json"
     with open(_file, "r") as fp:
-        _settings = json.load(fp)
-        return GuiSettings(dl_dir=_settings.get("gui", {}).get("dl_dir", ""))
+        _settings = json.load(fp).get("gui", {})
+        print(_settings)
+        return GuiSettings(dl_dir=_settings.get("dl_dir", ""),
+                           history_url=_settings.get("history", []))
 
 
 def save_settings(settings: GuiSettings):
@@ -62,31 +66,35 @@ class Window(QWidget, BaseLog):
         self.setWindowTitle("Ripper! ;D")
         self._settings: GuiSettings = load_settings()
         self._grid = QGridLayout()
-        self.button_change_style = QPushButton("Change Style")
-        self._url_input = QLineEdit()
+        self._url_input = QComboBox()
         self._btn_list = QPushButton("List Episodes")
         self._btn_download = QPushButton("Download Selected Episodes")
         self._btn_dest = QPushButton("Select Destination")
         self._lbl_dest = QLabel("")
         self._btn_download.setDisabled(True)
-        # self._grid.addWidget(self.button_change_style, 3, 1)
+        self._list = QListWidget()
+        self._list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+        self._ep_list: List[EpisodeData]
+        self._init()
+        print(self._settings)
+        self._add_widgets_to_grid()
+        self.setLayout(self._grid)
+
+    def _add_widgets_to_grid(self):
         self._grid.addWidget(self._btn_download, 3, 0)
         self._grid.addWidget(self._lbl_dest, 4, 0)
         self._grid.addWidget(self._btn_dest, 4, 1)
         self._grid.addWidget(self._url_input, 0, 0)
         self._grid.addWidget(self._btn_list, 0, 1)
-        self._list = QListWidget()
-        self._list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        self._ep_list: List[EpisodeData]
         self._grid.addWidget(self._list, 1, 0, 1, 1)
-        self._init()
-        self.setLayout(self._grid)
 
     def _init(self):
+        self._url_input.setEditable(True)
         self._update_dest()
         self._btn_list.clicked.connect(self._list_eps)
         self._btn_download.clicked.connect(self._download)
         self._btn_dest.clicked.connect(self._select_dest)
+        self._url_input.addItems(self._settings.history_url)
 
     def _update_dest(self):
         self._lbl_dest.setText(f"dest: {self._settings.dl_dir}")
@@ -106,12 +114,18 @@ class Window(QWidget, BaseLog):
 
     @Slot()
     def _list_eps(self):
-        _lister = EpisodeLister.get_lister(self._url_input.text())
+        _url = self._url_input.currentText()
+        _lister = EpisodeLister.get_lister(_url)
         _eps = _lister.get_episodes()
-        if _eps:
-            self._ep_list = _eps
-            self._btn_download.setDisabled(False)
-            self._add_to_list()
+        if not _eps:
+            return  # TODO: display error / warning
+        self._ep_list = _eps
+        self._btn_download.setDisabled(False)
+        self._add_to_list()
+        if _url in self._settings.history_url:
+            return
+        self._settings.history_url.append(_url)
+        save_settings(self._settings)
 
     @Slot()
     def _download(self):
@@ -129,26 +143,8 @@ class Window(QWidget, BaseLog):
 
 def main():
     app = QApplication([])
-
-    # print(QStyleFactory.keys())
-
-    def change_style():
-        _valid = QStyleFactory.keys()
-        _now = app.style().name()
-        print(_now)
-        try:
-            _next_ix = _valid.index(_now) + 1
-        except ValueError as _:
-            _next_ix = _valid.index(_now.title()) + 1
-        try:
-            _next_str = _valid[_next_ix]
-        except IndexError as _:
-            _next_str = _valid[0]
-        app.setStyle(QStyleFactory.create(_next_str))
-
     widget = Window()
     widget.resize(600, 600)
-    widget.button_change_style.clicked.connect(change_style)
     widget.show()
     sys.exit(app.exec())
 
