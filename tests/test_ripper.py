@@ -1,6 +1,6 @@
 from pathlib import Path
+import tempfile
 import json
-
 from datetime import datetime
 
 import pytest
@@ -35,7 +35,7 @@ DATE_FRIDAY_2100 = datetime(2021, 4, 9, 21, 0, 0)
 
 
 def test_scheduled_show_list_no_existing_file():
-    non_file = Path("/tmp/non_existing_schedule___.json")
+    non_file = Path(tempfile.gettempdir()) / "non_existing_schedule___.json"
     assert not non_file.exists()
     args = get_cli_args()
     args.json_file = non_file
@@ -45,7 +45,7 @@ def test_scheduled_show_list_no_existing_file():
 
 
 def test_scheduled_show_list():
-    sched_file = Path("/tmp/test_show_schedule.json")
+    sched_file = Path(tempfile.gettempdir()) / "test_show_schedule.json"
     with open(sched_file, "w") as _file:
         json.dump(DATA, _file)
     args = get_cli_args()
@@ -58,7 +58,7 @@ def test_scheduled_show_list():
 
 
 def test_scheduled_show_list_one_show_next_show():
-    sched_file = Path("/tmp/test_show_schedule.json")
+    sched_file = Path(tempfile.gettempdir()) / "test_show_schedule.json"
     with open(sched_file, "w") as _file:
         json.dump(DATA, _file)
     args = get_cli_args()
@@ -71,7 +71,7 @@ def test_scheduled_show_list_one_show_next_show():
 
 def test_scheduled_show_list_one_show_next_show_seconds_to(mocker):
     mocker.patch("ripper_scheduler.get_now", return_value=DATE_FRIDAY_1900)
-    sched_file = Path("/tmp/test_show_schedule.json")
+    sched_file = Path(tempfile.gettempdir()) / "test_show_schedule.json"
     with open(sched_file, "w") as _file:
         json.dump(DATA, _file)
     args = get_cli_args()
