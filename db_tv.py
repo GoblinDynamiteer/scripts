@@ -106,7 +106,7 @@ class EpisodeDatabase(db_json.JSONDatabase):
                 return last_added_dict
         return last_added_dict
 
-    def export_last_added(self, target=os.path.join(CFG.get('path_tv'), 'latest.txt')):
+    def export_latest_added(self, target=os.path.join(CFG.get('path_tv'), 'latest.txt')):
         ''' Exports the latest added episodes to text file '''
         last_added = self.last_added(num=1000)
         last_added_text = [_to_text(e, last_added[e]) for e in last_added]
