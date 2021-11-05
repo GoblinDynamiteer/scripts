@@ -191,7 +191,7 @@ def scan_movies():
         pfcs(f"d[{'-' * util.terminal_width()}]")
     if new:
         database.save()
-        database.export_last_added()
+        database.export_latest_added()
     else:
         print("found no new movies")
 
@@ -235,7 +235,7 @@ def scan_episodes():
         pfcs(f"d[{'-' * util.terminal_width()}]")
     if new:
         database.save()
-        database.export_last_added()
+        database.export_latest_added()
     else:
         print("found no new episodes")
 
