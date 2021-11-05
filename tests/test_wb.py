@@ -1,8 +1,10 @@
-import pytest
-
-from wb_new import *
-
 from config import ConfigurationManager
+
+from pathlib import Path, PurePosixPath
+
+from wb.helper_methods import parse_download_arg, gen_find_cmd
+from wb.item import FileListItem
+from wb.list import FileList
 
 import pytest
 
