@@ -80,8 +80,7 @@ class FileListItem(BaseLog):
         try:
             _stamp, _bytes, _path = self._raw.split(" | ")
         except ValueError as _:
-            self.error(f"could not split line: {self._raw}",
-                       error_prefix="parse_error")
+            self.error(f"could not split line: {self._raw}")
             return
         self._path = PurePosixPath(_path)
         _files_path = get_remote_files_path()
@@ -90,19 +89,16 @@ class FileListItem(BaseLog):
         else:
             is_rel = str(self._path).startswith(str(_files_path))
         if not is_rel:
-            self.error(f"path {self._path} is not relative to: {_files_path}",
-                       error_prefix="parse_error")
+            self.error(f"path {self._path} is not relative to: {_files_path}")
             return
         if not _bytes.isdigit():
-            self.error(f"bytes value: {_bytes} is not an integer!",
-                       error_prefix="parse_error")
+            self.error(f"bytes value: {_bytes} is not an integer!")
             return
         self._bytes = int(_bytes)
         try:
             self._timestamp = int(_stamp.split(".")[0])
         except ValueError as _:
-            self.error(f"could not parse timestamp from: {_stamp}",
-                       error_prefix="parse_error")
+            self.error(f"could not parse timestamp from: {_stamp}")
             return
         self._valid = True
 
@@ -271,57 +267,56 @@ class FileList:
             _item.index = _ix
 
 
-class Connection(BaseLog):
-    def __init__(self):
-        super().__init__(verbose=True)
-        self._ssh_client = SSHClient()
-        self._ssh_client.set_missing_host_key_policy(AutoAddPolicy())
-        self._connected = False
-        self._scp = None
-
-    def _init_scp(self) -> bool:
-        if not self._connected:
-            self.error("need to be connected to init SCP")
-            return False
-        self._scp = SCPClient(self._ssh_client.get_transport())
-        self.log("SCP initialized")
-        return True
-
-    def connect(self, hostname, username=None, password=None):
-        self.set_log_prefix(f"SSH_CONN_{hostname.split('.')[0].upper()}")
-        self.log(f"connecting to {hostname}...")
-        try:
-            self._ssh_client.connect(hostname, username=username, password=password)
-            self._connected = True
-            self.log("OK")
-        except Exception as error:
-            self.error(f"FAIL: {error}")
-            self._connected = False
-
-    def run_command(self, command):
-        if not self._connected:
-            return None
-        _, stdout, _ = self._ssh_client.exec_command(command)
-        try:
-            return stdout.readlines()
-        except AttributeError as _:
-            if isinstance(stdout, str):
-                return stdout.split("\n")
-        return None
-
-    @property
-    def connected(self):
-        return self._connected
-
-    @property
-    def scp(self) -> [None, SCPClient]:
-        if not self._scp:
-            if not self._init_scp():
-                return None
-        return self._scp
-
-
 class Server(BaseLog):
+    class Connection(BaseLog):
+        def __init__(self):
+            super().__init__(verbose=True)
+            self._ssh_client = SSHClient()
+            self._ssh_client.set_missing_host_key_policy(AutoAddPolicy())
+            self._connected = False
+            self._scp = None
+
+        def _init_scp(self) -> bool:
+            if not self._connected:
+                self.error("need to be connected to init SCP")
+                return False
+            self._scp = SCPClient(self._ssh_client.get_transport())
+            self.log("SCP initialized")
+            return True
+
+        def connect(self, hostname, username=None, password=None):
+            self.set_log_prefix(f"SSH_CONN_{hostname.split('.')[0].upper()}")
+            self.log(f"connecting to {hostname}...")
+            try:
+                self._ssh_client.connect(hostname, username=username, password=password, look_for_keys=False)
+                self._connected = True
+                self.log("OK")
+            except Exception as error:
+                self.error(f"FAIL: {error}")
+                self._connected = False
+
+        def run_command(self, command):
+            if not self._connected:
+                return None
+            _, stdout, _ = self._ssh_client.exec_command(command)
+            try:
+                return stdout.readlines()
+            except AttributeError as _:
+                if isinstance(stdout, str):
+                    return stdout.split("\n")
+            return None
+
+        @property
+        def connected(self):
+            return self._connected
+
+        @property
+        def scp(self) -> [None, SCPClient]:
+            if not self._scp:
+                if not self._init_scp():
+                    return None
+            return self._scp
+
     def __init__(self, hostname):
         super().__init__(verbose=True)
         if not hostname:
@@ -329,7 +324,7 @@ class Server(BaseLog):
             raise ValueError("hostname not valid")
         self.set_log_prefix(f"{hostname.split('.')[0].upper()}")
         self._hostname = hostname
-        self._ssh = Connection()
+        self._ssh = self.Connection()
         self._connect()
 
     def _connect(self):
@@ -349,6 +344,10 @@ class Server(BaseLog):
     @property
     def hostname(self):
         return self._hostname
+
+    @property
+    def connected(self) -> bool:
+        return self._ssh.connected
 
 
 class ServerHandler:
@@ -378,6 +377,12 @@ class ServerHandler:
             return False
         return _item.download()
 
+    def valid(self) -> bool:
+        for server in self._servers:
+            if server.connected:
+                return True
+        return False
+
 
 def get_args():
     _parser = ArgumentParser("WB Handler")
@@ -403,6 +408,9 @@ def main():
             handler.add(_hostname)
         else:
             print(f"could not get hostname (key {_key.value}) from settings")
+    if not handler.valid():
+        print("could not connect to server(s)")
+        return
     if not args.download_items or args.list_items:
         handler.print_file_list()
     elif args.download_items:
