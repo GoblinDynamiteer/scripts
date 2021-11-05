@@ -63,6 +63,8 @@ class Color(Enum):
     DarkGrey = _CLR_DICT["dgrey"]
     Grey = _CLR_DICT["grey"]
     Red = _CLR_DICT["red"]
+    Error = _CLR_DICT["red"]
+    Warning = _CLR_DICT["warning"]
 
 
 def _is_win():
