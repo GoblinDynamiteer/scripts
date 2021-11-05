@@ -7,8 +7,6 @@ from enum import Enum
 from base_log import BaseLog
 from singleton import Singleton
 
-import util
-
 
 class SettingKeys(Enum):
     PATH_HOME = "home"
