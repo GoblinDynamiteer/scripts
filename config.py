@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from typing import Callable, Optional, Union, Any
+
 import configparser
 from pathlib import Path
 from enum import Enum
@@ -58,7 +60,8 @@ class ConfigurationManager(BaseLog, metaclass=Singleton):
             return self._load()
         return True
 
-    def get(self, key, convert=None, section=None, default=None):
+    def get(self, key, convert: Optional[Callable] = None, section: Optional[Union[str, SettingSection]] = None,
+            default: Any = None) -> Any:
         if self.SETTINGS is None:
             if not self._load():
                 return default
@@ -86,7 +89,7 @@ class ConfigurationManager(BaseLog, metaclass=Singleton):
             return convert(value)
         return value
 
-    def _load(self):
+    def _load(self) -> bool:
         settings_path = self.settings_file_path()
         self.log(f"loading settings: {settings_path}")
         if not settings_path.is_file():
@@ -99,20 +102,26 @@ class ConfigurationManager(BaseLog, metaclass=Singleton):
             return False
         return True
 
-    def set_config_file(self, path: Path):
+    def set_config_file(self, path: Path) -> None:
         self.log(f"setting custom settings file: {path}")
         self.custom_settings_file_path = path
         self._load()
 
-    def set_default_config_file(self):
+    def set_default_config_file(self) -> None:
         self.custom_settings_file_path = None
         self.log(f"setting default settings file: {self.settings_file_path()}")
         self._load()
 
-    def path(self, key):
-        return self.get(f'path_{key}')
+    def path(self, key, convert_to_path: bool = False, assert_path_exists: bool = False) -> Union[Path, str]:
+        _ret = self.get(f'path_{key}', default=None)
+        if assert_path_exists:
+            try:
+                assert Path(_ret).exists()
+            except AssertionError:
+                raise AssertionError(f"path ({key}): {_ret} does not exist!")
+        return Path(_ret) if convert_to_path else _ret
 
-    def settings_file_path(self):
+    def settings_file_path(self) -> Path:
         if self.custom_settings_file_path is not None:
             return self.custom_settings_file_path
         return self.BASE_DIR / self.FILE_NAME
