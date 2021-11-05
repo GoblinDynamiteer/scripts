@@ -2,7 +2,7 @@
 
 from argparse import ArgumentParser
 from pathlib import Path, PurePosixPath
-from typing import List
+from typing import List, Union, Optional
 import re
 from enum import Enum
 
@@ -13,7 +13,7 @@ from config import ConfigurationManager, SettingSection, SettingKeys
 from printout import pfcs, fcs
 
 from paramiko.client import SSHClient, AutoAddPolicy
-from scp import SCPClient, SCPException
+from scp import SCPClient
 
 
 def get_remote_files_path() -> PurePosixPath:
@@ -116,7 +116,7 @@ class FileListItem(BaseLog):
                 self._type = self.MediaType.Episode
 
     @property
-    def index(self) -> [int, None]:
+    def index(self) -> Optional[int]:
         return self._index
 
     @index.setter
@@ -128,7 +128,7 @@ class FileListItem(BaseLog):
         return self._path.name
 
     @property
-    def parent_name(self) -> [str, None]:
+    def parent_name(self) -> Optional[str]:
         if self._path.parent != get_remote_files_path():
             return self._path.parent.name
         return None
@@ -140,7 +140,15 @@ class FileListItem(BaseLog):
         return False
 
     @property
-    def path(self):
+    def path(self) -> PurePosixPath:
+        return self._path
+
+    @property
+    def download_path(self) -> PurePosixPath:
+        if self.is_rar:
+            if self._path.parent == get_remote_files_path():
+                raise AssertionError("parent is remote file path!")
+            return self._path.parent
         return self._path
 
     @property
@@ -156,7 +164,7 @@ class FileListItem(BaseLog):
         return self._type == self.MediaType.Episode
 
     @property
-    def media_type(self):
+    def media_type(self) -> MediaType:
         if self._type is None:
             self._determine_type()
         return self._type
@@ -182,7 +190,7 @@ class FileListItem(BaseLog):
         return self._server_id
 
     @property
-    def valid(self):
+    def valid(self) -> bool:
         if not self._valid:
             return False
         if any([_i in self.name.lower() for _i in self._ignore]):
@@ -197,11 +205,6 @@ class FileListItem(BaseLog):
             if "sample" in self._path.parent.name.lower():
                 return False
         return True
-
-    def download(self, dest_path=Path) -> bool:
-        #TODO: download instead of print
-        print_item(self)
-        return False
 
 
 class FileList:
@@ -276,11 +279,15 @@ class Server(BaseLog):
             self._connected = False
             self._scp = None
 
+        @staticmethod
+        def _scp_progress_callback(filename, size, sent):
+            print(filename, size, sent)
+
         def _init_scp(self) -> bool:
             if not self._connected:
                 self.error("need to be connected to init SCP")
                 return False
-            self._scp = SCPClient(self._ssh_client.get_transport())
+            self._scp = SCPClient(self._ssh_client.get_transport(), progress=self._scp_progress_callback)
             self.log("SCP initialized")
             return True
 
@@ -311,7 +318,7 @@ class Server(BaseLog):
             return self._connected
 
         @property
-        def scp(self) -> [None, SCPClient]:
+        def scp(self) -> Optional[SCPClient]:
             if not self._scp:
                 if not self._init_scp():
                     return None
@@ -349,6 +356,12 @@ class Server(BaseLog):
     def connected(self) -> bool:
         return self._ssh.connected
 
+    def download_with_scp(self, remote_path: PurePosixPath, local_path: Path) -> bool:
+        _scp_client = self._ssh.scp
+        if not _scp_client:
+            return False
+        _scp_client.get(str(remote_path), str(local_path), recursive=True)
+
 
 class ServerHandler:
     def __init__(self):
@@ -365,17 +378,18 @@ class ServerHandler:
 
     def _init_file_list(self):
         for server in self._servers:
-            self._file_list.parse_find_cmd_output(
-                server.list_files(), server_id=server.hostname)
+            self._file_list.parse_find_cmd_output(server.list_files(), server_id=server.hostname)
 
-    def download(self, key: [int, str]) -> bool:
+    def download(self, key: Union[str, int], destination: Path) -> bool:
         if self._file_list.empty():
             self._init_file_list()
         _item = self._file_list.get(key)
         if not _item:
             print(f"could not retrieve item with key: {key}")
             return False
-        return _item.download()
+        for server in self._servers:
+            if server.hostname == _item.server_id:
+                server.download_with_scp(_item.download_path, destination)
 
     def valid(self) -> bool:
         for server in self._servers:
@@ -414,9 +428,10 @@ def main():
     if not args.download_items or args.list_items:
         handler.print_file_list()
     elif args.download_items:
+        _dl_dir = ConfigurationManager().path("download", convert_to_path=True, assert_path_exists=True)
         _keys = parse_download_arg(args.download_items)
         for _key in _keys:
-            handler.download(_key)
+            handler.download(_key, _dl_dir)
 
 
 if __name__ == "__main__":

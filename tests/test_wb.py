@@ -4,10 +4,10 @@ from wb_new import *
 
 from config import ConfigurationManager
 
-from pytest import fixture
+import pytest
 
 
-@fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def set_config(tmpdir_factory):
     _file = Path(tmpdir_factory.mktemp("settings").join("_settings.txt"))
     with open(_file, "w") as settings_file:
@@ -239,6 +239,33 @@ class TestFileListItem:
                 r"show.s04e02.1080p.web-grpname.mkv"
         _item = FileListItem(_line)
         assert _item.parent_is_season_dir is False
+
+    def test_download_path_rar_file(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/Show.S04.iNTERNAL.1080p.WEB.H264-GROUPNAME/" \
+                r"Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME/" \
+                r"show.s04e02.1080p.web-grpname.rar"
+        _item = FileListItem(_line)
+        assert _item.download_path == PurePosixPath(
+            r"/home/johndoe/files/Show.S04.iNTERNAL.1080p.WEB.H264-GROUPNAME/"
+            r"Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME/"
+            )
+
+    def test_download_path_vid_file(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME/" \
+                r"show.s04e02.1080p.web-grpname.mkv"
+        _item = FileListItem(_line)
+        assert _item.download_path == PurePosixPath(
+            r"/home/johndoe/files/Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME/"
+            r"show.s04e02.1080p.web-grpname.mkv")
+
+    def test_download_path_rar_file_parent_is_dl_dir_raises_error(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/show.s04e02.1080p.web-grpname.rar"
+        _item = FileListItem(_line)
+        with pytest.raises(AssertionError):
+            _ = _item.download_path
 
 
 class TestFileList:
