@@ -128,22 +128,30 @@ class MovieDatabaseSingleton(metaclass=Singleton):
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--movie",
-                        type=str,
-                        required=False,
-                        default=None)
     parser.add_argument("--setimdb",
                         "-i",
                         type=str)
     parser.add_argument("--rescan",
                         "-r",
                         action="store_true")
+    _grp = parser.add_mutually_exclusive_group()
+    _grp.add_argument("--gen-latest-added",
+                      "-g",
+                      action="store_true",
+                      dest="gen_latest")
+    _grp.add_argument("--movie",
+                      type=str,
+                      required=False,
+                      default=None)
     return parser.parse_args()
 
 
 def main():
     args = get_args()
     database = MovieDatabase()
+    if args.gen_latest:
+        database.export_latest_added()
+        return
     if args.movie is None:
         for _mov in database.all_movies():
             print(_mov)
