@@ -81,7 +81,7 @@ class MovieDatabase(JSONDatabase):
         return False
 
     def export_latest_added(self):
-        _path = ConfigurationManager().path("path_film")
+        _path = ConfigurationManager().path("film")
         if _path is None:
             print(cstr("could not retrieve path to \"film\"", Color.Error))
             return
