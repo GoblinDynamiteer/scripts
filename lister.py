@@ -11,7 +11,6 @@ from pathlib import Path
 from config import ConfigurationManager as cfg
 from util_tv import parse_season_episode, parse_season
 from printout import pfcs, cstr, print_line, Color
-from db_tv import EpisodeDatabaseSingleton, ShowDatabaseSingleton
 from util import date_str_to_timestamp, now_timestamp
 from tvmaze import TvMazeData
 from util_movie import valid_letters as mov_letters, get_movie_nfo_imdb_id
@@ -94,6 +93,7 @@ class ListerItemTVShowEpisode:
         return subs
 
     def print_extras(self):
+        from db_tv import EpisodeDatabaseSingleton, ShowDatabaseSingleton
         maze_id = EpisodeDatabaseSingleton().get_id(self.filename)
         show_maze_id = ShowDatabaseSingleton().get_id(self.show_name)
         ep_maze_data = {}
@@ -131,6 +131,7 @@ class ListerItemTVShowSeason:
                     ep_list.append(ListerItemTVShowEpisode(
                         sub_path, self.extras))
         if self.extras and not self.episode:
+            from db_tv import EpisodeDatabaseSingleton, ShowDatabaseSingleton
             existing_nums = sorted([en.episode for en in ep_list])
             show_maze_id = ShowDatabaseSingleton().get_id(self.show_name)
             for entry in TvMazeData().get_json_all_episodes(show_maze_id):

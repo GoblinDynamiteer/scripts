@@ -1,50 +1,43 @@
-import unittest
 
-import lister
+from lister import determine_type, ListType, ListerItemTVShow
 
 
-class TestLister(unittest.TestCase):
-    def setUp(self):
-        self.det_type = lister.determine_type
-        self.type = lister.ListType
+class TestLister:
 
     def test_args_type_tv_season(self):
         arg = "tv better call saul s01".split(" ")
-        self.assertEqual(self.det_type(arg), self.type.TVShowSeason)
+        assert determine_type(arg) == ListType.TVShowSeason
         arg = "show firefly s01".split(" ")
-        self.assertEqual(self.det_type(arg), self.type.TVShowSeason)
+        assert determine_type(arg) == ListType.TVShowSeason
         arg = "show the walking dead s08".split(" ")
-        self.assertEqual(self.det_type(arg), self.type.TVShowSeason)
+        assert determine_type(arg) == ListType.TVShowSeason
 
     def test_args_type_movie(self):
         arg = "movie star wars return of the jedi".split(" ")
-        self.assertEqual(self.det_type(arg), self.type.Movie)
+        assert determine_type(arg) == ListType.Movie
         arg = "mov kill bill".split(" ")
-        self.assertEqual(self.det_type(arg), self.type.Movie)
+        assert determine_type(arg) == ListType.Movie
         arg = "film mad max fury road".split(" ")
-        self.assertEqual(self.det_type(arg), self.type.Movie)
+        assert determine_type(arg) == ListType.Movie
 
     def test_args_type_unknown(self):
         arg = "donald duck".split(" ")
-        self.assertEqual(self.det_type(arg), self.type.Unknown)
+        assert determine_type(arg) == ListType.Unknown
         arg = []
-        self.assertEqual(self.det_type(arg), self.type.Unknown)
+        assert determine_type(arg) == ListType.Unknown
 
     def test_obj_show(self):
         arg = "tv breaking bad s01e05".split(" ")
-        lister_type = self.type.TVSHowEpisode
-        obj = lister.ListerItemTVShow(arg, lister_type)
-        self.assertEqual(obj.season, 1)
-        self.assertEqual(obj.episode, 5)
+        obj = ListerItemTVShow(arg, ListType.TVSHowEpisode)
+        assert obj.season == 1
+        assert obj.episode == 5
 
         arg = "tv firefly s04".split(" ")  # wishful thinking...
-        lister_type = self.type.TVShowSeason
-        obj = lister.ListerItemTVShow(arg, lister_type)
-        self.assertEqual(obj.season, 4)
-        self.assertEqual(obj.episode, None)
+        obj = ListerItemTVShow(arg, ListType.TVShowSeason)
+        assert obj.season == 4
+        assert obj.episode is None
 
         arg = "tv Game of Throned".split(" ")
-        lister_type = self.type.TVShow
-        obj = lister.ListerItemTVShow(arg, lister_type)
-        self.assertEqual(obj.season, None)
-        self.assertEqual(obj.episode, None)
+        obj = ListerItemTVShow(arg, ListType.TVShowSeason)
+        assert obj.season is None
+        assert obj.episode is None
