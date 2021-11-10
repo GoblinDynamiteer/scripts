@@ -26,7 +26,8 @@ class TestLister:
         arg = []
         assert determine_type(arg) == ListType.Unknown
 
-    def test_obj_show(self):
+    def test_obj_show(self, mocker):
+        _mock = mocker.patch("lister.ListerItemTVShow.determine_paths", return_value=[])
         arg = "tv breaking bad s01e05".split(" ")
         obj = ListerItemTVShow(arg, ListType.TVSHowEpisode)
         assert obj.season == 1
@@ -41,3 +42,5 @@ class TestLister:
         obj = ListerItemTVShow(arg, ListType.TVShowSeason)
         assert obj.season is None
         assert obj.episode is None
+
+        assert _mock.call_count == 3
