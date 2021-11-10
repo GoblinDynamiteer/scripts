@@ -1,12 +1,11 @@
-from pathlib import Path
-import tempfile
 import json
 from datetime import datetime
 import argparse
+from pathlib import Path
 
 import pytest
 
-from ripper_scheduler import ScheduledShowList, get_cli_args
+from ripper_scheduler import ScheduledShowList
 from ripper_helpers import EpisodeLister, ViafreeEpisodeLister, Tv4PlayEpisodeLister, DPlayEpisodeLister, \
     SVTPlayEpisodeLister
 
@@ -52,7 +51,8 @@ def test_scheduled_show_list_no_existing_file(tmp_path):
     assert show_list.empty()
 
 
-def test_scheduled_show_list(tmp_path):
+def test_scheduled_show_list(tmp_path, mocker):
+    mocker.patch("ripper_scheduler.ScheduledShow._parse_dest_path", return_value=Path.home())
     sched_file = tmp_path / "test_show_schedule.json"
     sched_file.write_text(json.dumps(DATA))
     args = args_for_scheduled_show_list()
@@ -63,7 +63,8 @@ def test_scheduled_show_list(tmp_path):
     assert not show_list.empty()
 
 
-def test_scheduled_show_list_one_show_next_show(tmp_path):
+def test_scheduled_show_list_one_show_next_show(tmp_path, mocker):
+    mocker.patch("ripper_scheduler.ScheduledShow._parse_dest_path", return_value=Path.home())
     sched_file = tmp_path / "test_show_schedule.json"
     sched_file.write_text(json.dumps(DATA))
     args = args_for_scheduled_show_list()
@@ -74,6 +75,7 @@ def test_scheduled_show_list_one_show_next_show(tmp_path):
 
 
 def test_scheduled_show_list_one_show_next_show_seconds_to(mocker, tmp_path):
+    mocker.patch("ripper_scheduler.ScheduledShow._parse_dest_path", return_value=Path.home())
     _gn = mocker.patch("ripper_scheduler.get_now", return_value=DATE_FRIDAY_1900)
     sched_file = tmp_path / "test_show_schedule.json"
     sched_file.write_text(json.dumps(DATA))
@@ -101,7 +103,8 @@ class TestEpisodeLister:
         lister = EpisodeLister.get_lister(self.URL_TV4)
         assert isinstance(lister, Tv4PlayEpisodeLister) is True
 
-    def test_get_lister_dplay(self):
+    def test_get_lister_dplay(self, mocker):
+        mocker.patch("ripper_helpers.SessionSingleton.load_cookies_txt")
         lister = EpisodeLister.get_lister(self.URL_DISCOVERY)
         assert isinstance(lister, DPlayEpisodeLister) is True
 
