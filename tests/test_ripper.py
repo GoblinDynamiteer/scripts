@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from ripper_scheduler import ScheduledShowList
+from ripper_scheduler import ScheduledShowList, Airtime
 from ripper_helpers import EpisodeLister, ViafreeEpisodeLister, Tv4PlayEpisodeLister, DPlayEpisodeLister, \
     SVTPlayEpisodeLister
 
@@ -32,6 +32,17 @@ DATA = [
 
 DATE_FRIDAY_1900 = datetime(2021, 4, 9, 19, 0, 0)
 DATE_FRIDAY_2100 = datetime(2021, 4, 9, 21, 0, 0)
+
+
+class TestRipperSchedulerAirtime:
+    def test_seconds_to(self, mocker):
+        _gn = mocker.patch("ripper_scheduler.get_now", return_value=DATE_FRIDAY_1900)
+        airtime = Airtime("fri", "20:00")
+        assert airtime.seconds_to() == 60 * 60
+        airtime = Airtime("fri", "20:01")
+        assert airtime.seconds_to() == 60 * 60 + 60
+        airtime = Airtime("sun", "21:00")
+        assert airtime.seconds_to() == 24 * 2 * 60 * 60 + (2 * 60 * 60)
 
 
 def args_for_scheduled_show_list():

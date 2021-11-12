@@ -3,20 +3,22 @@
 import argparse
 import json
 import random
-import sys
 from time import sleep
 from datetime import datetime, timedelta, tzinfo
 from enum import Enum
 from pathlib import Path
 from threading import Thread
+import dataclasses
+from typing import List
+
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+
 from singleton import Singleton
 from base_log import BaseLog
-import dataclasses
 
 from config import ConfigurationManager
 
@@ -184,7 +186,7 @@ class ScheduledShow(BaseLog):
                 self.disabled = True
         self.skip_sub = data.get("skip_sub", False)
         self.downloaded_today = False
-        self.airtimes = []
+        self.airtimes: List[Airtime] = []
         self.set_log_prefix(f"show_{self.name}".replace(" ", "_").upper())
         self.log("init")
         pfcs(f"added show i[{self.name}]")
