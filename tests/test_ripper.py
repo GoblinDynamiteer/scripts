@@ -49,7 +49,7 @@ def args_for_scheduled_show_list():
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--simulate", action="store_true")
-    return parser.parse_args(["--verbose", "--simulate"])
+    return parser.parse_args(["--verbose"])
 
 
 def test_scheduled_show_list_no_existing_file(tmp_path):
