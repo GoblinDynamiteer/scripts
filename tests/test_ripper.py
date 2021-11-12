@@ -65,12 +65,14 @@ def test_scheduled_show_list(tmp_path, mocker):
 
 def test_scheduled_show_list_one_show_next_show(tmp_path, mocker):
     mocker.patch("ripper_scheduler.ScheduledShow._parse_dest_path", return_value=Path.home())
+    _gn = mocker.patch("ripper_scheduler.get_now", return_value=DATE_FRIDAY_1900)
     sched_file = tmp_path / "test_show_schedule.json"
     sched_file.write_text(json.dumps(DATA))
     args = args_for_scheduled_show_list()
     args.json_file = sched_file
     show_list = ScheduledShowList(args)
     next_show = show_list.next_show()
+    _gn.assert_called()
     assert next_show.name == "SomeShow"
 
 
