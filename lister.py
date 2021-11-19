@@ -98,7 +98,7 @@ class ListerItemTVShowEpisode:
         return subs
 
     def print_extras(self, only_airdate: bool = False):
-        from db_tv import EpisodeDatabaseSingleton, ShowDatabaseSingleton
+        from db.db_tv import EpisodeDatabaseSingleton, ShowDatabaseSingleton
         maze_id = EpisodeDatabaseSingleton().get_id(self.filename)
         show_maze_id = ShowDatabaseSingleton().get_id(self.show_name)
         ep_maze_data = {}
@@ -139,7 +139,7 @@ class ListerItemTVShowSeason:
                     ep_list.append(ListerItemTVShowEpisode(
                         sub_path, self.extras))
         if self.extras and not self.episode:
-            from db_tv import EpisodeDatabaseSingleton, ShowDatabaseSingleton
+            from db.db_tv import EpisodeDatabaseSingleton, ShowDatabaseSingleton
             existing_nums = sorted([en.episode for en in ep_list])
             show_maze_id = ShowDatabaseSingleton().get_id(self.show_name)
             for entry in TvMazeData().get_json_all_episodes(show_maze_id):

@@ -10,8 +10,8 @@ from enum import Enum
 import config
 import extract
 import util
-from db_mov import MovieDatabase
-from db_tv import EpisodeDatabase
+from db.db_mov import MovieDatabase
+from db.db_tv import EpisodeDatabase
 from printout import pfcs, cstr
 from release import determine_release_type
 from run import local_command, remote_command_get_output

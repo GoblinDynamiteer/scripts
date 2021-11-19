@@ -8,7 +8,7 @@ from pathlib import Path
 
 import util
 import util_tv
-from cache import MovieCache
+from db.cache import MovieCache
 from config import ConfigurationManager
 
 from printout import pfcs
@@ -134,7 +134,7 @@ def movie_path(movie_dir_name: str):
 
 
 def find_deleted_movies():
-    import db_mov
+    from db import db_mov
     db = db_mov.MovieDatabase()
     for m in db.all():
         if not exists(m):

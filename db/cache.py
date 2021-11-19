@@ -1,11 +1,10 @@
 #!/usr/bin/env python3.6
 
-import json
 import os
 from pathlib import Path
 from threading import Lock, Thread
 
-import db_json
+from db import db_json
 import util
 from config import ConfigurationManager
 from printout import cstr

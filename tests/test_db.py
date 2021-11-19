@@ -1,4 +1,4 @@
-import db_json
+from db import db_json
 
 
 class TestJsonDatabase:

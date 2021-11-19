@@ -6,7 +6,7 @@ import os
 import re
 
 from config import ConfigurationManager
-from cache import TvCache
+from db.cache import TvCache
 import util
 from pathlib import Path
 

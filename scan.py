@@ -13,8 +13,8 @@ from diskstation import is_ds_special_dir
 from omdb import OMDb
 from printout import pfcs
 
-from db_mov import MovieDatabaseSingleton
-from db_tv import ShowDatabaseSingleton, EpisodeDatabaseSingleton
+from db.db_mov import MovieDatabaseSingleton
+from db.db_tv import ShowDatabaseSingleton, EpisodeDatabaseSingleton
 
 
 class AllowedDuplicate(Enum):
