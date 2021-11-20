@@ -60,7 +60,8 @@ class ConfigurationManager(BaseLog, metaclass=Singleton):
             return self._load()
         return True
 
-    def get(self, key, convert: Optional[Callable] = None, section: Optional[Union[str, SettingSection]] = None,
+    def get(self, key: Union[SettingKeys, str], convert: Optional[Callable] = None,
+            section: Optional[Union[str, SettingSection]] = None,
             default: Any = None) -> Any:
         if self.SETTINGS is None:
             if not self._load():
@@ -80,11 +81,10 @@ class ConfigurationManager(BaseLog, metaclass=Singleton):
                     value = self.SETTINGS[_section][key]
                     break
         if value is None:
-            self.log_warn(f"could not find key: {key},"
-                          f" returning default: {default}")
+            self.log_warn(f"could not find key: {key}, returning default: {default}")
             return default
-        for match, repl in self.REPLACEMENTS:
-            value = value.replace(match, repl)
+        for match, replacement in self.REPLACEMENTS:
+            value = value.replace(match, replacement)
         if convert is not None:
             return convert(value)
         return value
@@ -112,8 +112,14 @@ class ConfigurationManager(BaseLog, metaclass=Singleton):
         self.log(f"setting default settings file: {self.settings_file_path()}")
         self._load()
 
-    def path(self, key, convert_to_path: bool = False, assert_path_exists: bool = False) -> Union[Path, str]:
-        _ret = self.get(f'path_{key}', default=None)
+    def path(self, key: Union[str, SettingKeys], convert_to_path: bool = False, assert_path_exists: bool = False) -> \
+            Union[Path, str]:
+        if isinstance(key, str):
+            if not key.startswith("path_"):
+                key = f"path_{key}"
+        elif not isinstance(key, SettingKeys):
+            raise TypeError("key must be str or SettingKeys!")
+        _ret = self.get(key, default=None)
         if assert_path_exists:
             try:
                 assert Path(_ret).exists()
