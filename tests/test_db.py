@@ -1,5 +1,10 @@
-from db import db_json
-from db.database import DataBase, Key, KeyType
+import json
+import random
+
+from db.database import Key, KeyType
+from db.db_json import JSONDatabase
+from db.db_mov import MovieDatabase
+from db.db_tv import EpisodeDatabase, ShowDatabase
 
 import pytest
 
@@ -51,46 +56,42 @@ class TestKey:
         assert _key.matches_type(123.123) is False
 
 
-class TestDatBaseBaseClass:
-    class _DB(DataBase):
-        def save(self) -> bool:
-            ...
-
+class TestDatBaseBaseJson:
     def test_set_valid_keys_auto_primary(self):
-        _db = self._DB()
+        _db = JSONDatabase()
         _key1 = Key("Name1")
         _db.set_valid_keys([_key1, Key("Name2"), Key("Name3")])
         assert _key1 == _db.primary_key
 
     def test_set_valid_keys_manual_primary(self):
-        _db = self._DB()
+        _db = JSONDatabase()
         _key2 = Key("Name2", primary=True)
         _db.set_valid_keys([Key("Name1"), _key2, Key("Name3")])
         assert _key2 == _db.primary_key
 
     def test_set_valid_keys_disallow_multiple_primary(self):
-        _db = self._DB()
+        _db = JSONDatabase()
         _key1 = Key("Name1", primary=True)
         _key2 = Key("Name2", primary=True)
         with pytest.raises(ValueError):
             _db.set_valid_keys([_key1, _key2, Key("Name3")])
 
     def test_set_valid_keys_disallow_same_key(self):
-        _db = self._DB()
+        _db = JSONDatabase()
         _key1 = Key("Name1", type=KeyType.List)
         _key2 = Key("Name1", type=KeyType.List)
         with pytest.raises(ValueError):
             _db.set_valid_keys([_key1, _key2, Key("Name3")])
 
     def test_set_valid_keys_disallow_same_name(self):
-        _db = self._DB()
+        _db = JSONDatabase()
         _key1 = Key("Name1", type=KeyType.List)
         _key2 = Key("Name1", type=KeyType.Integer)
         with pytest.raises(ValueError):
             _db.set_valid_keys([_key1, _key2, Key("Name3")])
 
     def test_insert_using_kwargs(self):
-        _db = self._DB()
+        _db = JSONDatabase()
         _key1 = Key("Name", type=KeyType.String, primary=True)
         _key2 = Key("Age", type=KeyType.Integer)
         _db.set_valid_keys([_key1, _key2])
@@ -98,7 +99,7 @@ class TestDatBaseBaseClass:
         assert _db.get("Harold", "Age") == 82
 
     def test_insert_using_dict(self):
-        _db = self._DB()
+        _db = JSONDatabase()
         _key1 = Key("Name", type=KeyType.String, primary=True)
         _key2 = Key("Age", type=KeyType.Integer)
         _db.set_valid_keys([_key1, _key2])
@@ -106,7 +107,7 @@ class TestDatBaseBaseClass:
         assert _db.get("Harold", "Age") == 82
 
     def test_insert_using_kwargs_primary_not_first(self):
-        _db = self._DB()
+        _db = JSONDatabase()
         _key1 = Key("Name", type=KeyType.String, primary=True)
         _key2 = Key("Age", type=KeyType.Integer)
         _key3 = Key("FavoriteColor")
@@ -115,7 +116,7 @@ class TestDatBaseBaseClass:
         assert _db.get("Harold", "Age") == 82
 
     def test_insert_raises_error_if_exists(self):
-        _db = self._DB()
+        _db = JSONDatabase()
         _key1 = Key("Name", type=KeyType.String, primary=True)
         _key2 = Key("Age", type=KeyType.Integer)
         _key3 = Key("FavoriteColor")
@@ -125,7 +126,7 @@ class TestDatBaseBaseClass:
             _db.insert(Name="Harold", Age=12)
 
     def test_update_raises_error_if_not_exists(self):
-        _db = self._DB()
+        _db = JSONDatabase()
         _key1 = Key("Name", type=KeyType.String, primary=True)
         _key2 = Key("Age", type=KeyType.Integer)
         _key3 = Key("FavoriteColor")
@@ -134,7 +135,7 @@ class TestDatBaseBaseClass:
             _db.update("Harold", Age=12)
 
     def test_update(self):
-        _db = self._DB()
+        _db = JSONDatabase()
         _key1 = Key("Name", type=KeyType.String, primary=True)
         _key2 = Key("Age", type=KeyType.Integer)
         _key3 = Key("FavoriteColor")
@@ -145,7 +146,7 @@ class TestDatBaseBaseClass:
         assert _db.get("Harold", "Age") == 12
 
     def test_update_raises_error_if_invalid_value_type(self):
-        _db = self._DB()
+        _db = JSONDatabase()
         _key1 = Key("Name", type=KeyType.String, primary=True)
         _key2 = Key("Age", type=KeyType.Integer)
         _key3 = Key("FavoriteColor")
@@ -155,7 +156,7 @@ class TestDatBaseBaseClass:
             _db.update("Harold", Age=12.1)
 
     def test_update_raises_error_if_missing_key(self):
-        _db = self._DB()
+        _db = JSONDatabase()
         _key1 = Key("Name", type=KeyType.String, primary=True)
         _key2 = Key("Age", type=KeyType.Integer)
         _key3 = Key("FavoriteColor")
@@ -164,67 +165,200 @@ class TestDatBaseBaseClass:
         with pytest.raises(ValueError):
             _db.update("Harold", SomeWrongKey="Value")
 
-
-class TestJsonDatabase:
-    def test_insert(self, tmp_path):
-        self.db_file = tmp_path / "__db__.json"
-        database = db_json.JSONDatabase(self.db_file.name)
-        database.set_valid_keys(["name", "age"])
-        database.set_key_type("name", str)
-        assert database.insert({"name": "Harold"}) is True
-        assert database.insert({"name": "Monica", "age": 32}) is True
-        assert database.insert({"name": "Harold"}) is False
-
-    def test_update(self, tmp_path):
-        self.db_file = tmp_path / "__db__.json"
-        database = db_json.JSONDatabase(self.db_file.name)
-        database.set_valid_keys(["name", "age"])
-        database.set_key_type("name", str)
-        assert database.insert({"name": "Harold"}) is True
-        assert database.update("Harold", "age", 72) is True
-
-    def test_x_in(self, tmp_path):
-        self.db_file = tmp_path / "__db__.json"
-        database = db_json.JSONDatabase(self.db_file.name)
-        database.set_valid_keys(["name", "age"])
-        database.set_key_type("name", str)
-        assert database.insert({"name": "Harold"}) is True
-        assert "Harold" in database
-        assert database.insert({"name": "Monica", "age": 32}) is True
-        assert "Monica" in database
-        assert "Andrea" not in database
-
-    def test_type_check(self, tmp_path):
-        self.db_file = tmp_path / "__db__.json"
-        database = db_json.JSONDatabase(self.db_file.name)
-        database.set_valid_keys(["name", "age"])
-        database.set_key_type("name", str)
-        database.set_key_type("age", int)
-        assert database.insert({"name": 123}) is False
-        assert database.insert({"name": "Carl", "age": "five"}) is False
-
-    def test_find_duplicates(self, tmp_path):
-        self.db_file = tmp_path / "__db__.json"
-        database = db_json.JSONDatabase(self.db_file.name)
-        database.set_valid_keys(["name", "age"])
-        database.set_key_type("name", str)
-        database.set_key_type("age", int)
-        database.insert({"name": "Harold", "age": 55})
-        database.insert({"name": "Linda", "age": 55})
-        database.insert({"name": "Oscar", "age": 32})
-        database.insert({"name": "Nina", "age": 28})
-        dupes = database.find_duplicates("age")
+    def test_find_duplicates(self):
+        _db = JSONDatabase()
+        _db.set_valid_keys([
+            Key("name", primary=True),
+            Key("age", type=KeyType.Integer)])
+        _db.insert(name="Harold", age=55)
+        _db.insert(name="Linda", age=55)
+        _db.insert(name="Oscar", age=32)
+        _db.insert(name="Nina", age=28)
+        dupes = _db.find_duplicates("age")
         assert 32 not in dupes
         assert 28 not in dupes
         age_55_list = dupes.get(55, [])
         assert len(age_55_list) == 2
         assert "Harold" in age_55_list
         assert "Linda" in age_55_list
-        database.insert({"name": "Ivy", "age": 28})
-        database.insert({"name": "Carl", "age": 28})
-        dupes = database.find_duplicates("age")
+        _db.insert(name="Ivy", age=28)
+        _db.insert(name="Carl", age=28)
+        dupes = _db.find_duplicates("age")
         assert 28 in dupes
         age_28_list = dupes.get(28, [])
         assert len(age_28_list) == 3
         for name in ["Carl", "Ivy", "Nina"]:
             assert name in age_28_list
+
+    def test_x_in(self):
+        _db = JSONDatabase()
+        _db.set_valid_keys([
+            Key("name", primary=True),
+            Key("age", type=KeyType.Integer)])
+        assert _db.insert(name="Harold") is True
+        assert "Harold" in _db
+        assert _db.insert(name="Monica", age=32) is True
+        assert "Monica" in _db
+        assert "Andrea" not in _db
+
+    def test_load_valid_file(self, tmp_path):
+        _file = tmp_path / "database.json"
+        _items = [
+            {"name": "Sonny", "age": 43},
+            {"name": "Lenny", "age": 12},
+            {"name": "Eva", "age": 32},
+        ]
+        with open(_file, "w") as _fp:
+            json.dump(_items, _fp)
+        assert _file.exists()
+        _db = JSONDatabase(_file)
+        _db.set_valid_keys([
+            Key("name", primary=True),
+            Key("age", type=KeyType.Integer)])
+        _db.load()
+        assert "Sonny" in _db
+        assert _db.get("Lenny", "age") == 12
+
+    def test_load_invalid_file(self, tmp_path):
+        _file = tmp_path / "database.json"
+        assert not _file.exists()
+        _db = JSONDatabase(_file)
+        _db.set_valid_keys([
+            Key("name", primary=True),
+            Key("age", type=KeyType.Integer)])
+        with pytest.raises(FileNotFoundError):
+            _db.load()
+
+
+class TestMovieDatabase:
+    def _gen_list(self, items=100):
+        _ret = []
+        for index in range(items):
+            _item = {
+                "folder": f"SomeMovie{index:05d}",
+                "title": f"Some Movie {index}",
+                "year": random.choice(range(1950, 2020)),
+                "scanned": 1262304061 + index
+            }
+            _ret.append(_item)
+        assert len(_ret) == items
+        return _ret
+
+    def test_all_movies(self, tmp_path):
+        _file = tmp_path / "database.json"
+        _items = self._gen_list(items=2000)
+        with open(_file, "w") as _fp:
+            json.dump(_items, _fp)
+        assert _file.exists()
+        _db = MovieDatabase(file_path=_file)
+        _all = list(_db.all_movies())
+        assert len(_all) == 2000
+        assert _items[0]["folder"] in [m["folder"] for m in _all]
+
+    def test_in(self, tmp_path):
+        _file = tmp_path / "database.json"
+        _items = self._gen_list(items=2000)
+        with open(_file, "w") as _fp:
+            json.dump(_items, _fp)
+        assert _file.exists()
+        _db = MovieDatabase(file_path=_file)
+        for m in _items:
+            assert m["folder"] in _db
+
+    def test_mark_removed(self, tmp_path):
+        _file = tmp_path / "database.json"
+        _items = self._gen_list(items=2000)
+        with open(_file, "w") as _fp:
+            json.dump(_items, _fp)
+        assert _file.exists()
+        _db = MovieDatabase(file_path=_file)
+        _item = _items[0]
+        assert _db.is_removed(_item["folder"]) is False
+        _db.mark_removed(_item["folder"])
+        assert _db.is_removed(_item["folder"]) is True
+
+    def test_add(self, tmp_path):
+        _file = tmp_path / "database.json"
+        _items = self._gen_list(items=20)
+        with open(_file, "w") as _fp:
+            json.dump(_items, _fp)
+        assert _file.exists()
+        _db = MovieDatabase(file_path=_file)
+        assert len(list(_db.all_movies())) == 20
+        _db.add(folder="SomeNewCoolMovie", title="Some New Cool Movie", year=2022, scanned=16623040613)
+        assert "SomeNewCoolMovie" in _db
+        assert len(list(_db.all_movies())) == 21
+
+
+class TestShowDatabase:
+    def _gen_list(self, items=100):
+        _ret = []
+        for index in range(items):
+            _item = {
+                "folder": f"SomeShow{index:05d}",
+                "title": f"Some Show {index}",
+                "year": random.choice(range(1950, 2020)),
+                "scanned": 1262304061 + index
+            }
+            _ret.append(_item)
+        assert len(_ret) == items
+        return _ret
+
+    def test_all_shows(self, tmp_path):
+        _file = tmp_path / "database.json"
+        _items = self._gen_list(items=2000)
+        with open(_file, "w") as _fp:
+            json.dump(_items, _fp)
+        assert _file.exists()
+        _db = ShowDatabase(file_path=_file)
+        _all = list(_db.all_shows())
+        assert len(_all) == 2000
+        assert _items[0]["folder"] in [m["folder"] for m in _all]
+
+    def test_in(self, tmp_path):
+        _file = tmp_path / "database.json"
+        _items = self._gen_list(items=2000)
+        with open(_file, "w") as _fp:
+            json.dump(_items, _fp)
+        assert _file.exists()
+        _db = ShowDatabase(file_path=_file)
+        for m in _items:
+            assert m["folder"] in _db
+
+
+class TestEpisodeDatabase:
+    def _gen_list(self, items=100):
+        _ret = []
+        for index in range(items):
+            _item = {
+                "filename": f"SomeShow{index:05d}.mkv",
+                "released": 1099173600 + index,
+                "season_number": random.randint(1, 20),
+                "episode_number": random.randint(1, 20),
+                "tvshow": "SomeShow",
+                "scanned": 1262304061 + index
+            }
+            _ret.append(_item)
+        assert len(_ret) == items
+        return _ret
+
+    def test_all_episodes(self, tmp_path):
+        _file = tmp_path / "database.json"
+        _items = self._gen_list(items=2000)
+        with open(_file, "w") as _fp:
+            json.dump(_items, _fp)
+        assert _file.exists()
+        _db = EpisodeDatabase(file_path=_file)
+        _all = list(_db.all_episodes())
+        assert len(_all) == 2000
+        assert _items[0]["filename"] in [m["filename"] for m in _all]
+
+    def test_in(self, tmp_path):
+        _file = tmp_path / "database.json"
+        _items = self._gen_list(items=2000)
+        with open(_file, "w") as _fp:
+            json.dump(_items, _fp)
+        assert _file.exists()
+        _db = EpisodeDatabase(file_path=_file)
+        for m in _items:
+            assert m["filename"] in _db

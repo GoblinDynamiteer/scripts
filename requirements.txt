@@ -33,3 +33,5 @@ scp>=0.13.6
 pyfiglet~=0.8.post1
 beautifulsoup4~=4.10.0
 selenium~=3.141.0
+pymongo~=3.12.1
+bs4~=0.0.1
