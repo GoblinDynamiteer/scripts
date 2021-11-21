@@ -68,10 +68,19 @@ class TestFileListItem:
 
     def test_parse_invalid_subpack(self):
         _line = r"1611998314.0000000000 | 196154 | " \
-                r"/home/jk/files/SE.SUBPACKS.02.03.2012-Collection/" \
+                r"/home/johndoe/files/SE.SUBPACKS.02.03.2012-Collection/" \
                 r"Cool.Movie.2004.NORDiC.SUBPACK.x264-Grp/cmv.x264-grp.rar"
         _item = FileListItem(_line)
         assert _item.valid is False
+
+    def test_parse_invalid_subs(self):
+        _line = r"1611998314.0000000000 | 196154 | " \
+                r"/home/johndoe/files/Movie.2017.720p.BluRay.x264-Group/" \
+                r"Subs/" \
+                r"movie.2017.720p.bluray.x264-group.rar"
+        _item = FileListItem(_line)
+        assert _item.valid is False
+
 
     def test_parse_invalid_lines(self):
         _line = r"1611998314.0000000000 45986355 | " \

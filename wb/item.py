@@ -151,7 +151,7 @@ class FileListItem(BaseLog):
             _match = re.search(r"\.part\d{2,3}\.rar", self._path.name)
             if _match:
                 return self._path.name.endswith("part01.rar")
-            if "subpack" in self._path.parent.name.lower():
+            if any([s in self._path.parent.name.lower() for s in ["subpack", "subs"]]):
                 return False
         if self.is_video:
             if "sample" in self._path.parent.name.lower():
