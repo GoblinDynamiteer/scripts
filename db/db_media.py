@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import dataclasses
 from typing import Optional, List, Callable, Dict
 from pathlib import Path
 from dataclasses import dataclass
@@ -7,8 +6,8 @@ from dataclasses import dataclass
 from printout import Color, cstr
 import util
 from db.db_json import JSONDatabase
-from db.db_mongo import MongoDatabase
-from db.database import DatabaseType, DataBase, Key
+from db.db_mongo import MongoDatabase, MongoDbSettings
+from db.database import DatabaseType, DataBase
 from base_log import BaseLog
 
 
@@ -40,7 +39,16 @@ class MediaDatabase(BaseLog):
         elif self._settings.type == DatabaseType.Mongo:
             assert self._settings.collection_name is not None
             assert self._settings.database_name is not None
-            self._db = MongoDatabase(self._settings.database_name, self._settings.collection_name)
+            import config
+            _conf = config.ConfigurationManager()
+            _settings = MongoDbSettings(
+                ip=_conf.get(config.SettingKeys.MONGO_IP, assert_exists=True),
+                username=_conf.get(config.SettingKeys.MONGO_USERNAME, assert_exists=True),
+                password=_conf.get(config.SettingKeys.MONGO_PASSWORD, assert_exists=True),
+                database_name=self._settings.database_name,
+                collection_name=self._settings.collection_name
+            )
+            self._db = MongoDatabase(_settings)
             self.log("init Mongo")
         else:
             raise ValueError(f"invalid db type: {self._settings.type}")

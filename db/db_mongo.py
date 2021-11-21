@@ -76,7 +76,21 @@ class MongoDatabase(DataBase):
 
     def find(self, filter_by: Optional[Dict[str, Any]] = None, sort_by_key: Optional[str] = None,
              limit: Optional[int] = None, reversed_sort: bool = False) -> List[Dict]:
-        pass
+        _query = filter_by or {}
+        if filter_by is not None:
+            _query = filter_by
+        _cur = self._collection.find(_query)
+        if not _cur:
+            return []
+        if sort_by_key:
+            _cur.sort(str(sort_by_key), pymongo.DESCENDING if reversed_sort else pymongo.ASCENDING)
+        _ret = []
+        for item in _cur:
+            _ = item.pop("_id")  # Remove MongoDb Id
+            _ret.append(dict(item))
+            if len(_ret) == limit:
+                break
+        return _ret
 
     def update_entry(self, entry: Entry) -> bool:
         _val = entry.get(self.primary_key.name)
@@ -105,20 +119,3 @@ class MongoDatabase(DataBase):
         if _entry is None:
             return None
         return _entry.get(str(column))
-
-
-if __name__ == "__main__":
-    import config
-
-    _conf = config.ConfigurationManager()
-    _settings = MongoDbSettings(
-        ip=_conf.get(config.SettingKeys.MONGO_IP, assert_exists=True),
-        username=_conf.get(config.SettingKeys.MONGO_USERNAME, assert_exists=True),
-        password=_conf.get(config.SettingKeys.MONGO_PASSWORD, assert_exists=True),
-        database_name="playground",
-        collection_name="python"
-    )
-    database = MongoDatabase(settings=_settings)
-    database.set_valid_keys([Key("Name"), Key("Age", type=KeyType.Integer)])
-    print(database.entry_names())
-    database.update(entry="Harold", Age=45)

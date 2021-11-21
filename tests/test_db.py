@@ -255,7 +255,7 @@ class TestMovieDatabase:
         with open(_file, "w") as _fp:
             json.dump(_items, _fp)
         assert _file.exists()
-        _db = MovieDatabase(file_path=_file)
+        _db = MovieDatabase(file_path=_file, use_json_db=True)
         _all = list(_db.all_movies())
         assert len(_all) == 2000
         assert _items[0]["folder"] in [m["folder"] for m in _all]
@@ -266,7 +266,7 @@ class TestMovieDatabase:
         with open(_file, "w") as _fp:
             json.dump(_items, _fp)
         assert _file.exists()
-        _db = MovieDatabase(file_path=_file)
+        _db = MovieDatabase(file_path=_file, use_json_db=True)
         for m in _items:
             assert m["folder"] in _db
 
@@ -276,7 +276,7 @@ class TestMovieDatabase:
         with open(_file, "w") as _fp:
             json.dump(_items, _fp)
         assert _file.exists()
-        _db = MovieDatabase(file_path=_file)
+        _db = MovieDatabase(file_path=_file, use_json_db=True)
         _item = _items[0]
         assert _db.is_removed(_item["folder"]) is False
         _db.mark_removed(_item["folder"])
@@ -288,7 +288,7 @@ class TestMovieDatabase:
         with open(_file, "w") as _fp:
             json.dump(_items, _fp)
         assert _file.exists()
-        _db = MovieDatabase(file_path=_file)
+        _db = MovieDatabase(file_path=_file, use_json_db=True)
         assert len(list(_db.all_movies())) == 20
         _db.add(folder="SomeNewCoolMovie", title="Some New Cool Movie", year=2022, scanned=16623040613)
         assert "SomeNewCoolMovie" in _db
@@ -315,7 +315,7 @@ class TestShowDatabase:
         with open(_file, "w") as _fp:
             json.dump(_items, _fp)
         assert _file.exists()
-        _db = ShowDatabase(file_path=_file)
+        _db = ShowDatabase(file_path=_file, use_json_db=True)
         _all = list(_db.all_shows())
         assert len(_all) == 2000
         assert _items[0]["folder"] in [m["folder"] for m in _all]
@@ -326,7 +326,7 @@ class TestShowDatabase:
         with open(_file, "w") as _fp:
             json.dump(_items, _fp)
         assert _file.exists()
-        _db = ShowDatabase(file_path=_file)
+        _db = ShowDatabase(file_path=_file, use_json_db=True)
         for m in _items:
             assert m["folder"] in _db
 
@@ -353,7 +353,7 @@ class TestEpisodeDatabase:
         with open(_file, "w") as _fp:
             json.dump(_items, _fp)
         assert _file.exists()
-        _db = EpisodeDatabase(file_path=_file)
+        _db = EpisodeDatabase(file_path=_file, use_json_db=True)
         _all = list(_db.all_episodes())
         assert len(_all) == 2000
         assert _items[0]["filename"] in [m["filename"] for m in _all]
@@ -364,7 +364,7 @@ class TestEpisodeDatabase:
         with open(_file, "w") as _fp:
             json.dump(_items, _fp)
         assert _file.exists()
-        _db = EpisodeDatabase(file_path=_file)
+        _db = EpisodeDatabase(file_path=_file, use_json_db=True)
         for m in _items:
             assert m["filename"] in _db
 

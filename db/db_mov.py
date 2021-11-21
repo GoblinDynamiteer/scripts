@@ -42,13 +42,7 @@ def _to_text_removed(movie_data: Dict) -> str:
 
 
 class MovieDatabase(MediaDatabase):
-    def __init__(self, file_path: Optional[Path] = None):
-        if file_path is None:
-            _path = ConfigurationManager().path(SettingKeys.PATH_MOVIE_DATABASE,
-                                                assert_path_exists=True,
-                                                convert_to_path=True)
-        else:
-            _path = file_path
+    def __init__(self, file_path: Optional[Path] = None, use_json_db: bool = False):
         keys = [
             Key("folder", primary=True),
             Key("title"),
@@ -58,7 +52,17 @@ class MovieDatabase(MediaDatabase):
             Key(self.REMOVED_KEY_STR, type=KeyType.Boolean),
             Key(self.REMOVED_DATE_KEY_STR, type=KeyType.Integer),
         ]
-        _settings = MediaDbSettings(type=DatabaseType.JSON, path=_path)
+
+        if use_json_db:
+            if file_path is None:
+                _path = ConfigurationManager().path(SettingKeys.PATH_MOVIE_DATABASE,
+                                                    assert_path_exists=True,
+                                                    convert_to_path=True)
+            else:
+                _path = file_path
+            _settings = MediaDbSettings(type=DatabaseType.JSON, path=_path)
+        else:
+            _settings = MediaDbSettings(type=DatabaseType.Mongo, database_name="media", collection_name="movies")
 
         MediaDatabase.__init__(self, _settings)
         self._db.set_valid_keys(keys)

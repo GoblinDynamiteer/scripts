@@ -25,13 +25,7 @@ def _to_text_removed(episode_data: Dict) -> str:
 
 
 class ShowDatabase(MediaDatabase):
-    def __init__(self, file_path: Optional[Path] = None):
-        if file_path is None:
-            _path = ConfigurationManager().path(SettingKeys.PATH_TVSHOW_DATABASE,
-                                                assert_path_exists=True,
-                                                convert_to_path=True)
-        else:
-            _path = file_path
+    def __init__(self, file_path: Optional[Path] = None, use_json_db: bool = False):
         keys = [
             Key("folder", primary=True),
             Key("title"),
@@ -42,7 +36,17 @@ class ShowDatabase(MediaDatabase):
             Key(self.REMOVED_KEY_STR, type=KeyType.Boolean),
             Key(self.REMOVED_DATE_KEY_STR, type=KeyType.Integer),
         ]
-        _settings = MediaDbSettings(type=DatabaseType.JSON, path=_path)
+
+        if use_json_db:
+            if file_path is None:
+                _path = ConfigurationManager().path(SettingKeys.PATH_EPISODE_DATABASE,
+                                                    assert_path_exists=True,
+                                                    convert_to_path=True)
+            else:
+                _path = file_path
+            _settings = MediaDbSettings(type=DatabaseType.JSON, path=_path)
+        else:
+            _settings = MediaDbSettings(type=DatabaseType.Mongo, database_name="media", collection_name="shows")
 
         MediaDatabase.__init__(self, _settings)
         self._db.set_valid_keys(keys)
@@ -63,13 +67,7 @@ class ShowDatabase(MediaDatabase):
 
 
 class EpisodeDatabase(MediaDatabase):
-    def __init__(self, file_path: Optional[Path] = None):
-        if file_path is None:
-            _path = ConfigurationManager().path(SettingKeys.PATH_TVSHOW_DATABASE,
-                                                assert_path_exists=True,
-                                                convert_to_path=True)
-        else:
-            _path = file_path
+    def __init__(self, file_path: Optional[Path] = None, use_json_db: bool = False):
         keys = [
             Key("filename", primary=True),
             Key("season_number", type=KeyType.Integer),
@@ -82,7 +80,17 @@ class EpisodeDatabase(MediaDatabase):
             Key(self.REMOVED_KEY_STR, type=KeyType.Boolean),
             Key(self.REMOVED_DATE_KEY_STR, type=KeyType.Integer),
         ]
-        _settings = MediaDbSettings(type=DatabaseType.JSON, path=_path)
+
+        if use_json_db:
+            if file_path is None:
+                _path = ConfigurationManager().path(SettingKeys.PATH_EPISODE_DATABASE,
+                                                    assert_path_exists=True,
+                                                    convert_to_path=True)
+            else:
+                _path = file_path
+            _settings = MediaDbSettings(type=DatabaseType.JSON, path=_path)
+        else:
+            _settings = MediaDbSettings(type=DatabaseType.Mongo, database_name="media", collection_name="episodes")
 
         MediaDatabase.__init__(self, _settings)
         self._db.set_valid_keys(keys)
