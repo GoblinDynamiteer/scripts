@@ -1,10 +1,15 @@
 import json
 import random
+from typing import List, Dict
 
 from db.database import Key, KeyType
 from db.db_json import JSONDatabase
 from db.db_mov import MovieDatabase
 from db.db_tv import EpisodeDatabase, ShowDatabase
+from db.db_mongo import MongoDatabase, MongoDbSettings
+
+import mongomock
+import pymongo
 
 import pytest
 
@@ -362,3 +367,177 @@ class TestEpisodeDatabase:
         _db = EpisodeDatabase(file_path=_file)
         for m in _items:
             assert m["filename"] in _db
+
+
+class TestMongoDatabase:
+    def _gen_items(self, num=100) -> List[Dict]:
+        _ret = []
+        for i in range(num):
+            _ret.append(dict(Name=f"Harold{i + 1}", Age=random.randint(10, 99)))
+        return _ret
+
+    @mongomock.patch(servers=(("mocked.server.com", 27017),))
+    def test_connection_ok(self):
+        objects = self._gen_items(100)
+        client = pymongo.MongoClient("mocked.server.com")
+        client.test_db.test_collection.insert_many(objects)
+        _settings = MongoDbSettings(
+            ip="mocked.server.com",
+            username="none",
+            password="none",
+            collection_name="test_collection",
+            database_name="test_db"
+        )
+        _db = MongoDatabase(settings=_settings)
+
+    def test_connection_error_raises_exception(self):
+        _settings = MongoDbSettings(
+            ip="some.non-existing.server.org.123456",
+            username="none",
+            password="none",
+            collection_name="test_collection",
+            database_name="test_db"
+        )
+        with pytest.raises(ConnectionError):
+            _ = MongoDatabase(settings=_settings)
+
+    @mongomock.patch(servers=(("mocked.server.com", 27017),))
+    def test_connection_missing_db_raises_exception(self):
+        objects = self._gen_items(100)
+        client = pymongo.MongoClient("mocked.server.com")
+        client.test_db.test_collection.insert_many(objects)
+        _settings = MongoDbSettings(
+            ip="mocked.server.com",
+            username="none",
+            password="none",
+            collection_name="test_collection",
+            database_name="non_existing_db"
+        )
+        with pytest.raises(ValueError):
+            _ = MongoDatabase(settings=_settings)
+
+    @mongomock.patch(servers=(("mocked.server.com", 27017),))
+    def test_connection_missing_collection_raises_exception(self):
+        objects = self._gen_items(100)
+        client = pymongo.MongoClient("mocked.server.com")
+        client.test_db.test_collection.insert_many(objects)
+        _settings = MongoDbSettings(
+            ip="mocked.server.com",
+            username="none",
+            password="none",
+            collection_name="non_existing_collection",
+            database_name="test_db"
+        )
+        with pytest.raises(ValueError):
+            _ = MongoDatabase(settings=_settings)
+
+    @mongomock.patch(servers=(("mocked.server.com", 27017),))
+    def test_basic_retrieval(self):
+        objects = self._gen_items(100)
+        client = pymongo.MongoClient("mocked.server.com")
+        client.test_db.test_collection.insert_many(objects)
+        _settings = MongoDbSettings(
+            ip="mocked.server.com",
+            username="none",
+            password="none",
+            collection_name="test_collection",
+            database_name="test_db"
+        )
+        _db = MongoDatabase(settings=_settings)
+        _db.set_valid_keys([Key("Name"), Key("Age", type=KeyType.Integer)])
+        assert len(_db.entry_names()) == 100
+        _age = objects[10].get("Age", None)
+        _name = objects[10].get("Name", None)
+        assert _age is not None
+        assert _name is not None
+        assert _db.get(_name, "Age") == _age
+
+    @mongomock.patch(servers=(("mocked.server.com", 27017),))
+    def test_x_in(self):
+        objects = self._gen_items(10)
+        client = pymongo.MongoClient("mocked.server.com")
+        client.test_db.test_collection.insert_many(objects)
+        _settings = MongoDbSettings(
+            ip="mocked.server.com",
+            username="none",
+            password="none",
+            collection_name="test_collection",
+            database_name="test_db"
+        )
+        _db = MongoDatabase(settings=_settings)
+        _db.set_valid_keys([Key("Name"), Key("Age", type=KeyType.Integer)])
+        for _obj in objects:
+            assert _obj.get("Name", None) in _db
+
+    @mongomock.patch(servers=(("mocked.server.com", 27017),))
+    def test_insert(self):
+        objects = self._gen_items(10)
+        client = pymongo.MongoClient("mocked.server.com")
+        client.test_db.test_collection.insert_many(objects)
+        _settings = MongoDbSettings(
+            ip="mocked.server.com",
+            username="none",
+            password="none",
+            collection_name="test_collection",
+            database_name="test_db"
+        )
+        _db = MongoDatabase(settings=_settings)
+        _db.set_valid_keys([Key("Name"), Key("Age", type=KeyType.Integer)])
+        _db.insert(Name="Linda", Age=23)
+        assert "Linda" in _db
+        assert _db.get("Linda", "Age") == 23
+
+    @mongomock.patch(servers=(("mocked.server.com", 27017),))
+    def test_update(self):
+        objects = self._gen_items(10)
+        client = pymongo.MongoClient("mocked.server.com")
+        client.test_db.test_collection.insert_many(objects)
+        _settings = MongoDbSettings(
+            ip="mocked.server.com",
+            username="none",
+            password="none",
+            collection_name="test_collection",
+            database_name="test_db"
+        )
+        _db = MongoDatabase(settings=_settings)
+        _db.set_valid_keys([Key("Name"), Key("Age", type=KeyType.Integer)])
+        _db.insert(Name="Linda", Age=23)
+        assert "Linda" in _db
+        assert _db.get("Linda", "Age") == 23
+        _db.update("Linda", Age=33)
+        assert _db.get("Linda", "Age") == 33
+
+    @mongomock.patch(servers=(("mocked.server.com", 27017),))
+    def test_find_duplicates(self):
+        client = pymongo.MongoClient("mocked.server.com")
+        client.test_db.test_collection.insert_many([
+            dict(Name="Harold", Age=55),
+            dict(Name="Linda", Age=55),
+            dict(Name="Oscar", Age=32),
+            dict(Name="Nina", Age=28)])
+        _settings = MongoDbSettings(
+            ip="mocked.server.com",
+            username="none",
+            password="none",
+            collection_name="test_collection",
+            database_name="test_db"
+        )
+        _db = MongoDatabase(settings=_settings)
+        _db.set_valid_keys([
+            Key("Name", primary=True),
+            Key("Age", type=KeyType.Integer)])
+        dupes = _db.find_duplicates("Age")
+        assert 32 not in dupes
+        assert 28 not in dupes
+        age_55_list = dupes.get(55, [])
+        assert len(age_55_list) == 2
+        assert "Harold" in age_55_list
+        assert "Linda" in age_55_list
+        _db.insert(Name="Ivy", Age=28)
+        _db.insert(Name="Carl", Age=28)
+        dupes = _db.find_duplicates("Age")
+        assert 28 in dupes
+        age_28_list = dupes.get(28, [])
+        assert len(age_28_list) == 3
+        for name in ["Carl", "Ivy", "Nina"]:
+            assert name in age_28_list

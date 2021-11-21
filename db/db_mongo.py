@@ -2,7 +2,7 @@ from enum import Enum, auto
 from typing import Optional, Union, Any, List, Dict
 from dataclasses import dataclass
 
-from pymongo import MongoClient
+import pymongo  # Do not use "from pymongo import MongoClient", mongomock in unit tests require this way...
 from pymongo.errors import ServerSelectionTimeoutError
 from pymongo.collection import Collection
 
@@ -28,7 +28,7 @@ class MongoDatabase(DataBase):
     def __init__(self, settings: MongoDbSettings):
         super().__init__()
         self._new_entries = List[Entry]
-        self._client: Optional[MongoClient] = None
+        self._client: Optional[pymongo.MongoClient] = None
         self._collection: Optional[Collection] = None
         self._state: MongoDatabase.State = self.State.NotInitialized
         self._settings: MongoDbSettings = settings
@@ -38,11 +38,11 @@ class MongoDatabase(DataBase):
         if self._state == self.State.Connected:
             return True
         if self._client is None:
-            self._client = MongoClient(self._settings.ip,
-                                       self._settings.port,
-                                       username=self._settings.username,
-                                       password=self._settings.password,
-                                       serverSelectionTimeoutMS=1000)
+            self._client = pymongo.MongoClient(self._settings.ip,
+                                               self._settings.port,
+                                               username=self._settings.username,
+                                               password=self._settings.password,
+                                               serverSelectionTimeoutMS=1000)
             try:
                 self._client.server_info()
             except ServerSelectionTimeoutError as _:
@@ -91,7 +91,14 @@ class MongoDatabase(DataBase):
         return _id is not None
 
     def find_duplicates(self, key: Union[Key, str]) -> Dict[Any, List[str]]:
-        pass
+        _all = {}
+        for _cur in self._collection.find(filter={str(key): {"$exists": True}}):
+            _val = _cur.get(str(key))
+            if _val in _all:
+                _all[_val].append(_cur.get(self.primary_key.name))
+            else:
+                _all[_val] = [_cur.get(self.primary_key.name)]
+        return {k: v for k, v in _all.items() if len(v) > 1}
 
     def get(self, entry_name: str, column: Union[Key, str]) -> Optional[Any]:
         _entry: Optional[Entry] = self.get_entry(entry_name)
