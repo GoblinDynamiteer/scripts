@@ -50,6 +50,9 @@ class Entry:
     def data(self) -> Dict:
         return self._data
 
+    def __str__(self):
+        return f"Entry: {self._data}"
+
 
 class DataBase(ABC):
     def __init__(self):
