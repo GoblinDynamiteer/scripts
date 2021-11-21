@@ -37,10 +37,14 @@ class SettingKeys(Enum):
     WB_SERVER_2 = "server2"
     WB_USERNAME = "username"
     WB_PASSWORD = "password"
+    MONGO_IP = "mongo_ip"
+    MONGO_USERNAME = "mongo_username"
+    MONGO_PASSWORD = "mongo_password"
 
 
 class SettingSection(Enum):
     WB = "wb"
+    Database = "database"
 
 
 class ConfigurationManager(BaseLog, metaclass=Singleton):
@@ -60,8 +64,11 @@ class ConfigurationManager(BaseLog, metaclass=Singleton):
             return self._load()
         return True
 
-    def get(self, key: Union[SettingKeys, str], convert: Optional[Callable] = None,
+    def get(self,
+            key: Union[SettingKeys, str],
+            convert: Optional[Callable] = None,
             section: Optional[Union[str, SettingSection]] = None,
+            assert_exists: bool = False,
             default: Any = None) -> Any:
         if self.SETTINGS is None:
             if not self._load():
@@ -82,6 +89,8 @@ class ConfigurationManager(BaseLog, metaclass=Singleton):
                     break
         if value is None:
             self.log_warn(f"could not find key: {key}, returning default: {default}")
+            if assert_exists:
+                raise AssertionError(f"could not retrieve value for key {key}")
             return default
         for match, replacement in self.REPLACEMENTS:
             value = value.replace(match, replacement)
