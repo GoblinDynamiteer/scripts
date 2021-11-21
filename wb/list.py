@@ -7,7 +7,8 @@ from wb.item import FileListItem
 class FileList:
     def __init__(self):
         self._items: List[FileListItem] = []
-        self._sorted = False
+        self._sorted: bool = False
+        self._compared_to_database: bool = False
 
     def parse_find_cmd_output(self, lines: List[str], server_id: str):
         for line in lines:
@@ -18,6 +19,8 @@ class FileList:
     def print(self):
         if not self._sorted:
             self._sort()
+        if not self._compared_to_database:
+            self._compare_to_database()
         for item in self._items:
             item.print()
 
@@ -65,3 +68,18 @@ class FileList:
         self._items.sort(key=lambda x: x.timestamp)
         for _ix, _item in enumerate(self._items, 1):
             _item.index = _ix
+
+    def _compare_to_database(self):
+        self._compared_to_database = True
+        import db.db_mov
+        import db.db_tv
+        _movdb = db.db_mov.MovieDatabase()
+        _epdb = db.db_tv.EpisodeDatabase()
+        for item in self._items:
+            if item.is_movie:
+                _folder = item.parent_name or item.path.stem
+                if _folder in _movdb:
+                    item.downloaded = True
+            elif item.is_tvshow:
+                if item.name in _epdb:
+                    item.downloaded = True

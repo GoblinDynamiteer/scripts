@@ -25,6 +25,7 @@ class FileListItem(BaseLog):
         self._index = None
         self._server_id = server_id
         self._type = None
+        self._downloaded: bool = False
         self._parse()
 
     def _parse(self):
@@ -142,6 +143,16 @@ class FileListItem(BaseLog):
         return self._server_id
 
     @property
+    def downloaded(self) -> bool:
+        return self._downloaded
+
+    @downloaded.setter
+    def downloaded(self, state: bool) -> None:
+        if self._downloaded == state:
+            return
+        self._downloaded = True
+
+    @property
     def valid(self) -> bool:
         if not self._valid:
             return False
@@ -167,4 +178,5 @@ class FileListItem(BaseLog):
             _type_str = fcs("p[SHOW]")
             if self.parent_is_season_dir:
                 _name = self.path.stem
-        pfcs(f"i<[{self.index:04d}]> [{_type_str}] {_name}", format_chars=("<", ">"))
+        _dl_str = f"DL:{'Y' if self._downloaded else 'N'}"
+        pfcs(f"i<[{self.index:04d}]> [{_type_str}] [{_dl_str}] {_name}", format_chars=("<", ">"))
