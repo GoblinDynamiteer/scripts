@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Union, Any
+from typing import List, Optional, Dict, Union, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum, auto
 
@@ -57,6 +57,7 @@ class Entry:
 class DataBase(ABC):
     def __init__(self):
         self._keys: List[Key] = []
+        self._entry_primary_value_cache: Optional[Tuple[Any]] = None
 
     @abstractmethod
     def save(self) -> bool:
@@ -71,7 +72,7 @@ class DataBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def entry_names(self) -> List[str]:
+    def entry_primary_values(self) -> Tuple[Any]:
         raise NotImplementedError
 
     @abstractmethod
@@ -101,11 +102,13 @@ class DataBase(ABC):
                 return key
         return None
 
-    def __contains__(self, primary_key_value: str):
-        return self.get_entry(primary_key_value) is not None
+    def __contains__(self, primary_key_value: Any):
+        if self._entry_primary_value_cache is None:
+            self._entry_primary_value_cache = self.entry_primary_values()
+        return primary_key_value in self._entry_primary_value_cache
 
     def __iter__(self):
-        for name in self.entry_names():
+        for name in self.entry_primary_values():
             yield name
 
     def set_valid_keys(self, key_list: List[Key]):
@@ -142,6 +145,7 @@ class DataBase(ABC):
                 _entry = self.get_entry(value)
                 if _entry is not None:
                     raise ValueError(f"entry {self.primary_key.name}={value} already exists! use update instead!")
+            self._entry_primary_value_cache = None
             new_entry.update(column, value)
         return self.insert_entry(new_entry)
 

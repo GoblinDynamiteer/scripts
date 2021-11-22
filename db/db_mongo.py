@@ -1,8 +1,9 @@
 from enum import Enum, auto
-from typing import Optional, Union, Any, List, Dict
+from typing import Optional, Union, Any, List, Dict, Tuple
 from dataclasses import dataclass
 
 import pymongo  # Do not use "from pymongo import MongoClient", mongomock in unit tests require this way...
+from pymongo.cursor import Cursor
 from pymongo.errors import ServerSelectionTimeoutError
 from pymongo.collection import Collection
 
@@ -57,6 +58,9 @@ class MongoDatabase(DataBase):
             raise ValueError(f"collection {_coll_name} does not exist in db {_coll_name}")
         self._collection = self._client[_db_name][_coll_name]
 
+    def _find_all(self) -> Cursor:
+        return self._collection.find(filter={})
+
     def save(self) -> bool:
         pass
 
@@ -71,8 +75,8 @@ class MongoDatabase(DataBase):
         _ = _entry.pop("_id")  # Remove MongoDb Id
         return Entry(dict(_entry))
 
-    def entry_names(self) -> List[str]:
-        return [_cur.get(self.primary_key.name) for _cur in self._collection.find(filter={})]
+    def entry_primary_values(self) -> Tuple[Any]:
+        return tuple([_cur.get(self.primary_key.name) for _cur in self._find_all()])
 
     def find(self, filter_by: Optional[Dict[str, Any]] = None, sort_by_key: Optional[str] = None,
              limit: Optional[int] = None, reversed_sort: bool = False) -> List[Dict]:

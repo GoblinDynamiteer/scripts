@@ -445,7 +445,7 @@ class TestMongoDatabase:
         )
         _db = MongoDatabase(settings=_settings)
         _db.set_valid_keys([Key("Name"), Key("Age", type=KeyType.Integer)])
-        assert len(_db.entry_names()) == 100
+        assert len(_db.entry_primary_values()) == 100
         _age = objects[10].get("Age", None)
         _name = objects[10].get("Name", None)
         assert _age is not None

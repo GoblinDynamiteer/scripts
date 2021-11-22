@@ -3,7 +3,7 @@
 import json
 import shutil
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any, Union, Tuple
 from datetime import datetime
 
 from config import ConfigurationManager, SettingKeys
@@ -66,9 +66,8 @@ class JSONDatabase(DataBase):
         self._need_save = True
         return True
 
-    def entry_names(self) -> List[str]:
-        for _entry in self._entries:
-            yield _entry.get(self.primary_key.name)
+    def entry_primary_values(self) -> Tuple[Any]:
+        return tuple([e.get(self.primary_key.name) for e in self._entries])
 
     def find(self,
              filter_by: Optional[Dict[str, Any]] = None,
