@@ -3,6 +3,7 @@
 from argparse import ArgumentParser
 
 from config import ConfigurationManager, SettingSection, SettingKeys
+from base_log import BaseLogGlobalSettings
 
 from wb.helper_methods import parse_download_arg
 from wb.server import ServerHandler
@@ -20,11 +21,16 @@ def get_args():
                          action="store_true",
                          dest="list_items",
                          help="list items on WB server(s)")
+    _parser.add_argument("--verbose",
+                         "-v",
+                         action="store_true")
     return _parser.parse_args()
 
 
 def main():
     args = get_args()
+    BaseLogGlobalSettings().verbose = args.verbose
+    BaseLogGlobalSettings().use_timestamps = True
     handler = ServerHandler()
     for _key in [SettingKeys.WB_SERVER_1, SettingKeys.WB_SERVER_2]:
         _hostname = ConfigurationManager().get(key=_key, section=SettingSection.WB)

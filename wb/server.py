@@ -13,7 +13,7 @@ from wb.list import FileList
 class Server(BaseLog):
     class Connection(BaseLog):
         def __init__(self):
-            super().__init__(verbose=True)
+            BaseLog.__init__(self, use_global_settings=True)
             self._ssh_client = SSHClient()
             self._ssh_client.set_missing_host_key_policy(AutoAddPolicy())
             self._connected = False
@@ -65,7 +65,7 @@ class Server(BaseLog):
             return self._scp
 
     def __init__(self, hostname):
-        super().__init__(verbose=True)
+        BaseLog.__init__(self, use_global_settings=True)
         if not hostname:
             self.error(f"invalid hostname: {hostname}")
             raise ValueError("hostname not valid")
@@ -103,8 +103,10 @@ class Server(BaseLog):
         _scp_client.get(str(remote_path), str(local_path), recursive=True)
 
 
-class ServerHandler:
+class ServerHandler(BaseLog):
     def __init__(self):
+        BaseLog.__init__(self, use_global_settings=True)
+        self.set_log_prefix("ServerHandler")
         self._servers: List[Server] = []
         self._file_list: FileList = FileList()
 
@@ -117,8 +119,10 @@ class ServerHandler:
         self._file_list.print()
 
     def _init_file_list(self):
+        self.log("gathering item from server(s)")
         for server in self._servers:
             self._file_list.parse_find_cmd_output(server.list_files(), server_id=server.hostname)
+        self.log(f"found {len(self._file_list)} number of items")
 
     def download(self, key: Union[str, int], destination: Path) -> bool:
         if self._file_list.empty():

@@ -1,14 +1,21 @@
 import re
 from typing import List
+from timeit import default_timer
 
 from wb.item import FileListItem
+from base_log import BaseLog
 
 
-class FileList:
+class FileList(BaseLog):
     def __init__(self):
+        BaseLog.__init__(self, use_global_settings=True)
+        self.set_log_prefix("FileList")
         self._items: List[FileListItem] = []
         self._sorted: bool = False
         self._compared_to_database: bool = False
+
+    def __len__(self):
+        return len([i for i in self._items if i.valid])
 
     def parse_find_cmd_output(self, lines: List[str], server_id: str):
         for line in lines:
@@ -17,12 +24,16 @@ class FileList:
                 self._items.append(_item)
 
     def print(self):
+        _start = default_timer()
         if not self._sorted:
             self._sort()
         if not self._compared_to_database:
+            self.log("comparing items to database...")
             self._compare_to_database()
         for item in self._items:
             item.print()
+        _elapsed = default_timer() - _start
+        self.log(f"listing operation took: {_elapsed}s")
 
     def empty(self):
         return len(self._items) == 0
