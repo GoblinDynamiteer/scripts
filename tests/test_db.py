@@ -1,6 +1,8 @@
 import json
 import random
-from typing import List, Dict
+from typing import List, Dict, Union, Optional, Callable, Any
+
+import config
 
 from db.database import Key, KeyType
 from db.db_json import JSONDatabase
@@ -235,7 +237,7 @@ class TestDatBaseBaseJson:
             _db.load()
 
 
-class TestMovieDatabase:
+class TestMovieDatabaseJSON:
     def _gen_list(self, items=100):
         _ret = []
         for index in range(items):
@@ -295,7 +297,7 @@ class TestMovieDatabase:
         assert len(list(_db.all_movies())) == 21
 
 
-class TestShowDatabase:
+class TestShowDatabaseJSON:
     def _gen_list(self, items=100):
         _ret = []
         for index in range(items):
@@ -331,7 +333,7 @@ class TestShowDatabase:
             assert m["folder"] in _db
 
 
-class TestEpisodeDatabase:
+class TestEpisodeDatabaseJSON:
     def _gen_list(self, items=100):
         _ret = []
         for index in range(items):
@@ -367,6 +369,69 @@ class TestEpisodeDatabase:
         _db = EpisodeDatabase(file_path=_file, use_json_db=True)
         for m in _items:
             assert m["filename"] in _db
+
+
+class TestEpisodeDatabaseMongo:
+    def mocked_config_get(self,
+                          key: Union[config.SettingKeys, str],
+                          convert: Optional[Callable] = None,
+                          section: Optional[Union[str, config.SettingSection]] = None,
+                          assert_exists: bool = False,
+                          default: Any = None) -> Any:
+
+        if isinstance(key, config.SettingKeys):
+            key = key.value
+        if key == "mongo_ip":
+            return "mocked.server.com"
+        return None
+
+    def _gen_list(self, items=100) -> List[Dict]:
+        _ret = []
+        for index in range(items):
+            _item = {
+                "filename": f"SomeShow{index:05d}.mkv",
+                "released": 1099173600 + index,
+                "season_number": random.randint(1, 20),
+                "episode_number": random.randint(1, 20),
+                "tvshow": "SomeShow",
+                "scanned": 1262304061 + index
+            }
+            _ret.append(_item)
+        assert len(_ret) == items
+        return _ret
+
+    @mongomock.patch(servers=(("mocked.server.com", 27017),))
+    def test_mock_config(self, mocker):
+        client = pymongo.MongoClient("mocked.server.com")
+        client.media.episodes.insert_many(self._gen_list())
+        mocker.patch.object(config.ConfigurationManager, "get", self.mocked_config_get)
+        assert config.ConfigurationManager().get("mongo_ip") == "mocked.server.com"
+        assert config.ConfigurationManager().get(config.SettingKeys.MONGO_IP) == "mocked.server.com"
+        _db = EpisodeDatabase(use_json_db=False)
+
+    @mongomock.patch(servers=(("mocked.server.com", 27017),))
+    def test_all_episodes(self, mocker):
+        client = pymongo.MongoClient("mocked.server.com")
+        _items = self._gen_list(items=2000)
+        client.media.episodes.insert_many(_items)
+        mocker.patch.object(config.ConfigurationManager, "get", self.mocked_config_get)
+        _db = EpisodeDatabase(use_json_db=False)
+        _all = list(_db.all_episodes())
+        assert len(_all) == 2000
+        assert _items[0]["filename"] in [m["filename"] for m in _all]
+
+    @mongomock.patch(servers=(("mocked.server.com", 27017),))
+    def test_in(self, mocker):
+        client = pymongo.MongoClient("mocked.server.com")
+        _items = self._gen_list(items=2000)
+        client.media.episodes.insert_many(_items)
+        mocker.patch.object(config.ConfigurationManager, "get", self.mocked_config_get)
+        _db = EpisodeDatabase(use_json_db=False)
+        for m in _items:
+            assert m["filename"] in _db
+        _db.add(filename="new_cool_show_s01e02.mkv", season_number=1, episode_number=2, tvshow="New Cool Show",
+                scanned=123)
+        assert "new_cool_show_s01e02.mkv" in _db
 
 
 class TestMongoDatabase:
