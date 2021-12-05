@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from typing import Dict
+
 from datetime import datetime
 from printout import fcs, cstr, Color, print_line, pfcs
 from singleton import Singleton
@@ -46,6 +48,7 @@ class BaseLog:
         self._log_prefix_color = 154  # light green / info
         self._use_timestamp = use_timestamps
         self._use_ms = use_milliseconds
+        self._warned: Dict[str, bool] = {}
         if use_global_settings:  # overrides
             _settings = BaseLogGlobalSettings()
             self._use_timestamp = _settings.use_timestamps
@@ -88,6 +91,12 @@ class BaseLog:
         self._print_with_tag(warn_str, tag=fcs("w[warning]"), format_string=format_string, force=force)
 
     def warn(self, warn_str, format_string=False, force=False):
+        self.log_warn(warn_str, format_string, force)
+
+    def warn_once(self, warn_str, format_string=False, force=False):
+        if self._warned.get(warn_str, False):
+            return
+        self._warned[warn_str] = True
         self.log_warn(warn_str, format_string, force)
 
     def warn_fs(self, warn_str, force=False):
