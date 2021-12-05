@@ -6,7 +6,7 @@ from config import ConfigurationManager, SettingSection, SettingKeys
 from base_log import BaseLogGlobalSettings
 
 from wb.helper_methods import parse_download_arg
-from wb.server import ServerHandler
+from wb.server import ServerHandler, ConnectionSettings
 
 
 def get_args():
@@ -24,6 +24,24 @@ def get_args():
     _parser.add_argument("--verbose",
                          "-v",
                          action="store_true")
+    _rsa_grp = _parser.add_mutually_exclusive_group()
+    _rsa_grp.add_argument("--fallback-to-password",
+                          "--fallback",
+                          "-f",
+                          action="store_true",
+                          dest="fallback",
+                          help="attempt to connect with password if RSA fails")
+    _rsa_grp.add_argument("--no-rsa",
+                          "-n",
+                          action="store_false",
+                          dest="use_rsa",
+                          help="do not use RSA to connect, instead only attempt password")
+    _parser.add_argument("--no-system-scp",
+                         "-s",
+                         action="store_false",
+                         dest="use_system_scp",
+                         help="do not use system SCP for transferring files, instead use the "
+                              "(potentially slower) python lib SCPClient")
     return _parser.parse_args()
 
 
@@ -31,7 +49,9 @@ def main():
     args = get_args()
     BaseLogGlobalSettings().verbose = args.verbose
     BaseLogGlobalSettings().use_timestamps = True
-    handler = ServerHandler()
+    handler = ServerHandler(ConnectionSettings(use_password=args.fallback or not args.use_rsa,
+                                               use_rsa_key=args.use_rsa,
+                                               use_system_scp=args.use_system_scp))
     for _key in [SettingKeys.WB_SERVER_1, SettingKeys.WB_SERVER_2]:
         _hostname = ConfigurationManager().get(key=_key, section=SettingSection.WB)
         if _hostname:

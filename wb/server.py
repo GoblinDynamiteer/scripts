@@ -1,5 +1,6 @@
 from pathlib import PurePosixPath, Path
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Tuple
+from dataclasses import dataclass
 
 from paramiko import SSHClient, AutoAddPolicy
 from scp import SCPClient
@@ -10,6 +11,13 @@ from wb.helper_methods import gen_find_cmd
 from wb.list import FileList
 
 
+@dataclass
+class ConnectionSettings:
+    use_rsa_key: bool = True
+    use_password: bool = False
+    use_system_scp: bool = True
+
+
 class Server(BaseLog):
     class Connection(BaseLog):
         def __init__(self):
@@ -17,6 +25,7 @@ class Server(BaseLog):
             self._ssh_client = SSHClient()
             self._ssh_client.set_missing_host_key_policy(AutoAddPolicy())
             self._connected = False
+            self._used_password: Optional[bool] = None
             self._scp = None
 
         @staticmethod
@@ -31,13 +40,17 @@ class Server(BaseLog):
             self.log("SCP initialized")
             return True
 
-        def connect(self, hostname, username=None, password=None):
+        def connect(self, hostname, use_rsa_key: bool, username: Optional[str] = None, password: Optional[str] = None):
             self.set_log_prefix(f"SSH_CONN_{hostname.split('.')[0].upper()}")
             self.log(f"connecting to {hostname}...")
             try:
-                self._ssh_client.connect(hostname, username=username, password=password, look_for_keys=False)
+                self._ssh_client.connect(hostname, username=username, password=password, look_for_keys=use_rsa_key)
                 self._connected = True
-                self.log("OK")
+                self._used_password = self._ssh_client.get_transport().auth_handler.auth_method == "password"
+                if self._used_password:
+                    self.log("OK [connected using password]")
+                else:
+                    self.log("OK")
             except Exception as error:
                 self.error(f"FAIL: {error}")
                 self._connected = False
@@ -58,28 +71,41 @@ class Server(BaseLog):
             return self._connected
 
         @property
+        def used_password_to_connect(self) -> bool:
+            if not self._connected:
+                return False
+            if self._used_password is None:
+                return False
+            return self._used_password
+
+        @property
         def scp(self) -> Optional[SCPClient]:
             if not self._scp:
                 if not self._init_scp():
                     return None
             return self._scp
 
-    def __init__(self, hostname):
+    def __init__(self, hostname: str, settings: ConnectionSettings):
         BaseLog.__init__(self, use_global_settings=True)
         if not hostname:
             self.error(f"invalid hostname: {hostname}")
             raise ValueError("hostname not valid")
+        self._settings = settings
         self.set_log_prefix(f"{hostname.split('.')[0].upper()}")
         self._hostname = hostname
+        self._user: Optional[str] = None
         self._ssh = self.Connection()
         self._connect()
 
     def _connect(self):
         if self._ssh.connected:
             self.log("already connected")
-        _user = ConfigurationManager().get(SettingKeys.WB_USERNAME, section=SettingSection.WB)
-        _pw = ConfigurationManager().get(SettingKeys.WB_PASSWORD, section=SettingSection.WB)
-        self._ssh.connect(self._hostname, username=_user, password=_pw)
+        if self._settings.use_password:
+            _pw = ConfigurationManager().get(SettingKeys.WB_PASSWORD, section=SettingSection.WB)
+        else:
+            _pw = None
+        self._user = ConfigurationManager().get(SettingKeys.WB_USERNAME, section=SettingSection.WB)
+        self._ssh.connect(self._hostname, username=self._user, password=_pw, use_rsa_key=self._settings.use_rsa_key)
 
     def list_files(self) -> [FileList, None]:
         if not self._ssh.connected:
@@ -97,21 +123,32 @@ class Server(BaseLog):
         return self._ssh.connected
 
     def download_with_scp(self, remote_path: PurePosixPath, local_path: Path) -> bool:
+        if self._settings.use_system_scp:
+            if self._ssh.used_password_to_connect:
+                self.warn_once("will fallback to python SCP to download file, was connected with password")
+            else:
+                return self._download_with_system_scp(remote_path, local_path)
         _scp_client = self._ssh.scp
         if not _scp_client:
             return False
         _scp_client.get(str(remote_path), str(local_path), recursive=True)
 
+    def _download_with_system_scp(self, remote_path: PurePosixPath, local_path: Path) -> bool:
+        from run import local_command
+        _cmd = f"scp -r {self._user}@{self._hostname}:\"{remote_path}\" {local_path}"
+        return local_command(_cmd, hide_output=False)
+
 
 class ServerHandler(BaseLog):
-    def __init__(self):
+    def __init__(self, settings: ConnectionSettings):
         BaseLog.__init__(self, use_global_settings=True)
         self.set_log_prefix("ServerHandler")
+        self._settings: ConnectionSettings = settings
         self._servers: List[Server] = []
         self._file_list: FileList = FileList()
 
     def add(self, hostname):
-        self._servers.append(Server(hostname))
+        self._servers.append(Server(hostname, settings=self._settings))
 
     def print_file_list(self):
         if self._file_list.empty():
