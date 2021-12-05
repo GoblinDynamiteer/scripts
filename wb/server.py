@@ -1,6 +1,7 @@
 from pathlib import PurePosixPath, Path
-from typing import Optional, List, Union, Tuple
+from typing import Optional, List, Union
 from dataclasses import dataclass
+import time
 
 from paramiko import SSHClient, AutoAddPolicy
 from scp import SCPClient
@@ -9,6 +10,7 @@ from base_log import BaseLog
 from config import ConfigurationManager, SettingKeys, SettingSection
 from wb.helper_methods import gen_find_cmd
 from wb.list import FileList
+from util import bytes_to_human_readable
 
 
 @dataclass
@@ -16,6 +18,12 @@ class ConnectionSettings:
     use_rsa_key: bool = True
     use_password: bool = False
     use_system_scp: bool = True
+
+
+def scp_progress_callback(filename, size, sent):
+    _size = bytes_to_human_readable(size)
+    _dl = bytes_to_human_readable(sent)
+    print(f"\r{filename}: {_dl} / {_size}", end="")
 
 
 class Server(BaseLog):
@@ -28,15 +36,11 @@ class Server(BaseLog):
             self._used_password: Optional[bool] = None
             self._scp = None
 
-        @staticmethod
-        def _scp_progress_callback(filename, size, sent):
-            print(filename, size, sent)
-
         def _init_scp(self) -> bool:
             if not self._connected:
                 self.error("need to be connected to init SCP")
                 return False
-            self._scp = SCPClient(self._ssh_client.get_transport(), progress=self._scp_progress_callback)
+            self._scp = SCPClient(self._ssh_client.get_transport(), progress=scp_progress_callback)
             self.log("SCP initialized")
             return True
 
@@ -131,7 +135,10 @@ class Server(BaseLog):
         _scp_client = self._ssh.scp
         if not _scp_client:
             return False
+        self.log_fs(f"downloading i[{remote_path.name}]")
         _scp_client.get(str(remote_path), str(local_path), recursive=True)
+        print()
+        return True
 
     def _download_with_system_scp(self, remote_path: PurePosixPath, local_path: Path) -> bool:
         from run import local_command
