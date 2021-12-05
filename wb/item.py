@@ -179,6 +179,8 @@ class FileListItem(BaseLog):
             if self.parent_is_season_dir:
                 _name = self.path.stem
         _dl_str = f"DL:{'Y' if self._downloaded else 'N'}"
+        _ix_fcs_c = "i"
         if self._downloaded:
+            _ix_fcs_c = "dg"
             _name = cstr(_name, Color.DarkGrey)
-        pfcs(f"i<[{self.index:04d}]> [{_type_str}] [{_dl_str}] {_name}", format_chars=("<", ">"))
+        pfcs(f"{_ix_fcs_c}<[{self.index:04d}]> [{_type_str}] [{_dl_str}] {_name}", format_chars=("<", ">"))
