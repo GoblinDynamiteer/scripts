@@ -10,7 +10,7 @@ from pathlib import Path
 
 from config import ConfigurationManager as cfg
 from util_tv import parse_season_episode, parse_season
-from printout import pfcs, cstr, print_line, Color
+from printout import pfcs, cstr, print_line, Color, fcs
 from util import date_str_to_timestamp, now_timestamp
 from tvmaze import TvMazeData
 from util_movie import valid_letters as mov_letters, get_movie_nfo_imdb_id
@@ -45,12 +45,14 @@ class ListerItemTVMissingShowEpisode:
         self.name = f"{show_name.replace(' ', '.')}.{se_str}"
         self.row_len = len(self.name)
 
-    def show_list(self):
-        pfcs(f"  o[<< {self.name} >> MISSING]")
+    def show_list(self, one_line: bool = False):
+        _missing_str = fcs(f"  o[{self.name} >> MISSING <<]")
+        if not one_line:
+            _missing_str += "\n     "
         id_str = "id: " + cstr(f"{self.data.get('id', 0)}", Color.LightBlue)
         aired_str = "aired: " + cstr(self.data.get("airdate"), Color.LightBlue)
         name_str = "\"" + cstr(self.data.get("name"), Color.LightBlue) + "\""
-        print(f"      {name_str} {id_str} {aired_str}")
+        print(f"{_missing_str} {name_str} {id_str} {aired_str}")
 
 
 class ListerItemTVShowEpisode:
@@ -63,7 +65,7 @@ class ListerItemTVShowEpisode:
         self.subs = self.determine_subs()
         self.row_len = len(self.filename)
 
-    def show_list(self):
+    def show_list(self, one_line: bool = False):
         se_str = f"S{self.season:02d}E{self.episode:02d}"
         subs_str = "subs: "
         for sub in SubtitleLang:
@@ -74,10 +76,13 @@ class ListerItemTVShowEpisode:
                 continue
             subs_str += cstr(sub.value + " ",
                              Color.LightGreen if has else Color.DarkGrey)
-        pfcs(
-            f"  i[{self.filename: <{self.row_len}}]\n      b[{se_str}] {subs_str}")
+        _output = fcs(f"  i[{self.filename: <{self.row_len}}]")
+        if not one_line:
+            _output += "\n     "
+        _output += fcs(f" b[{se_str}] {subs_str}")
+        print(_output, end=" " if one_line and self.extras else "\n")
         if self.extras:
-            self.print_extras()
+            self.print_extras(only_airdate=one_line)
 
     def determine_subs(self):
         path_en_srt = self.path.with_suffix(".en.srt")
@@ -92,7 +97,7 @@ class ListerItemTVShowEpisode:
             subs.append(SubtitleLang.Unknown)
         return subs
 
-    def print_extras(self):
+    def print_extras(self, only_airdate: bool = False):
         from db_tv import EpisodeDatabaseSingleton, ShowDatabaseSingleton
         maze_id = EpisodeDatabaseSingleton().get_id(self.filename)
         show_maze_id = ShowDatabaseSingleton().get_id(self.show_name)
@@ -101,9 +106,12 @@ class ListerItemTVShowEpisode:
             if entry.get("season", 0) == self.season and entry.get("number", 0) == self.episode:
                 ep_maze_data = entry
                 break
+        aired_str = "aired: " + cstr(ep_maze_data.get("airdate"), Color.LightBlue)
+        if only_airdate:
+            print(aired_str)
+            return
         id_str = "id: " + cstr(f"{maze_id}",
                                Color.LightBlue) if maze_id is not None else ""
-        aired_str = "aired: " + cstr(ep_maze_data.get("airdate"), Color.LightBlue)
         name_str = "\"" + cstr(ep_maze_data.get("name"), Color.LightBlue) + "\""
         print(f"      {name_str} {id_str} {aired_str}")
 
@@ -151,11 +159,11 @@ class ListerItemTVShowSeason:
             ep.row_len = max_len
         return ep_list
 
-    def show_list(self):
+    def show_list(self, one_line: bool = False):
         print(f" {self.path.name}")
         for ep in sorted(self.episode_list,
                          key=operator.attrgetter("episode")):
-            ep.show_list()
+            ep.show_list(one_line=one_line)
 
 
 class ListerItemTVShow:
@@ -199,9 +207,9 @@ class ListerItemTVShow:
                 matches.append(sub_path)
         return matches
 
-    def show_list(self):
+    def show_list(self, one_line: bool = False):
         for season in sorted(self.season_lists, key=operator.attrgetter("season_num")):
-            season.show_list()
+            season.show_list(one_line=one_line)
 
 
 class ListerItemMovie:
@@ -299,7 +307,7 @@ def determine_type(arguments: list):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Multipurpouse lister")
+    parser = argparse.ArgumentParser(description="Multi-purpose lister")
     parser.add_argument("keywords",
                         metavar="N",
                         type=str,
@@ -309,6 +317,10 @@ def main():
                         action="store_true",
                         help="show extra info",
                         dest="show_extras")
+    parser.add_argument("--oneline",
+                        "-o",
+                        action="store_true",
+                        dest="one_line")
     args = parser.parse_args()
 
     args_type = determine_type(args.keywords)
@@ -317,7 +329,7 @@ def main():
     if args_type in [ListType.TVShow, ListType.TVShowSeason, ListType.TVSHowEpisode]:
         lister_show = ListerItemTVShow(
             args.keywords[1:], args_type, args.show_extras)
-        lister_show.show_list()
+        lister_show.show_list(one_line=args.one_line)
     elif args_type == ListType.Movie:
         lister_mov = ListerItemMovieDir(args.keywords[1:], args.show_extras)
         lister_mov.show_list()
