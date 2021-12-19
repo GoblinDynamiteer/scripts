@@ -104,7 +104,7 @@ class MovieDatabase(JSONDatabase):
         if _path is None:
             print(cstr("could not retrieve path to \"film\"", Color.Error))
             return
-        _path = _path / "latest.txt"
+        _path = _path / "removed.txt"
         last_removed = self.last_removed(num=1000)
         last_removed_text = [_to_text(m, last_removed[m], use_removed_date=True)
                              for m in last_removed]
