@@ -56,6 +56,9 @@ class Entry:
     def __str__(self):
         return f"Entry: {self._data}"
 
+    def __eq__(self, other: "Entry"):
+        return self._data == other._data
+
 
 class DataBase(ABC):
     def __init__(self):
@@ -119,6 +122,10 @@ class DataBase(ABC):
             self._add_key(key)
         if not self.primary_key:
             self._keys[0].primary = True
+
+    def get_keys(self) -> List[Key]:
+        for key in self._keys:
+            yield key
 
     def update(self, entry: str, **data) -> bool:
         _entry = self.get_entry(entry)

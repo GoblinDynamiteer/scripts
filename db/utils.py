@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 
 from config import ConfigurationManager, SettingKeys
 from db.db_media import MediaType, MediaDatabase
+from printout import pfcs
 
 
 def db_json_convert_old_format(source: Path, destination: Path, primary_key_name: str) -> None:
@@ -31,8 +32,21 @@ def compare_mongo_json_media_databases(media_type: Optional[MediaType] = None):
         _types = [media_type]
     for media_type in _types:
         print(f"running comparison on type: {media_type.name}")
-        _db_json = MediaDatabase.get(media_type, use_json_db=True)
-        _db_mongo = MediaDatabase.get(media_type, use_json_db=False)
+        _db_json = MediaDatabase.get_database(media_type, use_json_db=True)
+        _db_mongo = MediaDatabase.get_database(media_type, use_json_db=False)
+        if any([db is None for db in (_db_json, _db_mongo)]):
+            print("could not get both json and mongo databases")
+            return
+        _keys = _db_json.get_keys()
+        for item in _db_json:
+            if item not in _db_mongo:
+                pfcs(f"o[{item}] -> not in mongo db!")
+            else:
+                _entry_j = _db_json._db.get_entry(item)
+                _entry_m = _db_mongo._db.get_entry(item)
+                if _entry_m == _entry_j:
+                    continue
+                pfcs(f"entries diff:\n  i[{_entry_j}] \nvs\n   o[{_entry_m}]")
 
 
 def get_args():

@@ -8,7 +8,7 @@ from printout import Color, cstr
 import util
 from db.db_json import JSONDatabase
 from db.db_mongo import MongoDatabase, MongoDbSettings
-from db.database import DatabaseType, DataBase
+from db.database import DatabaseType, DataBase, Key
 from base_log import BaseLog
 
 
@@ -48,10 +48,16 @@ class MediaDatabase(BaseLog):
         self._init()
 
     @staticmethod
-    def get(media_type: MediaType, use_json_db: bool = False) -> Optional["MediaDatabase"]:
+    def get_database(media_type: MediaType, use_json_db: bool = False) -> Optional["MediaDatabase"]:
         if media_type == MediaType.Movie:
             from db.db_mov import MovieDatabase
             return MovieDatabase(use_json_db=use_json_db)
+        if media_type == MediaType.Episode:
+            from db.db_tv import EpisodeDatabase
+            return EpisodeDatabase(use_json_db=use_json_db)
+        if media_type == MediaType.Show:
+            from db.db_tv import ShowDatabase
+            return ShowDatabase(use_json_db=use_json_db)
         return None
 
     def _init(self):
@@ -75,6 +81,13 @@ class MediaDatabase(BaseLog):
             self.log("init Mongo")
         else:
             raise ValueError(f"invalid db type: {self._settings.type}")
+
+    def __iter__(self):
+        for item in self._db:
+            yield item
+
+    def get_keys(self) -> List[Key]:
+        return self._db.get_keys()
 
     def _get_last_of(self, key: str, limit: int) -> List[Dict]:
         return self._db.find(sort_by_key=key, reversed_sort=True, limit=limit)
