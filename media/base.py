@@ -15,6 +15,9 @@ class MediaItem(ABC):
     def exists_on_disk(self) -> bool:
         return self._path.exists()
 
+    def __repr__(self):
+        return self.filename
+
     @property
     @abstractmethod
     def name(self) -> Type:
