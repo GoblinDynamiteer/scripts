@@ -21,11 +21,14 @@ class Key:
     name: str
     type: KeyType = KeyType.String
     primary: bool = False
+    optional: bool = True
 
     def __str__(self):
         return self.name
 
     def matches_type(self, obj: Any) -> bool:
+        if obj is None and self.optional:
+            return not self.primary
         if isinstance(obj, str) and self.type == KeyType.String:
             return True
         if isinstance(obj, int) and self.type == KeyType.Integer:
@@ -140,7 +143,7 @@ class DataBase(ABC):
             if _key is None:
                 raise ValueError(f"cannot insert entry, {column} is not a valid key")
             if not _key.matches_type(value):
-                raise TypeError(f"value {value} is not of type {_key.type.name}")
+                raise TypeError(f"value {value} is not of type {_key.type.name} for key {_key}")
             if self.primary_key.name == column:
                 _entry = self.get_entry(value)
                 if _entry is not None:

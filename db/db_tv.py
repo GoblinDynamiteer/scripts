@@ -28,7 +28,7 @@ class ShowDatabase(MediaDatabase):
     def __init__(self, file_path: Optional[Path] = None, use_json_db: bool = False):
         keys = [
             Key("folder", primary=True),
-            Key("title"),
+            Key("title", optional=False),
             Key("year", type=KeyType.Integer),
             Key("imdb"),
             Key("tvmaze", type=KeyType.Integer),
@@ -70,10 +70,10 @@ class EpisodeDatabase(MediaDatabase):
     def __init__(self, file_path: Optional[Path] = None, use_json_db: bool = False):
         keys = [
             Key("filename", primary=True),
-            Key("season_number", type=KeyType.Integer),
-            Key("episode_number", type=KeyType.Integer),
+            Key("season_number", type=KeyType.Integer, optional=False),
+            Key("episode_number", type=KeyType.Integer, optional=False),
             Key("released", type=KeyType.Integer),
-            Key("tvshow"),
+            Key("tvshow", optional=False),
             Key("imdb"),
             Key("tvmaze", type=KeyType.Integer),
             Key(self.SCANNED_KEY_STR, type=KeyType.Integer),

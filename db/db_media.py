@@ -2,6 +2,7 @@
 from typing import Optional, List, Callable, Dict
 from pathlib import Path
 from dataclasses import dataclass
+from enum import Enum, auto
 
 from printout import Color, cstr
 import util
@@ -19,6 +20,21 @@ class MediaDbSettings:
     database_name: Optional[str] = None
 
 
+class MediaType(Enum):
+    Movie = auto()
+    Episode = auto()
+    Show = auto()
+
+    @classmethod
+    def from_string(cls, string: str) -> Optional["MediaType"]:
+        if not isinstance(string, str):
+            return None
+        for mt in cls:
+            if mt.name.lower() == string.lower():
+                return mt
+        return None
+
+
 class MediaDatabase(BaseLog):
     SCANNED_KEY_STR = "scanned"
     REMOVED_DATE_KEY_STR = "removed_date"
@@ -30,6 +46,13 @@ class MediaDatabase(BaseLog):
         self._settings: MediaDbSettings = settings
         self.set_log_prefix("MediaDb")
         self._init()
+
+    @staticmethod
+    def get(media_type: MediaType, use_json_db: bool = False) -> Optional["MediaDatabase"]:
+        if media_type == MediaType.Movie:
+            from db.db_mov import MovieDatabase
+            return MovieDatabase(use_json_db=use_json_db)
+        return None
 
     def _init(self):
         if self._settings.type == DatabaseType.JSON:

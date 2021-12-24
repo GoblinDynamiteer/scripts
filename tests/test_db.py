@@ -9,11 +9,38 @@ from db.db_json import JSONDatabase
 from db.db_mov import MovieDatabase
 from db.db_tv import EpisodeDatabase, ShowDatabase
 from db.db_mongo import MongoDatabase, MongoDbSettings
+from db.db_media import MediaType
 
 import mongomock
 import pymongo
 
 import pytest
+
+
+class TestEnums:
+    def test_media_type_from_string_movie(self):
+        assert MediaType.from_string("movie") == MediaType.Movie
+        assert MediaType.from_string("Movie") == MediaType.Movie
+        assert MediaType.from_string("MOVIE") == MediaType.Movie
+        assert MediaType.from_string("mOvIe") == MediaType.Movie
+
+    def test_media_type_from_string_episode(self):
+        assert MediaType.from_string("episode") == MediaType.Episode
+        assert MediaType.from_string("Episode") == MediaType.Episode
+        assert MediaType.from_string("EPISODE") == MediaType.Episode
+        assert MediaType.from_string("ePiSoDe") == MediaType.Episode
+
+    def test_media_type_from_string_show(self):
+        assert MediaType.from_string("show") == MediaType.Show
+        assert MediaType.from_string("Show") == MediaType.Show
+        assert MediaType.from_string("SHOW") == MediaType.Show
+        assert MediaType.from_string("sHoW") == MediaType.Show
+
+    def test_media_type_from_string_invalid(self):
+        assert MediaType.from_string(1) is None
+        assert MediaType.from_string(1.2) is None
+        assert MediaType.from_string({"hello": 1}) is None
+        assert MediaType.from_string("NOT_VALID") is None
 
 
 class TestKey:
@@ -61,6 +88,36 @@ class TestKey:
         _key = Key("SomeKeyName", type=KeyType.Boolean)
         assert _key.matches_type("some_string") is False
         assert _key.matches_type(123.123) is False
+
+    def test_matches_type_optional(self):
+        _key = Key("SomeKeyName", type=KeyType.Integer)
+        assert _key.matches_type(None) is True
+        _key = Key("SomeKeyName")
+        assert _key.matches_type(None) is True
+        _key = Key("SomeKeyName", type=KeyType.Boolean)
+        assert _key.matches_type(None) is True
+        _key = Key("SomeKeyName", type=KeyType.List)
+        assert _key.matches_type(None) is True
+
+    def test_matches_type_not_optional(self):
+        _key = Key("SomeKeyName", type=KeyType.Integer, optional=False)
+        assert _key.matches_type(None) is False
+        _key = Key("SomeKeyName", optional=False)
+        assert _key.matches_type(None) is False
+        _key = Key("SomeKeyName", type=KeyType.Boolean, optional=False)
+        assert _key.matches_type(None) is False
+        _key = Key("SomeKeyName", type=KeyType.List, optional=False)
+        assert _key.matches_type(None) is False
+
+    def test_matches_type_optional_primary(self):
+        _key = Key("SomeKeyName", type=KeyType.Integer, primary=True)
+        assert _key.matches_type(None) is False
+        _key = Key("SomeKeyName", primary=True)
+        assert _key.matches_type(None) is False
+        _key = Key("SomeKeyName", type=KeyType.Boolean, primary=True)
+        assert _key.matches_type(None) is False
+        _key = Key("SomeKeyName", type=KeyType.List, primary=True)
+        assert _key.matches_type(None) is False
 
 
 class TestDatBaseBaseJson:

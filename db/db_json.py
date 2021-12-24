@@ -66,7 +66,7 @@ class JSONDatabase(DataBase):
         self._need_save = True
         return True
 
-    def entry_primary_values(self) -> Tuple[Any]:
+    def entry_primary_values(self) -> Tuple[Optional[Any]]:
         return tuple([e.get(self.primary_key.name) for e in self._entries])
 
     def find(self,
