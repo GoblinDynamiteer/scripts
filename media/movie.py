@@ -4,6 +4,7 @@ from typing import Optional
 from media.base import MediaItem
 from media.enums import Type, Language
 from media.util import Util
+from media.regex import matches_movie_regex
 from config import ConfigurationManager, SettingKeys
 
 
@@ -32,6 +33,10 @@ class Movie(MediaItem):
 
     def is_compressed(self) -> bool:
         return False
+
+    def is_valid(self) -> bool:
+        if matches_movie_regex(self.name):
+            return True
 
     @property
     def letter(self):

@@ -18,6 +18,10 @@ class MediaItem(ABC):
     def __repr__(self):
         return self.filename
 
+    @abstractmethod
+    def is_valid(self):
+        raise NotImplementedError
+
     @property
     @abstractmethod
     def name(self) -> Type:
