@@ -39,7 +39,7 @@ class ShowDatabase(MediaDatabase):
 
         if use_json_db:
             if file_path is None:
-                _path = ConfigurationManager().path(SettingKeys.PATH_EPISODE_DATABASE,
+                _path = ConfigurationManager().path(SettingKeys.PATH_TVSHOW_DATABASE,
                                                     assert_path_exists=True,
                                                     convert_to_path=True)
             else:
