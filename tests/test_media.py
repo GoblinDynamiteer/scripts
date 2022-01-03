@@ -176,3 +176,10 @@ class TestMovie:
         assert not mov.exists_on_disk()
         _file.touch()
         assert mov.exists_on_disk()
+
+    def test_valid(self, tmp_path, mocker):
+        _file = tmp_path / "Movie.2015.1080p.WEB-DL.DD5.1.H264-Grp.mkv"
+        _path_mock = mocker.patch.object(config.ConfigurationManager, "path")
+        _path_mock.return_value = _file.parent
+        mov = Movie(_file)
+        assert mov.is_valid() is True
