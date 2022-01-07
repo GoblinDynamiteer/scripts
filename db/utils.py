@@ -25,7 +25,7 @@ def db_json_convert_old_format(source: Path, destination: Path, primary_key_name
     print(f"converted {source} -> {destination}")
 
 
-def compare_mongo_json_media_databases(media_type: Optional[MediaType] = None):
+def compare_mongo_json_media_databases(media_type: Optional[MediaType] = None, sync: bool = False):
     if media_type is None:
         _types = [mt for mt in MediaType]
     else:
@@ -41,18 +41,26 @@ def compare_mongo_json_media_databases(media_type: Optional[MediaType] = None):
         for item in _db_json:
             if item not in _db_mongo:
                 pfcs(f"o[{item}] -> not in mongo db!")
+                if sync:
+                    pfcs(f"inserting into mongo: i[{item}]")
+                    _entry_j = _db_json._db.get_entry(item)
+                    _db_mongo._db.insert_entry(_entry_j)
             else:
                 _entry_j = _db_json._db.get_entry(item)
                 _entry_m = _db_mongo._db.get_entry(item)
                 if _entry_m == _entry_j:
                     continue
                 pfcs(f"entries diff:\n  i[{_entry_j}] \nvs\n   o[{_entry_m}]")
+                if sync:
+                    pfcs(f"updating mongo: i[{item}]")
+                    _entry_j = _db_json._db.get_entry(item)
+                    _db_mongo._db.update_entry(_entry_j)
 
 
 def get_args():
     parser = ArgumentParser("Db Utils")
     parser.add_argument("command",
-                        choices=("convert", "compare"))
+                        choices=("convert", "compare", "sync"))
     parser.add_argument("--type",
                         "-t",
                         dest="media_type",
@@ -80,7 +88,9 @@ def main():
             _destination = _source.with_name(f"CONVERTED_{_source.name}")
             db_json_convert_old_format(_source, _destination, primary_key_name=primary_key_name)
     elif args.command == "compare":
-        compare_mongo_json_media_databases(MediaType.from_string(args.media_type))
+        compare_mongo_json_media_databases(MediaType.from_string(args.media_type), sync=False)
+    elif args.command == "sync":
+        compare_mongo_json_media_databases(MediaType.from_string(args.media_type), sync=True)
 
 
 if __name__ == "__main__":
