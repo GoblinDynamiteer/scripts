@@ -1,11 +1,44 @@
 from pathlib import Path
 from typing import Optional
+from dataclasses import dataclass
+
 
 from media.base import MediaItem
-from media.enums import Type, Language
+from media.enums import Type, Language, MOVIE_EXTRAS
 from media.util import Util
-from media.regex import matches_movie_regex
+from media.regex import matches_movie_regex, parse_year, parse_quality
 from config import ConfigurationManager, SettingKeys
+
+
+@dataclass
+class MovieData:
+    name: Optional[str] = None
+    year: Optional[int] = None
+    title: Optional[str] = None
+
+    def __post_init__(self):
+        if self.name is None:
+            return
+        _y = parse_year(self.name)
+        if _y is None:
+            _q = parse_quality(self.name)
+            if _q is None:
+                return
+            self._split_by(_q)
+        else:
+            self.year = _y
+            self._split_by(str(_y))
+
+    def _split_by(self, string: str):
+        _title = self.name.split(string)[0]
+        self.title = self._scrub_title(_title.replace(".", " ").strip())
+
+    def _scrub_title(self, title: str) -> str:
+        _words = title.split()
+        _extras = [ex.lower() for ex in MOVIE_EXTRAS]
+        while _words[-1].lower() in _extras:
+            del _words[-1]
+        return " ".join(_words)
 
 
 class Movie(MediaItem):
@@ -19,6 +52,7 @@ class Movie(MediaItem):
         self._letter: Optional[str] = None
         self._correct_loc: Optional[Path] = None
         self._analyze_path()
+        self._data: MovieData = MovieData(name=self.name)
 
     @property
     def type(self) -> Type:
@@ -37,6 +71,7 @@ class Movie(MediaItem):
     def is_valid(self) -> bool:
         if matches_movie_regex(self.name):
             return True
+        return False
 
     @property
     def letter(self):
@@ -75,3 +110,14 @@ class Movie(MediaItem):
 
     def _determine_correct_location(self):
         self._correct_loc = self._mov_dir / self.letter / self.name
+
+
+def main():
+    from media.util import MediaPaths
+    for mov in MediaPaths().movie_dirs():
+        _data = MovieData(mov.name)
+        print(f"{mov.name} : {_data.title} / {_data.year}")
+
+
+if __name__ == "__main__":
+    main()
