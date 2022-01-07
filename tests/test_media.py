@@ -24,16 +24,19 @@ class TestUtilMediaPaths:
 
     def test_movie_letter_dirs(self, tmp_path, mocker):
         _mov_path = tmp_path / "mov"
+        _mov_path.mkdir()
+        assert _mov_path.is_dir() is True
         _path_mock = mocker.patch.object(config.ConfigurationManager, "path")
         _path_mock.return_value = _mov_path
-        _mov_path.mkdir()
         _paths: Dict[str, Path] = {}
         for let in {'#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
                     'T', 'U', 'VW', 'X', 'Y', 'Z'}:
             _paths[let] = _mov_path / let
             _paths[let].mkdir()
+            assert _paths[let].is_dir() is True
         _invalid_path = _mov_path / ".invalid"
         _invalid_path.mkdir()
+        assert _invalid_path.is_dir() is True
         for path in MediaPaths().movie_letter_dirs():
             assert path in _paths.values()
 
