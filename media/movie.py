@@ -113,10 +113,13 @@ class Movie(MediaItem):
 
 
 def main():
+    # For testing
     from media.util import MediaPaths
+    from printout import print_line
     for mov in MediaPaths().movie_dirs():
         _data = MovieData(mov.name)
-        print(f"{mov.name} : {_data.title} / {_data.year}")
+        print(f"{mov.name}\n{_data.title} / {_data.year}")
+        print_line()
 
 
 if __name__ == "__main__":
