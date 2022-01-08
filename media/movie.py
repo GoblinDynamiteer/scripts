@@ -60,7 +60,13 @@ class Movie(MediaItem):
 
     @property
     def name(self) -> str:
+        """Retrieves \"name\" of the Movie, which determined from the directory name or extension-less filename."""
         return self._name
+
+    @property
+    def data(self) -> MovieData:
+        """Retrieves data, which contains \"guessed\" Title and Year of movie"""
+        return self._data
 
     def has_external_subtitle(self, language: Language) -> bool:
         return False
