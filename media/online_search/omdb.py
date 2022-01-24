@@ -6,7 +6,6 @@ import urllib.parse
 import urllib.request
 from argparse import ArgumentParser
 
-import util
 from base_log import BaseLog
 from config import ConfigurationManager, SettingKeys
 from media.movie import MovieData

@@ -10,7 +10,7 @@ import util
 import util_movie
 import util_tv
 from diskstation import is_ds_special_dir
-from omdb import OMDb
+from media.online_search.omdb import OMDb
 from printout import pfcs
 
 from db.db_mov import MovieDatabaseSingleton

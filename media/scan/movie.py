@@ -1,11 +1,9 @@
-from typing import Optional
-
 from media.scan.scanner import MediaScanner
 from db.db_mov import MovieDatabase
 from media.util import MediaPaths
 from media.movie import Movie
 
-import omdb
+from media.online_search import omdb
 
 
 class MovieScanner(MediaScanner):
@@ -28,7 +26,7 @@ class MovieScanner(MediaScanner):
         self.log_fs(f"processing new: i[{movie}]...")
         # TODO: check if imdb-id is present
         result = self._omdb.movie_search(movie.data)
-        if not result:
+        if result is None:
             return
         result.print()  # TODO: process result
 
