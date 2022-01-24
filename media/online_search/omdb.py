@@ -10,45 +10,16 @@ from base_log import BaseLog
 from config import ConfigurationManager, SettingKeys
 from media.movie import MovieData
 from media.imdb_id import IMDBId
+from media.online_search.result import SearchResult
 
 
-class OMDbMovieSearchResult:
-    def __init__(self, data):
-        self._raw = data
-
-    def print(self):
-        if not self._raw:
-            print(None)
-        _str = json.dumps(self._raw, indent=4)
-        print(_str)
-
-    def __repr__(self):
-        return json.dumps(self._raw, indent=4)
-
-    @property
-    def valid(self):
-        return "Title" in self._raw
-
-    @property
-    def year(self):
-        return self._raw.get("Year", None)
-
-    @property
-    def title(self):
-        return self._raw.get("Title", None)
-
-    @property
-    def genre(self):
-        return self._raw.get("Genre", None)
-
-    @property
-    def id(self):
-        return self._raw.get("imdbID", None)
+class OMDbMovieSearchResult(SearchResult):
+    pass
 
 
 class OMDb(BaseLog):
     URL = "http://www.omdbapi.com"
-    _results = {}
+    _results: Dict[str, OMDbMovieSearchResult] = {}
 
     def __init__(self, verbose=False):
         BaseLog.__init__(self, verbose=verbose)
