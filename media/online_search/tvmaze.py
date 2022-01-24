@@ -1,111 +1,117 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 
-''' TVMaze '''
-
+from typing import Dict, Optional, Union
+from enum import Enum, auto
 import json
 import urllib.parse
 import urllib.request
 
-import util
+from argparse import ArgumentParser
 
-from singleton import Singleton
-
-URL = "http://api.tvmaze.com"
-
-# TODO: refactor / move all methods into TvMazeData class
-
-
-def _tvmaze_search(url):
-    json_response = {}
-    try:
-        response = urllib.request.urlopen(
-            url, timeout=4).read().decode("utf-8")
-        json_response = json.loads(response)
-    except:
-        pass
-    return json_response
+from base_log import BaseLog
+from media.online_search.result import SearchResult
+from media.show import ShowData
+from media.episode import EpisodeData
+from media.imdb_id import IMDBId
 
 
-def id_from_show_name(show_name: str):
-    'Try to determine tvmaze id from show name'
-    result = show_search(show_name)
-    return result.get('id', None)
+class TvMazeSearchResult(SearchResult):
+    @property
+    def valid(self):
+        return "id" in self._raw
+
+    @property
+    def year(self):
+        return self._raw.get("premiered", None)
+
+    @property
+    def title(self):
+        return self._raw.get("name", None)
+
+    @property
+    def genre(self):
+        return self._raw.get("genre", None)
+
+    @property
+    def id(self):
+        return self._raw.get("id", None)
 
 
-def show_search(query_string: str):
-    ''' Search a TV Show, query can be show name or IMDb-id'''
-    if not isinstance(query_string, str):
-        raise TypeError('query has to be a string!')
-    if not query_string:
-        raise ValueError('query cannot be empty!')
-    url_args = {}
-    url = ""
-    if util.is_imdbid(query_string):
-        url_args['imdb'] = util.parse_imdbid(query_string)
-        url = f'{URL}/lookup/shows?'
-    else:
-        url_args['q'] = query_string
-        url = f'{URL}/singlesearch/shows?'
-    url = f'{url}{urllib.parse.urlencode(url_args)}'
-    return _tvmaze_search(url)
+class SearchType(Enum):
+    Show = auto()
+    Episode = auto()
 
 
-def episode_has_aired(show_name: str, season: int, episode: int, show_maze_id: int = None) -> bool:
-    result = episode_search(show_name, season, episode, show_maze_id)
-    if 'airdate' in result:
-        timestamp = util.date_str_to_timestamp(result['airdate'], r'%Y-%m-%d')
-        return timestamp < util.now_timestamp()
-    return False
+class TvMaze(BaseLog):
+    URL = "http://api.tvmaze.com"
+    _results: Dict[str, TvMazeSearchResult] = {}
 
+    def __init__(self, verbose=False):
+        BaseLog.__init__(self, verbose=verbose)
+        self.set_log_prefix("TVMaze")
+        self.log("init")
 
-def episode_search(show_name: str, season: int, episode: int, show_maze_id: int = None) -> dict:
-    ''' Retrieve episode data '''
-    url_args = {'season': season, 'number': episode}
-    if not show_maze_id:
-        show_maze_id = id_from_show_name(show_name)
-        if not show_maze_id:
+    def _search(self, url):
+        self.log_fs(f"searching... url: i[{url}]")
+        _res = urllib.request.urlopen(url, timeout=4).read().decode("utf-8")
+        return json.loads(_res)
+
+    def _url_from_imdb(self, imdb_id: IMDBId, search_type: SearchType) -> Optional[str]:
+        if not imdb_id.valid():
+            self.error("IMDbId invalid, cannot build search request")
             return None
-    url = f'{URL}/shows/{show_maze_id}/episodebynumber?{urllib.parse.urlencode(url_args)}'
-    return _tvmaze_search(url)
+        _args = {"imdb": str(imdb_id)}
+        if search_type == SearchType.Show:
+            return f"{self.URL}/lookup/shows?{urllib.parse.urlencode(_args)}"
+        elif search_type == SearchType.Episode:
+            raise NotImplementedError("not yet...")
+        raise ValueError(f"invalid search type: {search_type}")
 
+    def _url_from_show_data(self, data: ShowData) -> Optional[str]:
+        if not data.title:
+            self.error("title is required, cannot build search request")
+            return None
+        _args = {"q": data.title}
+        return f"{self.URL}/singlesearch/shows?{urllib.parse.urlencode(_args)}"
 
-class TvMazeData(metaclass=Singleton):
-    "TVMaze data holder, only executes a new search if needed"
-    DATA = {}
+    def show_search(self, data: Union[ShowData, IMDBId]):
+        if not data:
+            self.error("search requires either ShowData or IMDBId to be set")
+            return None
+        if isinstance(data, IMDBId):
+            url = self._url_from_imdb(data, search_type=SearchType.Show)
+        elif isinstance(data, ShowData):
+            url = self._url_from_show_data(data)
+        else:
+            self.error(f"invalid search data type: {type(data)}")
+            return None
+        _existing = self._results.get(url, None)
+        if _existing is not None:
+            return _existing
+        _ret = TvMazeSearchResult(self._search(url))
+        self._results[url] = _ret
+        return _ret
 
-    def get_json_all_episodes(self, show_id: int) -> dict:
-        url = self.url(show_id)
-        if url not in self.DATA:
-            self.DATA[url] = _tvmaze_search(url)
-        return self.DATA[url]
-
-    def get_json_all_special_episodes(self, show_id: int) -> dict:
-        url = self.url(show_id) + "?specials=1"
-        if url not in self.DATA:
-            special_list = [ep for ep in _tvmaze_search(
-                url) if ep["number"] is None]
-            self.DATA[url] = special_list
-        return self.DATA[url]
-
-    def url(self, show_id: int):
-        return f"http://api.tvmaze.com/shows/{show_id}/episodes"
+    def episode_search(self, data: Union[EpisodeData, IMDBId]):
+        raise NotImplementedError("not yet...")
 
 
 def main():
-    # pylint: disable=import-outside-toplevel
-    import argparse
-    # pylint: enable=import-outside-toplevel
-    parser = argparse.ArgumentParser("tvmaze searcher")
-    parser.add_argument("id", type=int)
-    parser.add_argument("--specials", action="store_true")
+    parser = ArgumentParser()
+    grp = parser.add_mutually_exclusive_group()
+    grp.add_argument("--id", "-i", type=str, default=None)
+    grp.add_argument("--title", "-t", type=str, default=None)
     args = parser.parse_args()
-    tvmaze_data = TvMazeData()
-    if args.specials:
-        data = tvmaze_data.get_json_all_special_episodes(args.id)
+    _tvmaze = TvMaze(verbose=True)
+    if args.title:
+        data = ShowData(title=args.title)
     else:
-        data = tvmaze_data.get_json_all_episodes(args.id)
-    print("data for", tvmaze_data.url(args.id))
-    print(json.dumps(data, indent=4))
+        data = IMDBId(args.id)
+    res: Optional[TvMazeSearchResult] = _tvmaze.show_search(data)
+    if res is None or not res.valid:
+        print("could not get a valid search result!")
+    else:
+        res.print()
 
 
 if __name__ == "__main__":

@@ -1,7 +1,9 @@
 import json
 
+from abc import ABC, abstractmethod
 
-class SearchResult:
+
+class SearchResult(ABC):
     def __init__(self, data):
         self._raw = data
 
@@ -15,21 +17,26 @@ class SearchResult:
         return json.dumps(self._raw, indent=4)
 
     @property
+    @abstractmethod
     def valid(self):
-        return "Title" in self._raw
+        raise NotImplemented()
 
     @property
+    @abstractmethod
     def year(self):
-        return self._raw.get("Year", None)
+        raise NotImplemented()
 
     @property
+    @abstractmethod
     def title(self):
-        return self._raw.get("Title", None)
+        raise NotImplemented()
 
     @property
+    @abstractmethod
     def genre(self):
-        return self._raw.get("Genre", None)
+        raise NotImplemented()
 
     @property
+    @abstractmethod
     def id(self):
-        return self._raw.get("imdbID", None)
+        raise NotImplemented()

@@ -14,7 +14,25 @@ from media.online_search.result import SearchResult
 
 
 class OMDbMovieSearchResult(SearchResult):
-    pass
+    @property
+    def valid(self):
+        return "Title" in self._raw
+
+    @property
+    def year(self):
+        return self._raw.get("Year", None)
+
+    @property
+    def title(self):
+        return self._raw.get("Title", None)
+
+    @property
+    def genre(self):
+        return self._raw.get("Genre", None)
+
+    @property
+    def id(self):
+        return self._raw.get("imdbID", None)
 
 
 class OMDb(BaseLog):
