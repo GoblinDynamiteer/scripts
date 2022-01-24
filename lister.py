@@ -12,7 +12,7 @@ from config import ConfigurationManager as cfg
 from util_tv import parse_season_episode, parse_season
 from printout import pfcs, cstr, print_line, Color, fcs
 from util import date_str_to_timestamp, now_timestamp
-from tvmaze import TvMazeData
+from media.online_search.tvmaze import TvMazeData
 from util_movie import valid_letters as mov_letters, get_movie_nfo_imdb_id
 from media.online_search.omdb import OMDb
 

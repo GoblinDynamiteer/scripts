@@ -5,7 +5,7 @@ from pathlib import Path
 from enum import Enum
 from datetime import datetime
 
-import tvmaze
+from media.online_search import tvmaze
 import util
 import util_movie
 import util_tv

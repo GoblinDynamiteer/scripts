@@ -1,6 +1,6 @@
 import unittest
 
-import tvmaze
+from media.online_search import tvmaze
 
 
 class TestTvMaze(unittest.TestCase):

@@ -5,8 +5,7 @@
 import json
 import argparse
 import sys
-import tvmaze
-
+from media.online_search import tvmaze
 
 PARSER = argparse.ArgumentParser(description='TVMaze search')
 PARSER.add_argument('query', type=str, help='Search query, Show title'
