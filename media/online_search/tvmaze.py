@@ -11,7 +11,6 @@ from argparse import ArgumentParser
 from base_log import BaseLog
 from media.online_search.result import SearchResult
 from media.show import ShowData
-from media.episode import EpisodeData
 from media.imdb_id import IMDBId
 from media.tvmaze_id import TvMazeId
 
@@ -141,8 +140,8 @@ class TvMaze(BaseLog):
         _show_result = self.show_search(show_data)
         if _show_result is None:
             return []
-        if _show_result.id in self._cached_ep_list:
-            return self._cached_ep_list[_show_result.id]
+        if str(_show_result.id) in self._cached_ep_list:
+            return self._cached_ep_list[str(_show_result.id)]
         _ret = []
         _url = f"{self._url_from_show_mazeid(_show_result.id)}/episodes"
         if _url not in self._results:
@@ -159,7 +158,7 @@ class TvMaze(BaseLog):
             _search_result = TvMazeEpisodeSearchResult(_data)
             _ret.append(_search_result)
             self._results[_ep_url] = _search_result
-        self._cached_ep_list[_show_result.id] = _ret
+        self._cached_ep_list[str(_show_result.id)] = _ret
         return _ret
 
     def episode_search(self, show_data: Union[ShowData, IMDBId, TvMazeId], episode_num: int,
