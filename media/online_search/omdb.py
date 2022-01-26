@@ -27,12 +27,20 @@ class OMDbMovieSearchResult(SearchResult):
         return self._raw.get("Title", None)
 
     @property
-    def genre(self):
-        return self._raw.get("Genre", None)
+    def genres(self):
+        _genres = self._raw.get("Genre", None)
+        if _genres is None:
+            return None
+        if isinstance(_genres, str):
+            return _genres.split(", ")
+        return _genres
 
     @property
-    def id(self):
-        return self._raw.get("imdbID", None)
+    def id(self) -> Optional[IMDBId]:
+        _id = self._raw.get("imdbID", None)
+        if _id is None:
+            return None
+        return IMDBId(_id)
 
 
 class OMDb(BaseLog):
@@ -111,7 +119,14 @@ def main():
     if res is None or not res.valid:
         print("could not get a valid search result!")
     else:
+        from printout import print_line
         res.print()
+        print_line()
+        print("valid", res.valid)
+        print("title", res.title)
+        print("year", res.year)
+        print("genres", res.genres)
+        print("id", res.id)
 
 
 if __name__ == "__main__":

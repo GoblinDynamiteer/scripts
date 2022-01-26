@@ -1,5 +1,5 @@
 import json
-
+from typing import Any, Optional, List
 from abc import ABC, abstractmethod
 
 
@@ -18,25 +18,25 @@ class SearchResult(ABC):
 
     @property
     @abstractmethod
-    def valid(self):
+    def valid(self) -> bool:
         raise NotImplemented()
 
     @property
     @abstractmethod
-    def year(self):
+    def year(self) -> Optional[int]:
         raise NotImplemented()
 
     @property
     @abstractmethod
-    def title(self):
+    def title(self) -> Optional[str]:
         raise NotImplemented()
 
     @property
     @abstractmethod
-    def genre(self):
+    def genres(self) -> Optional[List[str]]:
         raise NotImplemented()
 
     @property
     @abstractmethod
-    def id(self):
+    def id(self) -> Any:
         raise NotImplemented()
