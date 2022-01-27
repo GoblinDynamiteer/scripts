@@ -2,17 +2,28 @@ from typing import Optional, Union, List
 import re
 
 from base_log import BaseLog
+from media.enums import Type as MediaType
 
 
 class TvMazeId(BaseLog):
     REGEX = r"\d{1,10}"  # TODO: improve, this matches alot of numbers
 
-    def __init__(self, value: Optional[Union[str, int]] = None):
+    def __init__(self, value: Optional[Union[str, int]] = None, media_type: Optional[MediaType] = None):
         BaseLog.__init__(self, verbose=True)
         self.set_log_prefix("TVMAZE_ID")
         self._ids: List[int] = []
+        if media_type is not None:
+            if media_type == MediaType.Movie:
+                raise ValueError("id cannot be a movie!")
+            elif not isinstance(media_type, MediaType):
+                raise TypeError(f"invalid media_type: {type(media_type)}")
+        self._type = media_type or MediaType.Show
         if value is not None:
             self._parse(value)
+
+    @property
+    def type(self) -> MediaType:
+        return self._type
 
     def _parse(self, value: Union[str, int]) -> None:
         if isinstance(value, str):

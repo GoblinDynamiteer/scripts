@@ -1,6 +1,7 @@
 import pytest
 
 from media.tvmaze_id import TvMazeId
+from media.enums import Type
 
 
 class TestTvMazeIdStringParse:
@@ -41,6 +42,20 @@ class TestTvMazeIdInt:
         assert tvid.valid() is True
 
 
+class TestTvMazeIdType:
+    def test_default(self):
+        tvid = TvMazeId(123)
+        assert tvid.type == Type.Show
+
+    def test_set_show(self):
+        tvid = TvMazeId(123, media_type=Type.Show)
+        assert tvid.type == Type.Show
+
+    def test_set_episode(self):
+        tvid = TvMazeId(123, media_type=Type.Episode)
+        assert tvid.type == Type.Episode
+
+
 class TestTvMazeIdExceptions:
     def test_pass_incorrect_type(self):
         with pytest.raises(TypeError):
@@ -57,3 +72,9 @@ class TestTvMazeIdExceptions:
             TvMazeId(-1)
         with pytest.raises(ValueError):
             TvMazeId(-9999999999)
+
+    def test_invalid_type(self):
+        with pytest.raises(ValueError):
+            TvMazeId(123, media_type=Type.Movie)
+        with pytest.raises(TypeError):
+            TvMazeId(123, media_type="String")
