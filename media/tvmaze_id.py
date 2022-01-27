@@ -62,3 +62,8 @@ class TvMazeId(BaseLog):
         if not self._ids:
             return ""
         return f"{self._ids[0]}"
+
+    def __int__(self):
+        if not self.valid():
+            raise ValueError("invalid id, cannot convert to integer")
+        return self._ids[0]

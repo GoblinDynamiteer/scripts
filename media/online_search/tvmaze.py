@@ -1,24 +1,28 @@
 #!/usr/bin/env python3
 
 from typing import Dict, Optional, Union, List, Any
-from enum import Enum, auto
 import json
 import urllib.parse
 import urllib.request
+from http.client import HTTPResponse
 
 from argparse import ArgumentParser
 
 from base_log import BaseLog
 from media.online_search.result import SearchResult
 from media.show import ShowData
+from media.episode import EpisodeData
 from media.imdb_id import IMDBId
 from media.tvmaze_id import TvMazeId
+from media.enums import Type as MediaType
 
 
 class TvMazeShowSearchResult(SearchResult):
     @property
     def valid(self):
-        return "id" in self._raw
+        if isinstance(self._raw, dict):
+            return "id" in self._raw
+        return False
 
     @property
     def year(self):
@@ -43,7 +47,9 @@ class TvMazeShowSearchResult(SearchResult):
 class TvMazeEpisodeSearchResult(SearchResult):
     @property
     def valid(self):
-        return "id" in self._raw
+        if isinstance(self._raw, dict):
+            return "id" in self._raw
+        return False
 
     @property
     def year(self):
@@ -73,11 +79,6 @@ class TvMazeEpisodeSearchResult(SearchResult):
         return TvMazeId(_id)
 
 
-class SearchType(Enum):
-    Show = auto()
-    Episode = auto()
-
-
 class TvMaze(BaseLog):
     URL = "http://api.tvmaze.com"
     _results: Dict[str, Union[TvMazeShowSearchResult, TvMazeEpisodeSearchResult, List]] = {}
@@ -90,23 +91,22 @@ class TvMaze(BaseLog):
 
     def _search(self, url) -> Any:
         self.log_fs(f"searching... url: i[{url}]")
-        _res = urllib.request.urlopen(url, timeout=4).read().decode("utf-8")
+        _resp: HTTPResponse = urllib.request.urlopen(url, timeout=4)
+        if _resp.getcode() != 200:
+            raise ConnectionError(f"got response code: {_resp.status}")
+        _res = _resp.read().decode("utf-8")
         return json.loads(_res)
 
-    def _url_from_imdb(self, imdb_id: IMDBId, search_type: SearchType) -> Optional[str]:
+    def _url_from_imdb(self, imdb_id: IMDBId) -> Optional[str]:
         if not imdb_id.valid():
             self.error("IMDbId invalid, cannot build search request")
             return None
         _args = {"imdb": str(imdb_id)}
-        if search_type == SearchType.Show:
-            return f"{self.URL}/lookup/shows?{urllib.parse.urlencode(_args)}"
-        elif search_type == SearchType.Episode:
-            raise NotImplementedError("not yet...")
-        raise ValueError(f"invalid search type: {search_type}")
+        return f"{self.URL}/lookup/shows?{urllib.parse.urlencode(_args)}"
 
     def _url_from_show_data(self, data: ShowData) -> Optional[str]:
         if not data.title:
-            self.error("title is required, cannot build search request")
+            self.error("ShowData title is required, cannot build search request")
             return None
         _args = {"q": data.title}
         return f"{self.URL}/singlesearch/shows?{urllib.parse.urlencode(_args)}"
@@ -114,14 +114,16 @@ class TvMaze(BaseLog):
     def _url_from_show_mazeid(self, maze_id: TvMazeId) -> Optional[str]:
         if not maze_id.valid():
             return None
-        return f"{self.URL}/shows/{maze_id}"
+        if maze_id.type == MediaType.Show:
+            return f"{self.URL}/shows/{maze_id}"
+        return f"{self.URL}/episodes/{maze_id}"
 
     def show_search(self, data: Union[ShowData, IMDBId, TvMazeId]) -> Optional[TvMazeShowSearchResult]:
         if not data:
             self.error("search requires either ShowData or IMDBId to be set")
             return None
         if isinstance(data, IMDBId):
-            url = self._url_from_imdb(data, search_type=SearchType.Show)
+            url = self._url_from_imdb(data)
         elif isinstance(data, ShowData):
             url = self._url_from_show_data(data)
         elif isinstance(data, TvMazeId):
@@ -161,11 +163,32 @@ class TvMaze(BaseLog):
         self._cached_ep_list[str(_show_result.id)] = _ret
         return _ret
 
-    def episode_search(self, show_data: Union[ShowData, IMDBId, TvMazeId], episode_num: int,
-                       season_num: int) -> Optional[TvMazeEpisodeSearchResult]:
+    def _ep_from_show_search(self, show_data: Union[ShowData, IMDBId, TvMazeId], episode_num: int, season_num: int) -> \
+            Optional[TvMazeEpisodeSearchResult]:
         for _ep in self.episode_search_list_all(show_data):
             if _ep.season == season_num and _ep.episode == episode_num:
                 return _ep
+        return None
+
+    def episode_search(self, data: Union[ShowData, IMDBId, TvMazeId, EpisodeData], episode_num: Optional[int] = None,
+                       season_num: Optional[int] = None) -> Optional[TvMazeEpisodeSearchResult]:
+        _is_maze_id: bool = isinstance(data, TvMazeId)
+        if _is_maze_id and data.type == MediaType.Episode:
+            _url = self._url_from_show_mazeid(data)
+            if _url is None:
+                raise TypeError(f"could not get url from maze id: {data}")
+            return TvMazeEpisodeSearchResult(self._search(_url))
+        if isinstance(data, EpisodeData):
+            if data.show_title is None:
+                raise TypeError("EpisodeData show title needs to be set")
+            if data.episode_number is None or data.season_number is None:
+                raise TypeError("EpisodeData episode_num or season_num missing")
+            _show_data: ShowData = ShowData(title=data.show_title)
+            return self._ep_from_show_search(_show_data, data.episode_number, data.season_number)
+        if episode_num is None or season_num is None:
+            raise TypeError("episode_num or season_num missing")
+        if isinstance(data, (ShowData, IMDBId)) or (_is_maze_id and data.type == MediaType.Show):
+            return self._ep_from_show_search(data, episode_num, season_num)
         return None
 
 
