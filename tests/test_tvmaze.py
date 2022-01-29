@@ -70,6 +70,16 @@ class TestTvMazeSearch:
         assert int(res.id) == 777
         assert res.title == "A Title"
 
+    def test_show_search_using_string(self, mocker: MockerFixture):
+        _tvmaze = tvmaze.TvMaze()
+        urllib_mock = mocker.patch("urllib.request.urlopen")
+        urllib_mock.return_value = MockHelper.gen_mock(mocker, 456, title="A Show I Want To Find")
+        res = _tvmaze.show_search("A Show I Want To Find")
+        urllib_mock.assert_called_with(r"http://api.tvmaze.com/singlesearch/shows?q=A+Show+I+Want+To+Find", timeout=4)
+        assert res.valid is True
+        assert int(res.id) == 456
+        assert res.title == "A Show I Want To Find"
+
     def test_show_search_show_not_found(self, mocker: MockerFixture):
         _tvmaze = tvmaze.TvMaze()
         urllib_mock = mocker.patch("urllib.request.urlopen")

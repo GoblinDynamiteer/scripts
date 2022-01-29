@@ -16,6 +16,9 @@ from media.imdb_id import IMDBId
 from media.tvmaze_id import TvMazeId
 from media.enums import Type as MediaType
 
+EpisodeSearchQuery = Union[ShowData, IMDBId, TvMazeId, EpisodeData, str]
+ShowSearchQuery = Union[ShowData, IMDBId, TvMazeId, str]
+
 
 class TvMazeShowSearchResult(SearchResult):
     @property
@@ -118,7 +121,7 @@ class TvMaze(BaseLog):
             return f"{self.URL}/shows/{maze_id}"
         return f"{self.URL}/episodes/{maze_id}"
 
-    def show_search(self, data: Union[ShowData, IMDBId, TvMazeId]) -> Optional[TvMazeShowSearchResult]:
+    def show_search(self, data: ShowSearchQuery) -> Optional[TvMazeShowSearchResult]:
         if not data:
             self.error("search requires either ShowData or IMDBId to be set")
             return None
@@ -128,6 +131,8 @@ class TvMaze(BaseLog):
             url = self._url_from_show_data(data)
         elif isinstance(data, TvMazeId):
             url = self._url_from_show_mazeid(data)
+        elif isinstance(data, str):
+            url = self._url_from_show_data(ShowData(title=data))
         else:
             self.error(f"invalid search data type: {type(data)}")
             return None
@@ -138,7 +143,7 @@ class TvMaze(BaseLog):
         self._results[url] = _ret
         return _ret
 
-    def episode_search_list_all(self, show_data: Union[ShowData, IMDBId, TvMazeId]) -> List[TvMazeEpisodeSearchResult]:
+    def episode_search_list_all(self, show_data: ShowSearchQuery) -> List[TvMazeEpisodeSearchResult]:
         _show_result = self.show_search(show_data)
         if _show_result is None:
             return []
@@ -163,14 +168,14 @@ class TvMaze(BaseLog):
         self._cached_ep_list[str(_show_result.id)] = _ret
         return _ret
 
-    def _ep_from_show_search(self, show_data: Union[ShowData, IMDBId, TvMazeId], episode_num: int, season_num: int) -> \
+    def _ep_from_show_search(self, show_data: ShowSearchQuery, episode_num: int, season_num: int) -> \
             Optional[TvMazeEpisodeSearchResult]:
         for _ep in self.episode_search_list_all(show_data):
             if _ep.season == season_num and _ep.episode == episode_num:
                 return _ep
         return None
 
-    def episode_search(self, data: Union[ShowData, IMDBId, TvMazeId, EpisodeData], episode_num: Optional[int] = None,
+    def episode_search(self, data: EpisodeSearchQuery, episode_num: Optional[int] = None,
                        season_num: Optional[int] = None) -> Optional[TvMazeEpisodeSearchResult]:
         _is_maze_id: bool = isinstance(data, TvMazeId)
         if _is_maze_id and data.type == MediaType.Episode:
@@ -178,6 +183,10 @@ class TvMaze(BaseLog):
             if _url is None:
                 raise TypeError(f"could not get url from maze id: {data}")
             return TvMazeEpisodeSearchResult(self._search(_url))
+        if isinstance(data, str):
+            if episode_num is None or season_num is None:
+                raise TypeError("episode_num or season_num missing")
+            data = EpisodeData(title=data, season_number=season_num, episode_number=episode_num)
         if isinstance(data, EpisodeData):
             if data.show_title is None:
                 raise TypeError("EpisodeData show title needs to be set")
