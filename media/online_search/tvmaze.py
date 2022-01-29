@@ -87,8 +87,9 @@ class TvMaze(BaseLog):
     _results: Dict[str, Union[TvMazeShowSearchResult, TvMazeEpisodeSearchResult, List]] = {}
     _cached_ep_list: Dict[str, List[TvMazeEpisodeSearchResult]] = {}
 
-    def __init__(self, verbose=False):
+    def __init__(self, verbose=False, use_cache: bool = True):
         BaseLog.__init__(self, verbose=verbose)
+        self._use_cache = use_cache
         self.set_log_prefix("TVMaze")
         self.log("init")
 
@@ -136,9 +137,10 @@ class TvMaze(BaseLog):
         else:
             self.error(f"invalid search data type: {type(data)}")
             return None
-        _existing = self._results.get(url, None)
-        if _existing is not None:
-            return _existing
+        if self._use_cache:
+            _existing = self._results.get(url, None)
+            if _existing is not None:
+                return _existing
         _ret = TvMazeShowSearchResult(self._search(url))
         self._results[url] = _ret
         return _ret
@@ -147,7 +149,7 @@ class TvMaze(BaseLog):
         _show_result = self.show_search(show_data)
         if _show_result is None:
             return []
-        if str(_show_result.id) in self._cached_ep_list:
+        if self._use_cache and str(_show_result.id) in self._cached_ep_list:
             return self._cached_ep_list[str(_show_result.id)]
         _ret = []
         _url = f"{self._url_from_show_mazeid(_show_result.id)}/episodes"
@@ -165,7 +167,8 @@ class TvMaze(BaseLog):
             _search_result = TvMazeEpisodeSearchResult(_data)
             _ret.append(_search_result)
             self._results[_ep_url] = _search_result
-        self._cached_ep_list[str(_show_result.id)] = _ret
+        if self._use_cache:
+            self._cached_ep_list[str(_show_result.id)] = _ret
         return _ret
 
     def _ep_from_show_search(self, show_data: ShowSearchQuery, episode_num: int, season_num: int) -> \

@@ -39,9 +39,9 @@ class MockHelper:
         return cm
 
 
-class TestTvMazeSearch:
-    def test_show_search_using_show_data(self, mocker: MockerFixture):
-        _tvmaze = tvmaze.TvMaze()
+class TestTvMazeShowSearch:
+    def test_search_using_show_data(self, mocker: MockerFixture):
+        _tvmaze = tvmaze.TvMaze(use_cache=False)
         urllib_mock = mocker.patch("urllib.request.urlopen")
         urllib_mock.return_value = MockHelper.gen_mock(mocker, 123, title="Some Cool Show")
         res = _tvmaze.show_search(ShowData(title="Some Cool Show"))
@@ -50,8 +50,8 @@ class TestTvMazeSearch:
         assert int(res.id) == 123
         assert res.title == "Some Cool Show"
 
-    def test_show_search_using_imdb(self, mocker: MockerFixture):
-        _tvmaze = tvmaze.TvMaze()
+    def test_search_using_imdb(self, mocker: MockerFixture):
+        _tvmaze = tvmaze.TvMaze(use_cache=False)
         urllib_mock = mocker.patch("urllib.request.urlopen")
         urllib_mock.return_value = MockHelper.gen_mock(mocker, 666, title="Another Cool Show")
         res = _tvmaze.show_search(IMDBId("tt0944947"))
@@ -60,8 +60,8 @@ class TestTvMazeSearch:
         assert int(res.id) == 666
         assert res.title == "Another Cool Show"
 
-    def test_show_search_using_tv_maze_id(self, mocker: MockerFixture):
-        _tvmaze = tvmaze.TvMaze()
+    def test_search_using_tv_maze_id(self, mocker: MockerFixture):
+        _tvmaze = tvmaze.TvMaze(use_cache=False)
         urllib_mock = mocker.patch("urllib.request.urlopen")
         urllib_mock.return_value = MockHelper.gen_mock(mocker, 777, title="A Title")
         res = _tvmaze.show_search(TvMazeId(777, media_type=Type.Show))
@@ -70,8 +70,8 @@ class TestTvMazeSearch:
         assert int(res.id) == 777
         assert res.title == "A Title"
 
-    def test_show_search_using_string(self, mocker: MockerFixture):
-        _tvmaze = tvmaze.TvMaze()
+    def test_search_using_string(self, mocker: MockerFixture):
+        _tvmaze = tvmaze.TvMaze(use_cache=False)
         urllib_mock = mocker.patch("urllib.request.urlopen")
         urllib_mock.return_value = MockHelper.gen_mock(mocker, 456, title="A Show I Want To Find")
         res = _tvmaze.show_search("A Show I Want To Find")
@@ -80,16 +80,16 @@ class TestTvMazeSearch:
         assert int(res.id) == 456
         assert res.title == "A Show I Want To Find"
 
-    def test_show_search_show_not_found(self, mocker: MockerFixture):
-        _tvmaze = tvmaze.TvMaze()
+    def test_search_show_not_found(self, mocker: MockerFixture):
+        _tvmaze = tvmaze.TvMaze(use_cache=False)
         urllib_mock = mocker.patch("urllib.request.urlopen")
         urllib_mock.return_value = MockHelper.gen_mock_show_not_found(mocker)
         res = _tvmaze.show_search(TvMazeId(99999999999, media_type=Type.Show))
         urllib_mock.assert_called_with(r"http://api.tvmaze.com/shows/99999999999", timeout=4)
         assert res.valid is False
 
-    def test_show_search_show_use_cache(self, mocker: MockerFixture):
-        _tvmaze = tvmaze.TvMaze()
+    def test_search_show_use_cache(self, mocker: MockerFixture):
+        _tvmaze = tvmaze.TvMaze(use_cache=True)
         urllib_mock = mocker.patch("urllib.request.urlopen")
         urllib_mock.return_value = MockHelper.gen_mock(mocker, 779, title="A Title")
         _ = _tvmaze.show_search(TvMazeId(779, media_type=Type.Show))
@@ -106,7 +106,7 @@ class TestTvMazeExceptions:
     def test_show_search_status_code_not_ok(self, mocker: MockerFixture):
         urllib_mock = mocker.patch("urllib.request.urlopen")
         urllib_mock.return_value = MockHelper.gen_mock(mocker, 1, title="Show", resp_ok=False)
-        _tvmaze = tvmaze.TvMaze()
+        _tvmaze = tvmaze.TvMaze(use_cache=False)
         with pytest.raises(ConnectionError):
             _tvmaze.show_search(IMDBId("tt0944948"))
 
