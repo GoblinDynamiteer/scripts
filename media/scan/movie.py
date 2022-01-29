@@ -2,6 +2,7 @@ from media.scan.scanner import MediaScanner
 from db.db_mov import MovieDatabase
 from media.util import MediaPaths
 from media.movie import Movie
+from media.imdb_id import IMDBId
 
 from media.online_search import omdb
 
@@ -24,8 +25,13 @@ class MovieScanner(MediaScanner):
             self.warn_fs(f"w[{movie}] is not valid! Skipping...")
             return
         self.log_fs(f"processing new: i[{movie}]...")
-        # TODO: check if imdb-id is present
-        result = self._omdb.movie_search(movie.data)
+        _id = IMDBId(movie.path)  # TODO: assert path is dir...
+        if _id.valid():
+            self.log_fs(f"searching using imdb: [{_id}]")
+            result = self._omdb.movie_search(_id)
+        else:
+            self.log_fs(f"searching using data: [{movie.data}]")
+            result = self._omdb.movie_search(movie.data)
         if result is None:
             return
         result.print()  # TODO: process result
