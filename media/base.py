@@ -12,6 +12,10 @@ class MediaItem(ABC):
     def filename(self) -> str:
         return self._path.name
 
+    @property
+    def path(self) -> Path:
+        return self._path
+
     def exists_on_disk(self) -> bool:
         return self._path.exists()
 
