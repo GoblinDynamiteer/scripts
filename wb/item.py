@@ -5,8 +5,7 @@ from typing import Optional
 
 from base_log import BaseLog
 from printout import fcs, pfcs, cstr, Color
-from util_movie import is_movie
-from util_tv import is_episode, is_season
+from media.util import Util as MediaUtil
 from wb.helper_methods import get_remote_files_path
 
 
@@ -57,15 +56,15 @@ class FileListItem(BaseLog):
 
     def _determine_type(self):
         self._type = self.MediaType.Unknown
-        if is_movie(self.name):
+        if MediaUtil.is_movie(self.name):
             self._type = self.MediaType.Movie
-        elif is_episode(self.name):
+        elif MediaUtil.is_episode(self.name):
             self._type = self.MediaType.Episode
         elif self._path.parent != get_remote_files_path():
             _parent_name = self._path.parent.name
-            if is_movie(_parent_name):
+            if MediaUtil.is_movie(_parent_name):
                 self._type = self.MediaType.Movie
-            elif is_episode(_parent_name):
+            elif MediaUtil.is_episode(_parent_name):
                 self._type = self.MediaType.Episode
 
     @property
@@ -89,7 +88,7 @@ class FileListItem(BaseLog):
     @property
     def parent_is_season_dir(self) -> bool:
         if self.parent_name:
-            return is_season(self.parent_name)
+            return MediaUtil.is_season(self.parent_name)
         return False
 
     @property

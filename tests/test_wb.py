@@ -81,7 +81,6 @@ class TestFileListItem:
         _item = FileListItem(_line)
         assert _item.valid is False
 
-
     def test_parse_invalid_lines(self):
         _line = r"1611998314.0000000000 45986355 | " \
                 r"/home/johndoe/files/SomeFile.mkv"
