@@ -4,7 +4,7 @@ from typing import Optional, Tuple, List
 import re
 
 MOVIE_REGEX_PATTERN = r"^.+\.(2160p|1080p|720p|dvd|bdrip).+(\-|\.)[a-z0-9]+$"
-SEASON_REGEX_PATTERN = r"^.+\.[sS]\d{02}\.+(2160p|1080p|720p|dvd|bdrip).+\-[a-zA-Z0-9]+"
+SEASON_REGEX_PATTERN = r"^.+\.[sS]\d{02}\.+(?:.+)?(2160p|1080p|720p|dvd|bdrip).+\-[a-zA-Z0-9]+"
 SEASON_EPISODE_REGEX_PATTERN = r"\.[sS](?P<season_num>\d{2,4})?([Ee](?P<episode_num>\d{2})?\.)?"
 YEAR_REGEX_PATTERN = r"(?P<year>(19|20)\d{2})"
 RES_REGEX_PATTERN = r"(2160p|1080p|720p|dvd|bdrip)"

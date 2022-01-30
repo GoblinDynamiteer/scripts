@@ -68,6 +68,9 @@ class TestUtilShow:
     def test_is_season_true_from_str(self):
         assert Util.is_season("The.Family.Show.S01.1080p.HDTV.x264-Grp")
 
+    def test_is_season_true_from_str_internal(self):
+        assert Util.is_season("Show.S04.iNTERNAL.1080p.WEB.H264-GROUPNAME")
+
     def test_is_season_false_from_str(self):
         assert not Util.is_season("The.Children.Show.S01E01.1080p.BluRay.x264-Grp")
 
