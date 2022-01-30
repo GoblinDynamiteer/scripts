@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 
+from typing import Union, Optional, Tuple
 import shutil
 from enum import Enum
-import os
 
 _COLOR_END = "\033[0m"
 _CLR_DICT = {"black": 0,
@@ -12,6 +12,7 @@ _CLR_DICT = {"black": 0,
              "blue": 33,
              "dblue": 21,
              "purple": 171,
+             "dpurple": 93,
              "lpurple": 183,
              "orange": 214,
              "teal": 123,
@@ -36,7 +37,6 @@ _FORMAT_CODES = {
     "mg[": 243,  # medium grey
     "dg[": 239,  # dark grey
     "lg[": 252,  # light grey
-    "lb[" : 74, # light blue
     "e[": 196,  # error
     "g[": 154,  # green
     "b[": 74,  # blue
@@ -44,7 +44,6 @@ _FORMAT_CODES = {
     "o[": 214,  # orange
     "d[": 239,  # dark /grey
     "y[": 229,  # yellow
-    "r[": _CLR_DICT["red"],
     "w[": _CLR_DICT["warning"],
     "p[": _CLR_DICT["purple"]}
 
@@ -52,8 +51,11 @@ _FORMAT_CODES = {
 class Color(Enum):
     Black = _CLR_DICT["black"]
     LightGreen = _CLR_DICT["lgreen"]
+    DarkGreen = _CLR_DICT["dgreen"]
     Orange = _CLR_DICT["orange"]
     Purple = _CLR_DICT["purple"]
+    LightPurple = _CLR_DICT["lpurple"]
+    DarkPurple = _CLR_DICT["dpurple"]
     Pink = _CLR_DICT["pink"]
     Teal = _CLR_DICT["teal"]
     LightBlue = _CLR_DICT["lblue"]
@@ -65,13 +67,13 @@ class Color(Enum):
     Red = _CLR_DICT["red"]
     Error = _CLR_DICT["red"]
     Warning = _CLR_DICT["warning"]
+    Brown = _CLR_DICT["brown"]
 
 
-def _is_win():
-    return os.name == "nt"
+ColorType = Union[int, str, Color]
 
 
-def _to_index_str(color_value):
+def _to_index_str(color_value: ColorType) -> str:
     if isinstance(color_value, int):
         return str(color_value)
     if isinstance(color_value, str):
@@ -81,17 +83,7 @@ def _to_index_str(color_value):
     return str(Color.LightGreen.value)
 
 
-def test_colors():
-    for color_value in range(0, 257):
-        pcstr(f": {color_value} ##################", color_value)
-
-    for color_str, color_val in _CLR_DICT.items():
-        pcstr(color_str.upper() + f": {color_val}", color_str)
-
-
-def cstr(string, foreground, background=None, bold=False):
-    if _is_win():
-        return string
+def cstr(string: str, foreground: ColorType, background: Optional[ColorType] = None, bold: bool = False) -> str:
     _color_str = "\033[38;5;" + _to_index_str(foreground) + "m"
     if background:
         _color_str += "\033[48;5;" + _to_index_str(background) + "m"
@@ -100,7 +92,7 @@ def cstr(string, foreground, background=None, bold=False):
     return f"{_color_str}{str(string)}{_COLOR_END}"
 
 
-def pcstr(string, foreground, background=None, bold=False):
+def pcstr(string: str, foreground: ColorType, background: Optional[ColorType] = None, bold: bool = False) -> None:
     print(cstr(string, foreground, background, bold))
 
 
@@ -113,47 +105,57 @@ def percentage_to_cstr(percentage: str) -> str:
     return cstr(percentage, Color.LightGreen)
 
 
-def print_color_format_string(string, format_chars=("[", "]"), show=True, end="\n", get_str=False):
+def print_color_format_string(string: str,
+                              format_chars: Tuple[str, str] = ('[', ']'),
+                              show: bool = True,
+                              end: str = '\n',
+                              get_str: bool = False) -> Optional[str]:
+    """Prints with color, based on a special format in the passed string"""
     if len(format_chars) != 2 or not show:
         return
     for code, color_val in _FORMAT_CODES.items():
-        begin_code = code.replace("[", format_chars[0])
-        _rep = "\033[38;5;" + str(color_val) + "m" if not _is_win() else ""
-        string = string.replace(begin_code, _rep)
-    _rep = _COLOR_END if not _is_win() else ""
-    colored_str = string.replace(format_chars[1], _rep)
+        begin_code = code.replace('[', format_chars[0])
+        string = string.replace(begin_code, "\033[38;5;" + str(color_val) + "m")
+    colored_str = string.replace(format_chars[1], _COLOR_END)
     if get_str:
         return colored_str
-    print(colored_str, end=end)
+    print(string.replace(format_chars[1], _COLOR_END), end=end)
 
 
-def pfcs(string, format_chars=('[', ']'), show=True, end='\n'):
-    print_color_format_string(
-        string, format_chars=format_chars, show=show, end=end)
+def pfcs(string: str, format_chars: Tuple[str, str] = ('[', ']'), show: bool = True, end: str = '\n') -> None:
+    """Short for PrintFormatColorString, same as pcfs method"""
+    print_color_format_string(string, format_chars=format_chars, show=show, end=end)
 
 
-def pcfs(string, format_chars=('[', ']'), show=True, end='\n'):
-    print_color_format_string(
-        string, format_chars=format_chars, show=show, end=end)
+def pcfs(string: str, format_chars: Tuple[str, str] = ('[', ']'), show: bool = True, end: str = '\n') -> None:
+    """Short for PrintColorFormatString, same as pfcs method"""
+    print_color_format_string(string, format_chars=format_chars, show=show, end=end)
 
 
-def fcs(string, format_chars=('[', ']')):
+def fcs(string, format_chars=('[', ']')) -> str:
     return print_color_format_string(string, format_chars, get_str=True)
 
 
-def print_line(color=239, adapt_to_terminal_width=True, length=100, char="="):
+def print_line(color: ColorType = 239, adapt_to_terminal_width: bool = True, length: int = 100,
+               char: str = "=") -> None:
     if adapt_to_terminal_width:
         length = shutil.get_terminal_size()[0] - 1
     pcstr(char * length, color)
 
 
-def to_color_str(
-        string: str, foreground, background=None, bold: bool = False) -> str:
+def to_color_str(string: str, foreground: ColorType, background: Optional[ColorType] = None, bold: bool = False) -> str:
     """ Wrapper for cstr """
     return cstr(string, foreground, background, bold)
 
 
-if __name__ == "__main__":
+def main():
+    def test_colors():
+        for color_value in range(0, 257):
+            pcstr(f": {color_value} ##################", color_value)
+
+        for color_str, color_val in _CLR_DICT.items():
+            pcstr(color_str.upper() + f": {color_val}", color_str)
+
     print("colors:\n")
     test_colors()
     pfcs(f"Hello I am dg[dark grey] i am g[green]")
@@ -164,3 +166,7 @@ if __name__ == "__main__":
     print_line(color="blue")
     print_line(color="red")
     print_line()
+
+
+if __name__ == "__main__":
+    main()
