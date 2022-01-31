@@ -3,13 +3,14 @@ from db.db_mov import MovieDatabase
 from media.util import MediaPaths
 from media.movie import Movie
 from media.imdb_id import IMDBId
-
 from media.online_search import omdb
+from utils.datetime_utils import now_timestamp
+from printout import print_line
 
 
 class MovieScanner(MediaScanner):
-    def __init__(self, dont_update_database: bool = False):
-        MediaScanner.__init__(self, dont_update_database)
+    def __init__(self, update_database: bool = False):
+        MediaScanner.__init__(self, update_database)
         self.set_log_prefix("MOVIE_SCANNER")
         self._db: MovieDatabase = MovieDatabase()
         self._media_paths = MediaPaths()
@@ -27,18 +28,35 @@ class MovieScanner(MediaScanner):
         self.log_fs(f"processing new: i[{movie}]...")
         _id = IMDBId(movie.path)  # TODO: assert path is dir...
         if _id.valid():
-            self.log_fs(f"searching using imdb: [{_id}]")
+            self.log_fs(f"searching using imdb: o[{_id}]")
             result = self._omdb.movie_search(_id)
         else:
-            self.log_fs(f"searching using data: [{movie.data}]")
+            self.log_fs(f"searching using data: o[{movie.data}]")
             result = self._omdb.movie_search(movie.data)
-        if result is None:
-            return
-        result.print()  # TODO: process result
+        self._add_to_db(movie, result)
+
+    def _add_to_db(self, movie: Movie, search_result: omdb.OMDbMovieSearchResult):
+        _db_entry = {
+            "folder": movie.name,
+            "scanned": now_timestamp(),
+        }
+        if search_result.valid:
+            if search_result.id is not None:
+                _db_entry["imdb"] = search_result.id
+            if search_result.title is not None:
+                _db_entry["title"] = search_result.title
+            if search_result.year is not None:
+                _db_entry["year"] = search_result.year
+        if self._update_db:
+            self._db.add(**_db_entry)
+        else:
+            self.log("not adding to database...")
+            self.log_fs(f"data: i[{_db_entry}]")
+        print_line()
 
 
 def main():
-    scanner = MovieScanner(dont_update_database=True)
+    scanner = MovieScanner(update_database=False)
     scanner.scan()
 
 

@@ -12,9 +12,9 @@ class ScanType(Enum):
 
 
 class MediaScanner(ABC, BaseLog):
-    def __init__(self, dont_update_database: bool = False):
+    def __init__(self, update_database: bool = True):
         BaseLog.__init__(self, verbose=True)
-        self._update_db: bool = not dont_update_database
+        self._update_db: bool = update_database
         self.set_log_prefix("MEDIA_SCANNER")
 
     @abstractmethod
