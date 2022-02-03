@@ -28,7 +28,7 @@ class MediaItem(ABC):
 
     @property
     @abstractmethod
-    def name(self) -> Type:
+    def name(self) -> str:
         raise NotImplementedError
 
     @property
