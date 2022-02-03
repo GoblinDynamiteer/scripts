@@ -76,17 +76,17 @@ class Movie(MediaItem):
         return False
 
     @property
-    def letter(self):
+    def letter(self) -> str:
         if self._letter is None:
             self._determine_letter()
         return self._letter
 
-    def get_correct_location(self):
+    def get_correct_location(self) -> Path:
         if self._correct_loc is None:
             self._determine_correct_location()
         return self._correct_loc
 
-    def _analyze_path(self):
+    def _analyze_path(self) -> None:
         if Util.is_movie(self._path.parent):
             self._name = self._path.parent.name
         elif self._path.is_file():
@@ -96,7 +96,7 @@ class Movie(MediaItem):
         else:
             self._name = self._path.name.replace(".mkv", "")
 
-    def _determine_letter(self):
+    def _determine_letter(self) -> None:
         for prefix in ["The.", "An.", "A."]:
             if self.name.startswith(prefix):
                 _letter = self.name[len(prefix):len(prefix) + 1].upper()
@@ -110,7 +110,7 @@ class Movie(MediaItem):
         else:
             self._letter = _letter
 
-    def _determine_correct_location(self):
+    def _determine_correct_location(self) -> None:
         self._correct_loc = self._mov_dir / self.letter / self.name
 
 
