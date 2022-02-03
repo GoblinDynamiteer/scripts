@@ -43,6 +43,10 @@ class MediaPaths(metaclass=Singleton):
             for _movie_dir in _letter_dir.iterdir():
                 yield _movie_dir
 
+    def show_dirs(self) -> Generator[Path, None, None]:
+        for _show_dir in self.tv_dir().iterdir():
+            yield _show_dir
+
 
 class Util:
     @staticmethod
