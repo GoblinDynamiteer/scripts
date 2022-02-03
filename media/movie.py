@@ -5,9 +5,8 @@ from dataclasses import dataclass
 
 from media.base import MediaItem
 from media.enums import Type, Language, MOVIE_EXTRAS
-from media.util import Util
+from media.util import Util, MediaPaths
 from media.regex import matches_movie_regex, parse_year, parse_quality
-from config import ConfigurationManager, SettingKeys
 
 
 @dataclass
@@ -44,10 +43,7 @@ class MovieData:
 class Movie(MediaItem):
     def __init__(self, movie_file_or_dir_path: Path):
         MediaItem.__init__(self, movie_file_or_dir_path)
-        self._mov_dir = ConfigurationManager().path(
-            SettingKeys.PATH_MOVIES,
-            assert_path_exists=True,
-            convert_to_path=True)
+        self._mov_dir = MediaPaths().movie_dir()
         self._name: Optional[str] = None
         self._letter: Optional[str] = None
         self._correct_loc: Optional[Path] = None
@@ -68,7 +64,7 @@ class Movie(MediaItem):
         """Retrieves data, which contains \"guessed\" Title and Year of movie"""
         return self._data
 
-    def has_external_subtitle(self, language: Language) -> bool:
+    def has_external_subtitle(self, language: Language) -> bool: # TODO: implement
         return False
 
     def is_compressed(self) -> bool:
