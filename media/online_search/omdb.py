@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 from typing import Dict, Optional, Union
 import json
 import urllib.parse
@@ -41,6 +40,10 @@ class OMDbMovieSearchResult(SearchResult):
         if _id is None:
             return None
         return IMDBId(_id)
+
+    @property
+    def poster_url(self) -> Optional[str]:
+        return self._raw.get("Poster", None)
 
 
 class OMDb(BaseLog):
@@ -106,6 +109,7 @@ class OMDb(BaseLog):
 def main():
     parser = ArgumentParser()
     parser.add_argument("--year", "-y", type=int, default=None)
+    parser.add_argument("--open-poster", "-p", action="store_true", dest="open_poster")
     grp = parser.add_mutually_exclusive_group()
     grp.add_argument("--id", "-i", type=str, default=None)
     grp.add_argument("--title", "-t", type=str, default=None)
@@ -127,6 +131,13 @@ def main():
         print("year", res.year)
         print("genres", res.genres)
         print("id", res.id)
+        if args.open_poster:
+            _url = res.poster_url
+            if not _url:
+                print("did not get poster URL in response")
+                return
+            import webbrowser
+            webbrowser.open_new_tab(_url)
 
 
 if __name__ == "__main__":
