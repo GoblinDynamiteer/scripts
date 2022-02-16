@@ -513,8 +513,9 @@ def main():
         if args.filter:
             try:
                 filter_dict = json.loads(args.filter)
-            except:
-                print(f"invalid json for filter: {args.filter}, quitting...")
+            except json.decoder.JSONDecodeError as error:
+                print(f"could not parse JSON style filter: \"{cstr(args.filter, Color.DarkYellow)}\":"
+                      f"\n{cstr(str(error), Color.Red)}")
                 sys.exit(1)
         wanted_last = int(args.get_last)
         try:
