@@ -44,8 +44,9 @@ class MediaPaths(metaclass=Singleton):
                 yield _movie_dir
 
     def show_dirs(self) -> Generator[Path, None, None]:
-        for _show_dir in self.tv_dir().iterdir():
-            yield _show_dir
+        for _item in self.tv_dir().iterdir():
+            if _item.is_dir():
+                yield _item
 
 
 class Util:
