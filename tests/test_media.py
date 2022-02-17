@@ -176,3 +176,15 @@ class TestMovieData:
         md = MovieData("Movie.Title.LIMITED.720p.BluRay.x264-iMAGRP")
         assert md.title == "Movie Title"
         assert md.year is None
+
+
+class TestShowData:
+    def test_parse_title_from_release_season(self):
+        sd = ShowData("Gunsmoked.S02.2160p.DV.SR.WEB-DL.DDP5.1.H265-SomeGRP")
+        assert sd.title == "Gunsmoked"
+        assert sd.year is None
+
+    def test_parse_title_from_existing_show_dir(self):
+        sd = ShowData("North Park")
+        assert sd.title == "North Park"
+        assert sd.year is None

@@ -5,7 +5,7 @@ from pathlib import Path
 from media.base import MediaItem
 from media.util import MediaPaths
 from media.enums import Type, Language
-from media.regex import matches_season_subdir
+from media.regex import matches_season_subdir, parse_year, parse_quality, parse_season_and_episode
 
 
 @dataclass
@@ -13,6 +13,24 @@ class ShowData:
     name: Optional[str] = None  # Name of directory
     year: Optional[int] = None
     title: Optional[str] = None
+
+    def __post_init__(self):
+        if self.name is None:
+            return
+        _s, _e = parse_season_and_episode(self.name)
+        if _e is not None:
+            raise  # TODO: handle
+        if _s is not None:
+            _season_str = f".S{_s:02d}."
+            if _season_str not in self.name:
+                raise  # TODO: handle
+            self._split_by(_season_str)
+            return
+        self.title = self.name
+
+    def _split_by(self, string: str):
+        _title = self.name.split(string)[0]
+        self.title = _title.replace(".", " ").strip()
 
 
 class Show(MediaItem):
