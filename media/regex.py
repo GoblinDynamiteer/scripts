@@ -6,6 +6,7 @@ import re
 MOVIE_REGEX_PATTERN = r"^.+\.(2160p|1080p|720p|dvd|bdrip).+(\-|\.)[a-z0-9]+$"
 SEASON_REGEX_PATTERN = r"^.+\.[sS]\d{02}\.+(?:.+)?(2160p|1080p|720p|dvd|bdrip).+\-[a-zA-Z0-9]+"
 SEASON_EPISODE_REGEX_PATTERN = r"\.[sS](?P<season_num>\d{2,4})?([Ee](?P<episode_num>\d{2})?\.)?"
+SEASON_SUBDIR_REGEX_PATTERN = r"^[Ss]\d{2}$"
 YEAR_REGEX_PATTERN = r"(?P<year>(19|20)\d{2})"
 RES_REGEX_PATTERN = r"(2160p|1080p|720p|dvd|bdrip)"
 
@@ -20,6 +21,10 @@ def matches_season_regex(item: str, replace_whitespace: bool = True) -> bool:
     if replace_whitespace:
         item = item.replace(" ", ".")
     return re.search(SEASON_REGEX_PATTERN, item, re.IGNORECASE) is not None
+
+
+def matches_season_subdir(item: str) -> bool:
+    return re.search(SEASON_SUBDIR_REGEX_PATTERN, item) is not None
 
 
 def parse_season_and_episode(item: str, replace_whitespace: bool = True) -> Tuple[Optional[int], Optional[int]]:

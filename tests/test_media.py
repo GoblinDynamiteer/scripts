@@ -2,6 +2,7 @@ from pathlib import Path
 from string import ascii_letters
 
 from media.movie import Movie, MovieData
+from media.show import Show, ShowData
 from media.regex import parse_season_and_episode, parse_year, parse_quality
 import config
 
@@ -40,6 +41,18 @@ class TestRegex:
 
     def test_parse_quality_720p(self):
         assert parse_quality("Movie.1983.720p.WEB-DL.DD5.1.H264-Grp.mkv") == "720p"
+
+
+class TestShow:
+    SHOW_PATH = Path.home() / "TVShows"
+
+    def test_name_from_dir(self, tmp_path, mocker):
+        _dir = tmp_path / "Show.Name.S01.1080p.WEB-DL.DDP2.0.x264-GrpName"
+        _dir.mkdir()
+        _path_mock = mocker.patch.object(config.ConfigurationManager, "path")
+        _path_mock.return_value = self.SHOW_PATH
+        show = Show(_dir)
+        assert show.name == "Show.Name.S01.1080p.WEB-DL.DDP2.0.x264-GrpName"
 
 
 class TestMovie:
