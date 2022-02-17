@@ -137,6 +137,9 @@ class TvMaze(BaseLog):
         else:
             self.error(f"invalid search data type: {type(data)}")
             return None
+        if url is None:
+            self.warn(f"failed to retrieve url for {data}")
+            return None
         if self._use_cache:
             _existing = self._results.get(url, None)
             if _existing is not None:
