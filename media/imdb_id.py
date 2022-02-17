@@ -3,6 +3,7 @@ from typing import Optional, Union, List
 import re
 
 from base_log import BaseLog
+from printout import cstr, Color
 
 
 class IMDBId(BaseLog):
@@ -33,20 +34,16 @@ class IMDBId(BaseLog):
             self.warn(f"processing (possibly) non-text/ascii file: {file_path}")
         if file_path.stat().st_size > 1024 * 10:  # TODO: what is a reasonable file size for nfo files?
             self.warn(f"processing \"large\" file: {file_path}")
-        _found = False
         with open(file_path, "r") as fp:
             for _line in fp.readlines():
-                if self._parse_str(_line):
-                    _found = True
-        if _found:
-            self.log(f"found id in file: {file_path}")
+                self._parse_str(_line, source=str(file_path))
 
     def _parse_dir(self, dir_path: Path):
         for _item in dir_path.iterdir():
             if _item.is_file() and _item.suffix in [".nfo", ".txt"]:
                 self._parse_file(_item)
 
-    def _parse_str(self, string: str) -> bool:
+    def _parse_str(self, string: str, source: Optional[str] = None) -> bool:
         matches = re.findall(self.REGEX, string)
         if not matches:
             return False
@@ -54,7 +51,7 @@ class IMDBId(BaseLog):
         for match in matches:
             _num = match.lower().replace("tt", "")
             if _num not in self._ids:
-                self.log(f"found id: {_num}")
+                self.log(f"found id: {_num} " + cstr(source, Color.Grey) if source is not None else "")
                 self._ids.append(_num)
                 _ret = True
         return _ret
