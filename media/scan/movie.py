@@ -14,7 +14,7 @@ class MovieScanner(MediaScanner):
         self.set_log_prefix("MOVIE_SCANNER")
         self._db: MovieDatabase = MovieDatabase()
         self._media_paths = MediaPaths()
-        self._omdb = omdb.OMDb()
+        self._omdb = omdb.OMDb(verbose=True)
 
     def scan(self):
         for movie_dir in self._media_paths.movie_dirs():
