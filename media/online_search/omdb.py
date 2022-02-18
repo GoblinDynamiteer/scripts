@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+
 from typing import Dict, Optional, Union
 import json
 import urllib.parse
 import urllib.request
+from http.client import HTTPResponse
 from argparse import ArgumentParser
 
 from base_log import BaseLog
@@ -10,6 +12,8 @@ from config import ConfigurationManager, SettingKeys
 from media.movie import MovieData
 from media.imdb_id import IMDBId
 from media.online_search.result import SearchResult
+
+MovieSearchQuery = Union[MovieData, IMDBId]
 
 
 class OMDbMovieSearchResult(SearchResult):
@@ -62,7 +66,10 @@ class OMDb(BaseLog):
 
     def _search(self, url):
         self.log_fs(f"searching... url: i[{url}]")
-        _res = urllib.request.urlopen(url, timeout=4).read().decode("utf-8")
+        _resp: HTTPResponse = urllib.request.urlopen(url, timeout=4)
+        if _resp.getcode() != 200:
+            raise ConnectionError(f"got response code: {_resp.status}")
+        _res = _resp.read().decode("utf-8")
         return json.loads(_res)
 
     def _args(self) -> Dict[str, str]:
@@ -87,7 +94,7 @@ class OMDb(BaseLog):
             _args["y"] = str(year)
         return f"{self.URL}?{urllib.parse.urlencode(_args)}"
 
-    def movie_search(self, data: Union[MovieData, IMDBId]) -> Optional[OMDbMovieSearchResult]:
+    def movie_search(self, data: MovieSearchQuery) -> Optional[OMDbMovieSearchResult]:
         if not data:
             self.error("search requires either MovieData or IMDBId to be set")
             return None
