@@ -31,6 +31,7 @@ class SettingKeys(Enum):
     SMB_CREDENTIALS_DRB = "smb_credentials_drb"
     API_KEY_OMDB = "omdb_api_key"
     API_KEY_HUE = "hue_api_key"
+    API_KEY_JACKET = "jacket_api_key"
     IP_NAS = "ds_ip"
     IP_HUE = "hue_ip"
     WB_SERVER_1 = "server1"
@@ -40,11 +41,16 @@ class SettingKeys(Enum):
     MONGO_IP = "mongo_ip"
     MONGO_USERNAME = "mongo_username"
     MONGO_PASSWORD = "mongo_password"
+    JACKET_HOST = "jacket_host"
+    JACKET_PORT = "jacket_port"
+    TORRENT_INDEXERS_PRIVATE = "private_indexers"
+    TORRENT_INDEXERS_PUBLIC = "public_indexers"
 
 
 class SettingSection(Enum):
     WB = "wb"
     Database = "database"
+    Torrent = "torrent"
 
 
 class ConfigurationManager(BaseLog, metaclass=Singleton):
