@@ -12,6 +12,7 @@ from config import ConfigurationManager
 from vid import VideoFileMetadata
 from base_log import BaseLog
 from printout import cstr, print_line, Color, fcs
+from bs4 import BeautifulSoup
 
 
 class PreSearch(abc.ABC):
@@ -32,6 +33,81 @@ class PreSearch(abc.ABC):
 
     def set_query(self, query: str):
         self._query = query
+
+
+class PreDbOrgSearch(PreSearch, BaseLog):
+    URL = "https://predb.org/search"
+
+    def __init__(self, query: str = "", verbose=False):
+        PreSearch.__init__(self, query)
+        BaseLog.__init__(self, verbose=verbose)
+        self.set_log_prefix("PREDB_ORG")
+
+    def search(self) -> bool:
+        if not self._query:
+            self.error("search: query missing")
+            return False
+        self.log(fcs(f"search: using query i[{self._query}]"))
+        _url = self.URL
+        resp = requests.get(_url, params={"searchstr": self._query, "searchcat": "all"})
+        if resp.status_code != 200:
+            self.error("search: get request failed")
+            return False
+        if not resp.text:
+            return False
+        return self._parse_response(resp.text)
+
+    def _parse_response(self, result_html: str) -> bool:
+        soup = BeautifulSoup(result_html, "html.parser")
+        main_table = soup.find("table", attrs={"class": "table table-condensed"})
+        main_table_body = main_table.find("tbody")
+        for row in main_table_body.findAll("tr"):
+            rel = row.find("th")
+            self._results.append(rel.text)
+        if self._results:
+            self.log(f"search: got {len(self._results)} result(s)")
+            return True
+        self.warn("search: no results")
+        return False
+
+
+class PreDbMeSearch(PreSearch, BaseLog):
+    URL = "https://predb.me/?search="
+
+    def __init__(self, query: str = "", verbose=False):
+        PreSearch.__init__(self, query)
+        BaseLog.__init__(self, verbose=verbose)
+        self.set_log_prefix("PREDB_ME")
+
+    def search(self) -> bool:
+        if not self._query:
+            self.error("search: query missing")
+            return False
+        self.log(fcs(f"search: using query i[{self._query}]"))
+        resp = requests.get(self.URL, params={})
+        if resp.status_code != 200 or not resp.json().get("success", False):
+            self.error("search: get request failed")
+            return False
+        _data = resp.json().get("data", {})
+        if not _data:
+            self.error("search: no data in result")
+            return False
+        return self._parse_response(_data)
+
+    def _parse_response(self, result_data: dict) -> bool:
+        _values = result_data.get("values", [])
+        if not _values:
+            self.error("search: no data in result")
+            return False
+        for result in _values:
+            _name = result.get("name", "")
+            if _name:
+                self._results.append(_name)
+        if self._results:
+            self.log(f"search: got {len(self._results)} result(s)")
+            return True
+        self.warn("search: no results")
+        return False
 
 
 class PreDbLiveSearch(PreSearch, BaseLog):
@@ -97,7 +173,7 @@ def query_from_path(file_path: Path, use_replacement_list=True, use_metadata=Fal
         if metadata.title:
             if " - " in metadata.title:
                 query = metadata.title.split(" - ")[1]
-    return query
+    return query.replace("-", " ")
 
 
 def print_rename_info(src, dst, line=False):
@@ -135,7 +211,7 @@ def handle_file(cli_args):
         query = query_from_path(_path, use_metadata=cli_args.use_metadata)
         if not query:
             log.error(f"could not generate query for filename: {_path.name}")
-        _search = PreDbLiveSearch(query, verbose=cli_args.verbose)
+        _search = PreDbOrgSearch(query, verbose=cli_args.verbose)
         if not _search.search():
             if cli_args.rename:
                 log.warn(f"could not find release, not renaming file {item}")
@@ -147,9 +223,12 @@ def handle_file(cli_args):
             if not _path.exists():
                 log.warn(f"found release but {_path} does not exist, will not rename...")
                 continue
-            _results = _search.get_results(match="1080p")
+            if ".4k." in _path.name:
+                _results = _search.get_results(match="2160p")
+            else:
+                _results = _search.get_results(match="1080p")
             if not _results:
-                log.warn(f"could not find any 1080p releases for {_path.name}")
+                log.warn(f"could not find any releases with correct resolution for {_path.name}")
             new_file_name = _results[0]
             if not new_file_name.endswith(_path.suffix):
                 new_file_name = new_file_name + _path.suffix
@@ -166,7 +245,7 @@ def main():
     if args.file:
         handle_file(cli_args=args)
     else:
-        _search = PreDbLiveSearch(args.query, args.verbose)
+        _search = PreDbOrgSearch(args.query, args.verbose)
         if _search.search():
             for name in _search.get_results():
                 print(name + args.suffix)
