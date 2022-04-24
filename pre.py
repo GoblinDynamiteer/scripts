@@ -6,6 +6,7 @@ import json
 import re
 from pathlib import Path
 import abc
+from typing import List
 
 import requests
 from config import ConfigurationManager
@@ -196,44 +197,53 @@ def get_args():
     return parser.parse_args()
 
 
-def handle_file(cli_args):
+def args_to_file_paths(file_arg: str, assert_exists: bool = True) -> List[Path]:
+    if "*" in file_arg:
+        items = glob.glob(file_arg)
+    elif "," in file_arg:
+        items = file_arg.split(",")
+    else:
+        items = [file_arg]
+    _ret = []
+    for item in items:
+        _p = Path(item)
+        if assert_exists and not _p.is_file():
+            raise FileNotFoundError(f"File does not exist: {_p.resolve()}")
+        _ret.append(_p)
+    return _ret
+
+
+def handle_files(files: List[Path], cli_args: argparse.Namespace):
     log = BaseLog(verbose=True)
     log.set_log_prefix("FILE")
-    if "*" in cli_args.query:
-        items = glob.glob(cli_args.query)
-    elif "," in cli_args.query:
-        items = cli_args.query.split(",")
-    else:
-        items = [cli_args.query]
-    count = len(items)
-    for item in items:
-        _path = Path(item).resolve()
-        query = query_from_path(_path, use_metadata=cli_args.use_metadata)
+    count = len(files)
+    for file_path in files:
+        query = query_from_path(file_path, use_metadata=cli_args.use_metadata)
         if not query:
-            log.error(f"could not generate query for filename: {_path.name}")
+            log.error(f"could not generate query for filename: {file_path.name}")
         _search = PreDbOrgSearch(query, verbose=cli_args.verbose)
         if not _search.search():
             if cli_args.rename:
-                log.warn(f"could not find release, not renaming file {item}")
+                log.warn(f"could not find release, not renaming file {file_path.name}")
                 continue
             else:
                 log.warn(f"could not find release using query: {query}")
                 continue
         if cli_args.rename:
-            if not _path.exists():
-                log.warn(f"found release but {_path} does not exist, will not rename...")
+            if not file_path.exists():
+                log.warn(f"found release but {file_path} does not exist, will not rename...")
                 continue
-            if ".4k." in _path.name:
+            if ".4k." in file_path.name:
                 _results = _search.get_results(match="2160p")
             else:
                 _results = _search.get_results(match="1080p")
             if not _results:
                 log.warn(f"could not find any releases with correct resolution for {_path.name}")
             new_file_name = _results[0]
-            if not new_file_name.endswith(_path.suffix):
-                new_file_name = new_file_name + _path.suffix
-            _path.rename(new_file_name)
-            print_rename_info(_path, new_file_name, line=count > 1)
+            if not new_file_name.endswith(file_path.suffix):
+                new_file_name = new_file_name + file_path.suffix
+            file_path.rename(new_file_name)
+            print_rename_info(file_path, new_file_name, line=count > 1)
         else:
             log.log("results:")
             for _result in _search.get_results():
@@ -243,7 +253,7 @@ def handle_file(cli_args):
 def main():
     args = get_args()
     if args.file:
-        handle_file(cli_args=args)
+        handle_files(args_to_file_paths(args.query), cli_args=args)
     else:
         _search = PreDbOrgSearch(args.query, args.verbose)
         if _search.search():
