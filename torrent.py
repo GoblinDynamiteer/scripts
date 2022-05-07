@@ -64,10 +64,15 @@ def main():
                         level=logging.DEBUG,
                         datefmt="%I:%M:%S")
     logger = logging.getLogger(__name__)
-    logger.info("hello")
     ts = TorrentSearch()
-    from pprint import pprint
-    pprint(ts.search("big buck bunny"))
+    import pprint
+    import argparse
+    parser = argparse.ArgumentParser("Torrent search")
+    parser.add_argument("query")
+    args = parser.parse_args()
+    logger.info(f"searching for: {args.query}")
+    results = ts.search(args.query)
+    logger.info(f"results:\n{pprint.pformat(results)}")
 
 
 if __name__ == "__main__":
