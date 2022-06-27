@@ -18,6 +18,8 @@ class MediaDbSettings:
     path: Optional[Path] = None
     collection_name: Optional[str] = None
     database_name: Optional[str] = None
+    log_prefix: str = "MediaDb"
+    log_prefix_second: Optional[str] = None
 
 
 class MediaType(Enum):
@@ -44,7 +46,9 @@ class MediaDatabase(BaseLog):
         BaseLog.__init__(self, verbose=True, use_timestamps=True)
         self._db: Optional[DataBase] = None
         self._settings: MediaDbSettings = settings
-        self.set_log_prefix("MediaDb")
+        self.set_log_prefix(settings.log_prefix)
+        if self._settings.log_prefix_second:
+            self.set_log_prefix_2(self._settings.log_prefix_second)
         self._init()
 
     @staticmethod

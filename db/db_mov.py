@@ -64,6 +64,7 @@ class MovieDatabase(MediaDatabase):
         else:
             _settings = MediaDbSettings(type=DatabaseType.Mongo, database_name="media", collection_name="movies")
 
+        _settings.log_prefix_second = "movie"
         MediaDatabase.__init__(self, _settings)
         self._db.set_valid_keys(keys)
         self._db.load()

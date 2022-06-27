@@ -48,6 +48,7 @@ class ShowDatabase(MediaDatabase):
         else:
             _settings = MediaDbSettings(type=DatabaseType.Mongo, database_name="media", collection_name="shows")
 
+        _settings.log_prefix_second = "show"
         MediaDatabase.__init__(self, _settings)
         self._db.set_valid_keys(keys)
         self._db.load()
@@ -92,6 +93,7 @@ class EpisodeDatabase(MediaDatabase):
         else:
             _settings = MediaDbSettings(type=DatabaseType.Mongo, database_name="media", collection_name="episodes")
 
+        _settings.log_prefix_second = "episode"
         MediaDatabase.__init__(self, _settings)
         self._db.set_valid_keys(keys)
         self._db.load()
