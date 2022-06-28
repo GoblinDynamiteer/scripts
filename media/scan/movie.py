@@ -45,7 +45,7 @@ class MovieScanner(MediaScanner):
         }
         if search_result.valid:
             if search_result.id is not None:
-                _db_entry["imdb"] = search_result.id
+                _db_entry["imdb"] = str(search_result.id)
             if search_result.title is not None:
                 _db_entry["title"] = search_result.title
             if search_result.year is not None:
