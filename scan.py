@@ -76,6 +76,12 @@ def scan_diagnostics(args: Namespace) -> None:
                     print(f" {mov}")
         return _count
 
+    print("scanning for removed movies...")
+    mov_scan = MovieScanner(update_database=not args.simulate,
+                            verbose=args.verbose)
+    mov_scan.scan_removed()
+    # TODO: write to removed
+
     print("scanning for duplicate movies...")
     count = _list_duplicate_movs()
     if count == 0:

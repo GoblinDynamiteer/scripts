@@ -24,6 +24,15 @@ class MovieScanner(MediaScanner):
                 _count += 1
         return _count
 
+    def scan_removed(self) -> int:
+        _count = 0
+        existing = [d.name for d in self._media_paths.movie_dirs()]
+        for mov in self._db.all_movies(include_removed=False):
+            if mov.get("folder") not in existing:
+                _count += 1
+                print(mov)  # TODO: set as marked
+        return _count
+
     def _process_new_movie(self, movie: Movie):
         if not movie.is_valid():
             self.warn_fs(f"w[{movie}] is not valid! Skipping...")

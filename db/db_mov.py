@@ -105,6 +105,9 @@ class MovieDatabase(MediaDatabase):
     def update(self, folder: str, **data):
         self._db.update(folder, **data)
 
-    def all_movies(self):
+    def all_movies(self, include_removed: bool = True):
         for item in self._db.find():
-            yield item
+            if include_removed:
+                yield item
+            elif not item.get(self.REMOVED_KEY_STR, False):
+                yield item
