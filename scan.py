@@ -61,7 +61,8 @@ def scan_diagnostics(args: Namespace) -> None:
         section=SettingSection.MediaScanner,
         key=SettingKeys.SCANNER_ALLOWED_DUPLICATES).split(",")
 
-    def _list_duplicate_movs():
+    def _list_duplicate_movs() -> int:
+        _count = 0
         for imdb_id, movies in _mdb.find_duplicates().items():
             _is_duplicate: bool = True
             for _needle in _allowed:
@@ -69,12 +70,18 @@ def scan_diagnostics(args: Namespace) -> None:
                 if len(_matching) == 1:
                     _is_duplicate = False
             if _is_duplicate:
+                _count += 1
                 print(imdb_id)
                 for mov in movies:
                     print(f" {mov}")
+        return _count
 
-    print(_allowed)
-    _list_duplicate_movs()
+    print("scanning for duplicate movies...")
+    count = _list_duplicate_movs()
+    if count == 0:
+        print("no duplicates found")
+    else:
+        print(f"found {count} duplicates!")
 
 
 def _args_to_funcs(args: Namespace) -> List[Callable[[Namespace], None]]:
