@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from pathlib import Path
 
 from config import ConfigurationManager, SettingKeys
@@ -85,6 +85,19 @@ class MovieDatabase(MediaDatabase):
                                             assert_path_exists=True)
         _path = _path / "removed.txt"
         self.export_latest_removed(to_str_func=_to_text_removed, text_file_path=_path)
+
+    def find_duplicates(self) -> Dict[str, List[str]]:
+        _ret = {}
+        for _id, mov_list in self._db.find_duplicates(key=Key("imdb")).items():
+            if _id is None:
+                continue
+            _duplicates = []
+            for mov in mov_list:
+                if not self.is_removed(mov):  # FIXME: this is slow..
+                    _duplicates.append(mov)
+            if len(_duplicates) > 1:
+                _ret[_id] = _duplicates
+        return _ret
 
     def add(self, **data):
         self._db.insert(**data)

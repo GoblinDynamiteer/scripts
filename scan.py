@@ -7,6 +7,8 @@ from media.scan.movie import MovieScanner
 from db.db_mov import MovieDatabase
 from db.db_tv import EpisodeDatabase
 
+from config import ConfigurationManager, SettingKeys, SettingSection
+
 SCAN_TYPE_MOV = ("mov", "movie", "film")
 SCAN_TYPE_TV = ("tv", "show", "ep", "episodes")
 SCAN_TYPE_DIAG = ("diag", "diagnostics")
@@ -53,7 +55,26 @@ def scan_shows(args: Namespace) -> None:
 
 
 def scan_diagnostics(args: Namespace) -> None:
-    raise NotImplementedError("diag not implemented")
+    _mdb = MovieDatabase()
+    _allowed: List[str] = ConfigurationManager().get(
+        assert_exists=True,
+        section=SettingSection.MediaScanner,
+        key=SettingKeys.SCANNER_ALLOWED_DUPLICATES).split(",")
+
+    def _list_duplicate_movs():
+        for imdb_id, movies in _mdb.find_duplicates().items():
+            _is_duplicate: bool = True
+            for _needle in _allowed:
+                _matching = [m for m in movies if _needle.lower() in m.lower()]
+                if len(_matching) == 1:
+                    _is_duplicate = False
+            if _is_duplicate:
+                print(imdb_id)
+                for mov in movies:
+                    print(f" {mov}")
+
+    print(_allowed)
+    _list_duplicate_movs()
 
 
 def _args_to_funcs(args: Namespace) -> List[Callable[[Namespace], None]]:

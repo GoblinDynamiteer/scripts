@@ -45,12 +45,14 @@ class SettingKeys(Enum):
     JACKET_PORT = "jacket_port"
     TORRENT_INDEXERS_PRIVATE = "private_indexers"
     TORRENT_INDEXERS_PUBLIC = "public_indexers"
+    SCANNER_ALLOWED_DUPLICATES = "allowed_duplicates"
 
 
 class SettingSection(Enum):
     WB = "wb"
     Database = "database"
     Torrent = "torrent"
+    MediaScanner = "scanner"
 
 
 class ConfigurationManager(BaseLog, metaclass=Singleton):
