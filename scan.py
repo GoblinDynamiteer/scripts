@@ -9,6 +9,7 @@ from db.db_tv import EpisodeDatabase
 
 SCAN_TYPE_MOV = ("mov", "movie", "film")
 SCAN_TYPE_TV = ("tv", "show", "ep", "episodes")
+SCAN_TYPE_DIAG = ("diag", "diagnostics")
 
 
 def get_args() -> Namespace:
@@ -51,15 +52,21 @@ def scan_shows(args: Namespace) -> None:
         _db.export_latest_added_episodes()
 
 
+def scan_diagnostics(args: Namespace) -> None:
+    raise NotImplementedError("diag not implemented")
+
+
 def _args_to_funcs(args: Namespace) -> List[Callable[[Namespace], None]]:
     if not isinstance(args.scan_types, list) or not args.scan_types:
-        return [scan_movies, scan_shows]
+        return [scan_movies, scan_shows, scan_diagnostics]
     _ret = []
     for scan_type in args.scan_types:
         if scan_type in SCAN_TYPE_TV:
             _ret.append(scan_shows)
         elif scan_type in SCAN_TYPE_MOV:
             _ret.append(scan_movies)
+        elif scan_type in SCAN_TYPE_DIAG:
+            _ret.append(scan_diagnostics)
         elif args.verbose:
             print(f"invalid scan type: {scan_type}")
     if not _ret and args.verbose:
