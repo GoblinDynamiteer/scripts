@@ -12,11 +12,11 @@ class ScanType(Enum):
 
 
 class MediaScanner(ABC, BaseLog):
-    def __init__(self, update_database: bool = True):
-        BaseLog.__init__(self, verbose=True)
+    def __init__(self, update_database: bool = True, verbose: bool = False):
+        BaseLog.__init__(self, verbose=verbose)
         self._update_db: bool = update_database
         self.set_log_prefix("MEDIA_SCANNER")
 
     @abstractmethod
-    def scan(self):
+    def scan(self) -> int:
         raise NotImplementedError

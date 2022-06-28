@@ -9,23 +9,26 @@ from printout import print_line
 
 
 class MovieScanner(MediaScanner):
-    def __init__(self, update_database: bool = False):
-        MediaScanner.__init__(self, update_database)
+    def __init__(self, update_database: bool = False, verbose: bool = False):
+        MediaScanner.__init__(self, update_database, verbose=verbose)
         self.set_log_prefix("MOVIE_SCANNER")
         self._db: MovieDatabase = MovieDatabase()
         self._media_paths = MediaPaths()
-        self._omdb = omdb.OMDb(verbose=True)
+        self._omdb = omdb.OMDb(verbose=verbose)
 
-    def scan(self):
+    def scan(self) -> int:
+        _count = 0
         for movie_dir in self._media_paths.movie_dirs():
             if movie_dir.name not in self._db:
                 self._process_new_movie(Movie(movie_dir))
+                _count += 1
+        return _count
 
     def _process_new_movie(self, movie: Movie):
         if not movie.is_valid():
             self.warn_fs(f"w[{movie}] is not valid! Skipping...")
             return
-        self.log_fs(f"processing new: i[{movie}]...")
+        self.log_fs(f"processing new: i[{movie}]...", force=True)
         _id = IMDBId(movie.path)  # TODO: assert path is dir...
         if _id.valid():
             self.log_fs(f"searching using imdb: o[{_id}]")

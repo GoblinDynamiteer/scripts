@@ -9,24 +9,27 @@ from printout import print_line
 
 
 class ShowScanner(MediaScanner):
-    def __init__(self, update_database: bool = False):
-        MediaScanner.__init__(self, update_database)
+    def __init__(self, update_database: bool = False, verbose: bool = False):
+        MediaScanner.__init__(self, update_database, verbose=verbose)
         self.set_log_prefix("SHOW_SCANNER")
         self._db_show: ShowDatabase = ShowDatabase()
         self._db_ep: EpisodeDatabase = EpisodeDatabase()
         self._media_paths = MediaPaths()
-        self._tv_maze = tvmaze.TvMaze(verbose=True)
+        self._tv_maze = tvmaze.TvMaze(verbose=verbose)
 
-    def scan(self):
+    def scan(self) -> int:
+        _count = 0
         for show_dir in self._media_paths.show_dirs():
             if show_dir.name not in self._db_show:
                 self._process_new_show(Show(show_dir))
+                _count += 1
+        return _count
 
     def _process_new_show(self, show: Show):
         if not show.is_valid():
             self.warn_fs(f"w[{show.name}] is not valid! Skipping...")
             return
-        self.log_fs(f"processing new: i[{show.name}]...")
+        self.log_fs(f"processing new: i[{show.name}]...", force=True)
         _id = IMDBId(show.path)  # TODO: or tvmaze_id
         if _id.valid():
             self.log_fs(f"searching using imdb: o[{_id}]")
