@@ -98,14 +98,14 @@ class EpisodeDatabase(MediaDatabase):
         self._db.set_valid_keys(keys)
         self._db.load()
 
-    def export_latest_added_movies(self):
+    def export_latest_added_episodes(self):
         _path = ConfigurationManager().path(SettingKeys.PATH_TV,
                                             convert_to_path=True,
                                             assert_path_exists=True)
         _path = _path / "latest.txt"
         self.export_latest_added(to_str_func=_to_text_added, text_file_path=_path)
 
-    def export_latest_removed_movies(self):
+    def export_latest_removed_episodes(self):
         _path = ConfigurationManager().path(SettingKeys.PATH_TV,
                                             convert_to_path=True,
                                             assert_path_exists=True)
