@@ -4,13 +4,16 @@ from typing import List, Callable
 from media.scan.show import ShowScanner
 from media.scan.movie import MovieScanner
 
+from db.db_mov import MovieDatabase
+from db.db_tv import EpisodeDatabase
+
 SCAN_TYPE_MOV = ("mov", "movie", "film")
 SCAN_TYPE_TV = ("tv", "show", "ep", "episodes")
 
 
 def get_args() -> Namespace:
     parser = ArgumentParser("media scanner")
-    parser.add_argument("scan_types", default=None, nargs="*")
+    parser.add_argument("scan_types", nargs="*")
     parser.add_argument("--verbose", "-v",
                         action="store_true",
                         help="be verbose")
@@ -27,8 +30,11 @@ def scan_movies(args: Namespace) -> None:
     count = mov_scan.scan()
     if count == 0:
         print("-> No new movies found")
-    else:
-        print(f"-> Found {count} new movie(s)")
+        return
+    print(f"-> Found {count} new movie(s)")
+    if not args.simulate:
+        _db = MovieDatabase()
+        _db.export_latest_added_movies()
 
 
 def scan_shows(args: Namespace) -> None:
@@ -38,12 +44,15 @@ def scan_shows(args: Namespace) -> None:
     count = show_scan.scan()
     if count == 0:
         print("-> No new episodes found")
-    else:
-        print(f"-> Found {count} new episode(s)")
+        return
+    print(f"-> Found {count} new episode(s)")
+    if not args.simulate:
+        _db = EpisodeDatabase()
+        _db.export_latest_added_episodes()
 
 
 def _args_to_funcs(args: Namespace) -> List[Callable[[Namespace], None]]:
-    if not isinstance(args.scan_types, list):
+    if not isinstance(args.scan_types, list) or not args.scan_types:
         return [scan_movies, scan_shows]
     _ret = []
     for scan_type in args.scan_types:
