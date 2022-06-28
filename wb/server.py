@@ -128,10 +128,7 @@ class Server(BaseLog):
 
     def download_with_scp(self, remote_path: PurePosixPath, local_path: Path) -> bool:
         if self._settings.use_system_scp:
-            if self._ssh.used_password_to_connect:
-                self.warn_once("will fallback to python SCP to download file, was connected with password")
-            else:
-                return self._download_with_system_scp(remote_path, local_path)
+            return self._download_with_system_scp(remote_path, local_path)
         _scp_client = self._ssh.scp
         if not _scp_client:
             return False
