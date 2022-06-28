@@ -9,8 +9,8 @@ from printout import cstr, Color
 class IMDBId(BaseLog):
     REGEX = r"([tT]{2}[0-9]{7,})"
 
-    def __init__(self, value: Optional[Union[str, Path]] = None):
-        BaseLog.__init__(self, verbose=True)
+    def __init__(self, value: Optional[Union[str, Path]] = None, verbose: bool = False):
+        BaseLog.__init__(self, verbose=verbose)
         self.set_log_prefix("IMDB_ID")
         self._ids: List[str] = []
         if value is not None:
@@ -51,7 +51,7 @@ class IMDBId(BaseLog):
         for match in matches:
             _num = match.lower().replace("tt", "")
             if _num not in self._ids:
-                self.log(f"found id: {_num} " + cstr(source, Color.Grey) if source is not None else "")
+                self.log(f"found id: {_num} " + (cstr(source, Color.Grey) if source is not None else ""))
                 self._ids.append(_num)
                 _ret = True
         return _ret
