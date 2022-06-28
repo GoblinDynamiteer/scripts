@@ -22,8 +22,15 @@ class OMDbMovieSearchResult(SearchResult):
         return "Title" in self._raw
 
     @property
-    def year(self):
-        return self._raw.get("Year", None)
+    def year(self) -> Optional[int]:
+        _year = self._raw.get("Year", None)
+        if _year is None:
+            return None
+        if not isinstance(_year, str):
+            return None
+        if not _year.isnumeric():
+            return None
+        return int(_year)
 
     @property
     def title(self):
