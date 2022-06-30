@@ -28,9 +28,12 @@ class MovieScanner(MediaScanner):
         _count = 0
         existing = [d.name for d in self._media_paths.movie_dirs()]
         for mov in self._db.all_movies(include_removed=False):
-            if mov.get("folder") not in existing:
+            folder = mov.get("folder")
+            if folder not in existing:
                 _count += 1
-                print(mov)  # TODO: set as marked
+                self.log_fs(f"found removed: w[{folder}]...", force=True)
+                if self._update_db:
+                    self._db.mark_removed(folder)
         return _count
 
     def _process_new_movie(self, movie: Movie):

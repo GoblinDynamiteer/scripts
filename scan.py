@@ -54,7 +54,7 @@ def scan_shows(args: Namespace) -> None:
         _db.export_latest_added_episodes()
 
 
-def scan_diagnostics(args: Namespace) -> None:
+def scan_diagnostics_movies(args: Namespace) -> None:
     _mdb = MovieDatabase()
     _allowed: List[str] = ConfigurationManager().get(
         assert_exists=True,
@@ -79,15 +79,23 @@ def scan_diagnostics(args: Namespace) -> None:
     print("scanning for removed movies...")
     mov_scan = MovieScanner(update_database=not args.simulate,
                             verbose=args.verbose)
-    mov_scan.scan_removed()
-    # TODO: write to removed
-
+    count = mov_scan.scan_removed()
+    if count == 0:
+        print("no removed movies found")
+    else:
+        print(f"found {count} removed movies!")
+        if not args.simulate:
+            _mdb.export_latest_removed_movies()
     print("scanning for duplicate movies...")
     count = _list_duplicate_movs()
     if count == 0:
         print("no duplicates found")
     else:
         print(f"found {count} duplicates!")
+
+
+def scan_diagnostics(args: Namespace) -> None:
+    scan_diagnostics_movies(args)
 
 
 def _args_to_funcs(args: Namespace) -> List[Callable[[Namespace], None]]:
