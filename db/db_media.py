@@ -93,14 +93,14 @@ class MediaDatabase(BaseLog):
     def get_keys(self) -> List[Key]:
         return self._db.get_keys()
 
-    def _get_last_of(self, key: str, limit: int) -> List[Dict]:
-        return self._db.find(sort_by_key=key, reversed_sort=True, limit=limit)
+    def _get_last_of(self, key: str, limit: int, filter_by: Optional[Dict] = None) -> List[Dict]:
+        return self._db.find(sort_by_key=key, reversed_sort=True, limit=limit, filter_by=filter_by)
 
     def last_added(self, limit: int):
         return self._get_last_of(self.SCANNED_KEY_STR, limit)
 
     def last_removed(self, limit: int):
-        return self._get_last_of(self.REMOVED_DATE_KEY_STR, limit)
+        return self._get_last_of(self.REMOVED_DATE_KEY_STR, limit=limit, filter_by={"removed": True})
 
     def mark_removed(self, item: str):
         self._db.update(item, removed=True, removed_date=util.now_timestamp())
