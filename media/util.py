@@ -48,6 +48,12 @@ class MediaPaths(metaclass=Singleton):
             if _item.is_dir():
                 yield _item
 
+    def episode_files(self) -> Generator[Path, None, None]:
+        for _show_dir in self.show_dirs():
+            for _file in _show_dir.rglob("*.*"):
+                if _file.suffix in (".mkv", ".avi", ".mp4"):
+                    yield _file
+
 
 class Util:
     @staticmethod
