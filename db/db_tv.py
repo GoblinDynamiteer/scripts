@@ -124,3 +124,29 @@ class EpisodeDatabase(MediaDatabase):
 
     def __contains__(self, file_name: str):
         return file_name in self._db
+
+
+def main():
+    from argparse import Namespace, ArgumentParser
+
+    def get_args() -> Namespace:
+        parser = ArgumentParser()
+        parser.add_argument("--filter", default=None, type=str)
+        parser.add_argument("--limit", default=None, type=int)
+        return parser.parse_args()
+
+    db = EpisodeDatabase()
+    args = get_args()
+    count = 0
+    for ep in db.all_episodes():
+        if args.filter is not None:
+            if args.filter not in ep.get("filename", ""):
+                continue
+        count += 1
+        print(ep)
+        if args.limit == count:
+            break
+
+
+if __name__ == "__main__":
+    main()
