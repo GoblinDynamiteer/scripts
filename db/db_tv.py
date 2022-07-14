@@ -77,6 +77,7 @@ class EpisodeDatabase(MediaDatabase):
             Key("tvshow", optional=False),
             Key("imdb"),
             Key("tvmaze", type=KeyType.Integer),
+            Key("title", type=KeyType.String),
             Key(self.SCANNED_KEY_STR, type=KeyType.Integer),
             Key(self.REMOVED_KEY_STR, type=KeyType.Boolean),
             Key(self.REMOVED_DATE_KEY_STR, type=KeyType.Integer),
