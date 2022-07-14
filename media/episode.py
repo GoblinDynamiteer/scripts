@@ -36,6 +36,18 @@ class Episode(MediaItem):
     def type(self) -> Type:
         return Type.Episode
 
+    @property
+    def season_num(self) -> Optional[int]:
+        return self._data.season_number
+
+    @property
+    def episode_num(self) -> Optional[int]:
+        return self._data.episode_number
+
+    @property
+    def show_path(self) -> Path:
+        return self.path.parents[1]
+
     def has_external_subtitle(self, language: Language) -> bool:
         raise NotImplementedError()
 
@@ -56,7 +68,7 @@ class Episode(MediaItem):
         s, e = parse_season_and_episode(self.name)
         self._data.episode_number = e
         self._data.season_number = s
-        self._data.show_title = self.path.parents[1].name
+        self._data.show_title = self.show_path.name
 
     def __repr__(self):
         _dict = asdict(self._data)

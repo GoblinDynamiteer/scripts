@@ -5,6 +5,7 @@ import json
 import urllib.parse
 import urllib.request
 from http.client import HTTPResponse
+from datetime import datetime
 
 from argparse import ArgumentParser
 
@@ -57,6 +58,14 @@ class TvMazeEpisodeSearchResult(SearchResult):
     @property
     def year(self):
         return self._raw.get("airdate", None)
+
+    @property
+    def aired_timestamp(self) -> Optional[int]:
+        _ts = self._raw.get("airstamp", None)
+        if _ts is None:
+            return None
+        _dt = datetime.fromisoformat(_ts)
+        return int(_dt.timestamp())
 
     @property
     def title(self):
