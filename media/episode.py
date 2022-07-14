@@ -48,6 +48,10 @@ class Episode(MediaItem):
     def show_path(self) -> Path:
         return self.path.parents[1]
 
+    @property
+    def show_name(self) -> Optional[str]:
+        return self._data.show_title
+
     def has_external_subtitle(self, language: Language) -> bool:
         raise NotImplementedError()
 
@@ -58,6 +62,8 @@ class Episode(MediaItem):
         raise NotImplementedError()
 
     def is_valid(self) -> bool:
+        if self.show_name is None:
+            return False
         if self._data.episode_number is None:
             return False
         if self._data.season_number is None:

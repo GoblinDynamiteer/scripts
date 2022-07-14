@@ -61,6 +61,7 @@ class ShowScanner(MediaScanner):
 
     def _add_episode_to_db(self, ep: Episode, search_result: tvmaze.TvMazeEpisodeSearchResult):
         _db_entry = {
+            "tvshow": ep.show_name,
             "filename": ep.name,
             "scanned": now_timestamp(),
             "season_number": ep.season_num,
