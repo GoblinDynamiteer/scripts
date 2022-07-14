@@ -1,5 +1,5 @@
 from typing import Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pathlib import Path
 
 from media.base import MediaItem, Type, Language
@@ -56,10 +56,12 @@ class Episode(MediaItem):
         s, e = parse_season_and_episode(self.name)
         self._data.episode_number = e
         self._data.season_number = s
+        self._data.show_title = self.path.parents[1].name
 
     def __repr__(self):
-        return f"{self.path.resolve()} : [{self.name}] "\
-               f"valid: {self.is_valid()} S{self._data.season_number}E{self._data.episode_number}"
+        _dict = asdict(self._data)
+        _dict["valid"] = self.is_valid()
+        return str(_dict)
 
 
 def main():
