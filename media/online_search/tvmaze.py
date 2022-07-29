@@ -29,8 +29,17 @@ class TvMazeShowSearchResult(SearchResult):
         return False
 
     @property
-    def year(self):
-        return self._raw.get("premiered", None)
+    def year(self) -> Optional[int]:
+        _prem = self._raw.get("premiered", None)
+        if _prem is None:
+            return None
+        if not isinstance(_prem, str):
+            return None
+        try:
+            _y, _, _ = _prem.split("-")
+            return int(_y)
+        except Exception as _:
+            return None
 
     @property
     def title(self):
