@@ -1,4 +1,6 @@
-from media.scan.scanner import MediaScanner
+from typing import Optional
+
+from media.scan.scanner import MediaScanner, ScanType
 from db.db_mov import MovieDatabase
 from media.util import MediaPaths
 from media.movie import Movie
@@ -14,7 +16,6 @@ class MovieScanner(MediaScanner):
         self.set_log_prefix("MOVIE_SCANNER")
         self._db: MovieDatabase = MovieDatabase()
         self._media_paths = MediaPaths()
-        self._omdb = omdb.OMDb(verbose=verbose)
 
     def scan(self) -> int:
         _count = 0
@@ -37,6 +38,10 @@ class MovieScanner(MediaScanner):
                 if self._update_db:
                     self._db.mark_removed(folder)
         return _count
+
+    @property
+    def _omdb(self) -> omdb.OMDb:
+        return self.online_search_tool(ScanType.Movie)
 
     def _process_new_movie(self, movie: Movie):
         if not movie.is_valid():

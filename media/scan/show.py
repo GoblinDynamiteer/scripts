@@ -1,4 +1,4 @@
-from media.scan.scanner import MediaScanner
+from media.scan.scanner import MediaScanner, ScanType
 from db.db_tv import ShowDatabase, EpisodeDatabase
 from media.util import MediaPaths
 from media.show import Show
@@ -16,7 +16,6 @@ class ShowScanner(MediaScanner):
         self._db_show: ShowDatabase = ShowDatabase()
         self._db_ep: EpisodeDatabase = EpisodeDatabase()
         self._media_paths = MediaPaths()
-        self._tv_maze = tvmaze.TvMaze(verbose=verbose)
 
     def scan(self) -> int:
         _count = 0
@@ -30,6 +29,10 @@ class ShowScanner(MediaScanner):
                 self._process_new_episode(Episode(episode_file))
                 _count += 1
         return _count
+
+    @property
+    def _tv_maze(self) -> tvmaze.TvMaze:
+        return self.online_search_tool(ScanType.TvShow)
 
     def _process_new_show(self, show: Show):
         if not show.is_valid():
