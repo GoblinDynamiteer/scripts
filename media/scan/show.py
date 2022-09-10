@@ -21,6 +21,8 @@ class ShowScanner(MediaScanner):
     def scan(self) -> int:
         _count = 0
         for show_dir in self._media_paths.show_dirs():
+            if self.should_skip_dir(show_dir):
+                continue
             if show_dir.name not in self._db_show:
                 self._process_new_show(Show(show_dir))
         for episode_file in self._media_paths.episode_files():
@@ -31,7 +33,7 @@ class ShowScanner(MediaScanner):
 
     def _process_new_show(self, show: Show):
         if not show.is_valid():
-            self.warn_fs(f"w[{show.name}] is not valid! Skipping...")
+            self.warn_fs(f"w[{str(show)}] is not valid! Skipping...")
             return
         self.log_fs(f"processing new show: i[{show.name}]...", force=True)
         _id = IMDBId(show.path)  # TODO: or tvmaze_id

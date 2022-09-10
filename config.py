@@ -46,6 +46,7 @@ class SettingKeys(Enum):
     TORRENT_INDEXERS_PRIVATE = "private_indexers"
     TORRENT_INDEXERS_PUBLIC = "public_indexers"
     SCANNER_ALLOWED_DUPLICATES = "allowed_duplicates"
+    SCANNER_IGNORE_DIRS = "ignore_dirs"
 
 
 class SettingSection(Enum):

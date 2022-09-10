@@ -19,6 +19,8 @@ class MovieScanner(MediaScanner):
     def scan(self) -> int:
         _count = 0
         for movie_dir in self._media_paths.movie_dirs():
+            if self.should_skip_dir(movie_dir):
+                continue
             if movie_dir.name not in self._db:
                 self._process_new_movie(Movie(movie_dir))
                 _count += 1
