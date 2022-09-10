@@ -65,7 +65,7 @@ def main():
         handler.print_file_list()
     elif args.download_items:
         _dl_dir = ConfigurationManager().path("download", convert_to_path=True, assert_path_exists=True)
-        _keys = parse_download_arg(args.download_items)
+        _keys = parse_download_arg(args.download_items, number_of_items=handler.number_of_items())
         for _key in _keys:
             handler.download(_key, _dl_dir)
 

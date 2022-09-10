@@ -19,12 +19,14 @@ def gen_find_cmd(extensions: List[str]):
     return _cmd_str + " \\) -printf \"%T@ | %s | %p\\n\" | sort -n"
 
 
-def parse_download_arg(download_arg: str):
+def parse_download_arg(download_arg: str, number_of_items: int):
     _ret = []
     _splits = download_arg.split(",")
     for _str in _splits:
         if _str.isnumeric():
             _ret.append(int(_str))
+        elif _str.startswith("-"):
+            _ret.extend(list(range(number_of_items + 1))[int(_str):])
         elif "-" in _str:
             if _str.replace("-", "").isnumeric():
                 _start, _end = [int(ix) for ix in _str.split("-")]

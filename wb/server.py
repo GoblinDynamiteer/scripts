@@ -165,6 +165,11 @@ class ServerHandler(BaseLog):
             self._file_list.parse_find_cmd_output(server.list_files(), server_id=server.hostname)
         self.log(f"found {len(self._file_list)} number of items")
 
+    def number_of_items(self) -> int:
+        if self._file_list.empty():
+            self._init_file_list()
+        return len(self._file_list)
+
     def download(self, key: Union[str, int], destination: Path) -> bool:
         if self._file_list.empty():
             self._init_file_list()

@@ -25,23 +25,35 @@ class TestHelperMethods:
 
     def test_parse_download_arg(self):
         arg = "1,2,3"
-        assert parse_download_arg(arg) == [1, 2, 3]
+        assert parse_download_arg(arg, 1000) == [1, 2, 3]
         arg = "222-225"
-        assert parse_download_arg(arg) == [222, 223, 224, 225]
+        assert parse_download_arg(arg, 1000) == [222, 223, 224, 225]
         arg = "666,222-225"
-        assert parse_download_arg(arg) == [666, 222, 223, 224, 225]
+        assert parse_download_arg(arg, 1000) == [666, 222, 223, 224, 225]
         arg = "666,222-225,2-3"
-        assert parse_download_arg(arg) == [666, 222, 223, 224, 225, 2, 3]
+        assert parse_download_arg(arg, 1000) == [666, 222, 223, 224, 225, 2, 3]
+        arg = "6-10"
+        assert parse_download_arg(arg, 1000) == [6, 7, 8, 9, 10]
         arg = "Show.S06E02"
-        assert parse_download_arg(arg) == ["Show.S06E02"]
+        assert parse_download_arg(arg, 1000) == ["Show.S06E02"]
         arg = "Show.S06E02,2"
-        assert parse_download_arg(arg) == ["Show.S06E02", 2]
+        assert parse_download_arg(arg, 1000) == ["Show.S06E02", 2]
         arg = "Show.S06E02,2-5"
-        assert parse_download_arg(arg) == ["Show.S06E02", 2, 3, 4, 5]
+        assert parse_download_arg(arg, 1000) == ["Show.S06E02", 2, 3, 4, 5]
         arg = "124-123"  # invalid range
-        assert parse_download_arg(arg) == []
+        assert parse_download_arg(arg, 1000) == []
         arg = "124-123,111-115"  # invalid range + valid range
-        assert parse_download_arg(arg) == [111, 112, 113, 114, 115]
+        assert parse_download_arg(arg, 1000) == [111, 112, 113, 114, 115]
+
+    def test_parse_download_arg_get_last(self):
+        arg = "-5"
+        assert parse_download_arg(arg, 10) == [6, 7, 8, 9, 10]
+        arg = "-1"
+        assert parse_download_arg(arg, 9812312) == [9812312]
+        arg = "5-10,-2"
+        assert parse_download_arg(arg, 100) == [5, 6, 7, 8, 9, 10, 99, 100]
+        arg = "2,-3"
+        assert parse_download_arg(arg, 100) == [2, 98, 99, 100]
 
 
 class TestFileListItem:
@@ -98,7 +110,7 @@ class TestFileListItem:
                 r"/home/johndoe/files/SomeFile.mkv"
         _item = FileListItem(_line)
         assert _item.valid is False
-        
+
     def test_parse_valid_rar_part01(self):
         _line = r"1611998314.0000000000 | 50000000 | " \
                 r"/home/johndoe/files/Some.Cool.Movie.2007.1080p.BluRay.DTS.x264-Grp/" \
@@ -259,7 +271,7 @@ class TestFileListItem:
         assert _item.download_path == PurePosixPath(
             r"/home/johndoe/files/Show.S04.iNTERNAL.1080p.WEB.H264-GROUPNAME/"
             r"Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME/"
-            )
+        )
 
     def test_download_path_vid_file(self):
         _line = r"1623879181.7519188610 | 4025725826 | " \
