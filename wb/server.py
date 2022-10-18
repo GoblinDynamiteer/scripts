@@ -139,7 +139,10 @@ class Server(BaseLog):
 
     def _download_with_system_scp(self, remote_path: PurePosixPath, local_path: Path) -> bool:
         from run import local_command
-        _cmd = f"scp -r {self._user}@{self._hostname}:\"{remote_path}\" {local_path}"
+        _remote = str(remote_path)
+        if " " in _remote:  # Make sure to escape spaces
+            _remote = _remote.replace(" ", r"\ ")
+        _cmd = f"scp -r {self._user}@{self._hostname}:\"{_remote}\" {local_path}"
         return local_command(_cmd, hide_output=False)
 
 
