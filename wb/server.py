@@ -1,7 +1,6 @@
 from pathlib import PurePosixPath, Path
 from typing import Optional, List, Union
 from dataclasses import dataclass
-import time
 
 from paramiko import SSHClient, AutoAddPolicy
 from scp import SCPClient
@@ -20,7 +19,7 @@ class ConnectionSettings:
     use_system_scp: bool = True
 
 
-def scp_progress_callback(filename, size, sent):
+def scp_progress_callback(filename, size, sent) -> None:
     _size = bytes_to_human_readable(size)
     _dl = bytes_to_human_readable(sent)
     print(f"\r{filename}: {_dl} / {_size}", end="")
@@ -59,7 +58,7 @@ class Server(BaseLog):
                 self.error(f"FAIL: {error}")
                 self._connected = False
 
-        def run_command(self, command):
+        def run_command(self, command) -> Optional[List[str]]:
             if not self._connected:
                 return None
             _, stdout, _ = self._ssh_client.exec_command(command)
@@ -71,7 +70,7 @@ class Server(BaseLog):
             return None
 
         @property
-        def connected(self):
+        def connected(self) -> bool:
             return self._connected
 
         @property
@@ -119,7 +118,7 @@ class Server(BaseLog):
         return self._ssh.run_command(_cmd)
 
     @property
-    def hostname(self):
+    def hostname(self) -> str:
         return self._hostname
 
     @property
@@ -157,12 +156,12 @@ class ServerHandler(BaseLog):
     def add(self, hostname: str) -> None:
         self._servers.append(Server(hostname, settings=self._settings))
 
-    def print_file_list(self):
+    def print_file_list(self) -> None:
         if self._file_list.empty():
             self._init_file_list()
         self._file_list.print()
 
-    def _init_file_list(self):
+    def _init_file_list(self) -> None:
         self.log("gathering item from server(s)")
         for server in self._servers:
             self._file_list.parse_find_cmd_output(server.list_files(), server_id=server.hostname)
@@ -190,5 +189,5 @@ class ServerHandler(BaseLog):
                 return True
         return False
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._servers)
