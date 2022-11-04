@@ -154,7 +154,7 @@ class ServerHandler(BaseLog):
         self._servers: List[Server] = []
         self._file_list: FileList = FileList()
 
-    def add(self, hostname):
+    def add(self, hostname: str) -> None:
         self._servers.append(Server(hostname, settings=self._settings))
 
     def print_file_list(self):
@@ -189,3 +189,6 @@ class ServerHandler(BaseLog):
             if server.connected:
                 return True
         return False
+
+    def __len__(self):
+        return len(self._servers)

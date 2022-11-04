@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
+from typing import List
 
 from config import ConfigurationManager, SettingSection, SettingKeys
 from base_log import BaseLogGlobalSettings
@@ -45,6 +46,16 @@ def get_args():
     return _parser.parse_args()
 
 
+def get_server_addresses_from_settings() -> List[str]:
+    _ret = []
+    _num = ConfigurationManager().get(key=SettingKeys.WB_NUM_SERVERS, section=SettingSection.WB, assert_exists=True,
+                                      convert=int)
+    for _n in range(1, _num + 1):
+        _key = SettingKeys.WB_SERVER_PREFIX.value + str(_n)
+        _ret.append(ConfigurationManager().get(key=_key, section=SettingSection.WB, assert_exists=True))
+    return _ret
+
+
 def main():
     args = get_args()
     BaseLogGlobalSettings().verbose = args.verbose
@@ -52,12 +63,10 @@ def main():
     handler = ServerHandler(ConnectionSettings(use_password=args.fallback or not args.use_rsa,
                                                use_rsa_key=args.use_rsa,
                                                use_system_scp=args.use_system_scp))
-    for _key in [SettingKeys.WB_SERVER_1, SettingKeys.WB_SERVER_2]:
-        _hostname = ConfigurationManager().get(key=_key, section=SettingSection.WB)
-        if _hostname:
-            handler.add(_hostname)
-        else:
-            print(f"could not get hostname (key {_key.value}) from settings")
+    for _addr in get_server_addresses_from_settings():
+        handler.add(_addr)
+    if not len(handler):
+        print(f"no servers found in settings!")
     if not handler.valid():
         print("could not connect to server(s)")
         return
