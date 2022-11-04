@@ -55,6 +55,8 @@ class MovieScanner(MediaScanner):
         else:
             self.log_fs(f"searching using data: o[{movie.data}]")
             result = self._omdb.movie_search(movie.data)
+        if result and result.valid:
+            self.log(f"got: {result}")
         self._add_to_db(movie, result)
 
     def _add_to_db(self, movie: Movie, search_result: omdb.OMDbMovieSearchResult):

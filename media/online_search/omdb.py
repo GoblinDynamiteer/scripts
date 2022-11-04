@@ -56,6 +56,9 @@ class OMDbMovieSearchResult(SearchResult):
     def poster_url(self) -> Optional[str]:
         return self._raw.get("Poster", None)
 
+    def __repr__(self) -> str:
+        return f"OMDbMovieSearchResult(title={self.title}, id={self.id}, year={self.year})"
+
 
 class OMDb(BaseLog):
     URL = "http://www.omdbapi.com"
@@ -138,6 +141,8 @@ def main():
         print("could not get a valid search result!")
     else:
         from printout import print_line
+        print("repr:", res)  # __repr__
+        print("print():")
         res.print()
         print_line()
         print("valid", res.valid)
