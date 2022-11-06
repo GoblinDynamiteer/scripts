@@ -46,6 +46,8 @@ class ShowScanner(MediaScanner):
         else:
             self.log_fs(f"searching using data: o[{show.data}]")
             result = self._tv_maze.show_search(show.data)
+        if result and result.valid:
+            self.log(f"got: {result}")
         self._add_show_to_db(show, result)
 
     def _process_new_episode(self, episode: Episode):
@@ -62,6 +64,8 @@ class ShowScanner(MediaScanner):
         else:
             self.log_fs(f"searching using data: o[{episode.data}]")
             result = self._tv_maze.episode_search(episode.data)
+        if result and result.valid:
+            self.log(f"got: {result}")
         self._add_episode_to_db(episode, result)
 
     def _add_episode_to_db(self, ep: Episode, search_result: tvmaze.TvMazeEpisodeSearchResult):

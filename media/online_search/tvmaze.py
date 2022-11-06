@@ -56,6 +56,9 @@ class TvMazeShowSearchResult(SearchResult):
             return None
         return TvMazeId(_id)
 
+    def __repr__(self) -> str:
+        return f"TvMazeShowSearchResult(title={self.title}, id={self.id}, year={self.year})"
+
 
 class TvMazeEpisodeSearchResult(SearchResult):
     @property
@@ -98,6 +101,10 @@ class TvMazeEpisodeSearchResult(SearchResult):
         if _id is None:
             return None
         return TvMazeId(_id)
+
+    def __repr__(self) -> str:
+        return f"TvMazeEpisodeSearchResult(title={self.title}, season={self.season}, " \
+               f"episode={self.episode}, id={self.id}, year={self.year})"
 
 
 class TvMaze(BaseLog):
