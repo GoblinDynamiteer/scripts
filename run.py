@@ -70,7 +70,7 @@ def path_to_str(path):
     return None
 
 
-def extract(compressed_file: 'full path', destination, create_dirs=True, overwrite=True):
+def extract(compressed_file, destination, create_dirs=True, overwrite=True):
     "Extract files with fancy color output"
     compressed_file = path_to_str(compressed_file)
     destination = path_to_str(destination)
