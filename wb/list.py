@@ -23,7 +23,7 @@ class FileList(BaseLog):
             if _item.valid:
                 self._items.append(_item)
 
-    def print(self):
+    def print(self, show_additional_info: bool = False):
         _start = default_timer()
         if not self._sorted:
             self._sort()
@@ -31,7 +31,7 @@ class FileList(BaseLog):
             self.log("comparing items to database...")
             self._compare_to_database()
         for item in self._items:
-            item.print()
+            item.print(show_additional_info)
         _elapsed = default_timer() - _start
         self.log(f"listing operation took: {_elapsed}s")
 

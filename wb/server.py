@@ -1,22 +1,16 @@
 from pathlib import PurePosixPath, Path
 from typing import Optional, List, Union
-from dataclasses import dataclass
 
 from paramiko import SSHClient, AutoAddPolicy
 from scp import SCPClient
 
 from base_log import BaseLog
 from config import ConfigurationManager, SettingKeys, SettingSection
-from wb.helper_methods import gen_find_cmd
-from wb.list import FileList
 from util import bytes_to_human_readable
 
-
-@dataclass
-class ConnectionSettings:
-    use_rsa_key: bool = True
-    use_password: bool = False
-    use_system_scp: bool = True
+from wb.helper_methods import gen_find_cmd
+from wb.list import FileList
+from wb.settings import WBSettings
 
 
 def scp_progress_callback(filename, size, sent) -> None:
@@ -88,7 +82,7 @@ class Server(BaseLog):
                     return None
             return self._scp
 
-    def __init__(self, hostname: str, settings: ConnectionSettings):
+    def __init__(self, hostname: str, settings: WBSettings):
         BaseLog.__init__(self, use_global_settings=True)
         if not hostname:
             self.error(f"invalid hostname: {hostname}")
@@ -146,10 +140,10 @@ class Server(BaseLog):
 
 
 class ServerHandler(BaseLog):
-    def __init__(self, settings: ConnectionSettings):
+    def __init__(self, settings: WBSettings):
         BaseLog.__init__(self, use_global_settings=True)
         self.set_log_prefix("ServerHandler")
-        self._settings: ConnectionSettings = settings
+        self._settings: WBSettings = settings
         self._servers: List[Server] = []
         self._file_list: FileList = FileList()
 
@@ -159,7 +153,7 @@ class ServerHandler(BaseLog):
     def print_file_list(self) -> None:
         if self._file_list.empty():
             self._init_file_list()
-        self._file_list.print()
+        self._file_list.print(show_additional_info=self._settings.show_extra_info)
 
     def _init_file_list(self) -> None:
         self.log("gathering item from server(s)")

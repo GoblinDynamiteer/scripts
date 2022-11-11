@@ -168,7 +168,7 @@ class FileListItem(BaseLog):
                 return False
         return True
 
-    def print(self):
+    def print(self, show_additional_info: bool = False):
         _name = self.parent_name or self.path.stem
         _type_str = fcs("o[UNKN]")
         if self.is_movie:
