@@ -70,8 +70,10 @@ class Movie(MediaItem):
     def is_compressed(self) -> bool:
         return False
 
-    def is_valid(self) -> bool:
-        if matches_movie_regex(self.name):
+    def is_valid(self, replace_filename_whitespace: bool = True) -> bool:
+        if not replace_filename_whitespace and " " in self.name:
+            return False
+        if matches_movie_regex(self.name, replace_filename_whitespace):
             return True
         return False
 
