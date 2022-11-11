@@ -238,7 +238,7 @@ def handle_files(files: List[Path], cli_args: argparse.Namespace):
             else:
                 _results = _search.get_results(match="1080p")
             if not _results:
-                log.warn(f"could not find any releases with correct resolution for {_path.name}")
+                log.warn(f"could not find any releases with correct resolution for {file_path.name}")
             new_file_name = _results[0]
             if not new_file_name.endswith(file_path.suffix):
                 new_file_name = new_file_name + file_path.suffix
