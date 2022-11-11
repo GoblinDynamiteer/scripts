@@ -166,7 +166,7 @@ class ServerHandler(BaseLog):
             self._init_file_list()
         return len(self._file_list)
 
-    def download(self, key: Union[str, int], destination: Path) -> bool:
+    def download(self, key: Union[str, int]) -> bool:
         if self._file_list.empty():
             self._init_file_list()
         _item = self._file_list.get(key)
@@ -174,8 +174,14 @@ class ServerHandler(BaseLog):
             print(f"could not retrieve item with key: {key}")
             return False
         for server in self._servers:
-            if server.hostname == _item.server_id:
-                server.download_with_scp(_item.download_path, destination)
+            if server.hostname != _item.server_id:
+                continue
+            server.download_with_scp(_item.remote_download_path,
+                                     _item.local_destination() or
+                                     ConfigurationManager().path("download",
+                                                                 convert_to_path=True,
+                                                                 assert_path_exists=True))
+            break
 
     def valid(self) -> bool:
         for server in self._servers:

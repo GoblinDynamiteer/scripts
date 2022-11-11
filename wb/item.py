@@ -101,12 +101,22 @@ class FileListItem(BaseLog):
         return self._path
 
     @property
-    def download_path(self) -> PurePosixPath:
+    def remote_download_path(self) -> PurePosixPath:
         if self.is_rar:
             if self._path.parent == get_remote_files_path():
                 raise AssertionError("parent is remote file path!")
             return self._path.parent
         return self._path
+
+    def local_destination(self) -> Optional[Path]:
+        if self.is_rar:
+            return None
+        if self.is_tvshow:
+            _ep = Episode(Path(self.path))
+            _dest = _ep.get_correct_location()
+            if _dest.is_dir():
+                return _dest
+        return None
 
     @property
     def is_movie(self):

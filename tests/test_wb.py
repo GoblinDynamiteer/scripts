@@ -268,7 +268,7 @@ class TestFileListItem:
                 r"Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME/" \
                 r"show.s04e02.1080p.web-grpname.rar"
         _item = FileListItem(_line)
-        assert _item.download_path == PurePosixPath(
+        assert _item.remote_download_path == PurePosixPath(
             r"/home/johndoe/files/Show.S04.iNTERNAL.1080p.WEB.H264-GROUPNAME/"
             r"Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME/"
         )
@@ -278,7 +278,7 @@ class TestFileListItem:
                 r"/home/johndoe/files/Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME/" \
                 r"show.s04e02.1080p.web-grpname.mkv"
         _item = FileListItem(_line)
-        assert _item.download_path == PurePosixPath(
+        assert _item.remote_download_path == PurePosixPath(
             r"/home/johndoe/files/Show.S04E02.iNTERNAL.1080p.WEB.H264-GROUPNAME/"
             r"show.s04e02.1080p.web-grpname.mkv")
 
@@ -287,7 +287,7 @@ class TestFileListItem:
                 r"/home/johndoe/files/show.s04e02.1080p.web-grpname.rar"
         _item = FileListItem(_line)
         with pytest.raises(AssertionError):
-            _ = _item.download_path
+            _ = _item.remote_download_path
 
 
 class TestFileList:

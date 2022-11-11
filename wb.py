@@ -35,10 +35,9 @@ def main():
         return
     for cmd in setting.commands:
         if cmd == Command.Download:
-            _dl_dir = ConfigurationManager().path("download", convert_to_path=True, assert_path_exists=True)
             _keys = parse_download_arg(setting.download_items, number_of_items=handler.number_of_items())
             for _key in _keys:
-                handler.download(_key, _dl_dir)
+                handler.download(_key)
         elif cmd == Command.List:
             handler.print_file_list()
 
