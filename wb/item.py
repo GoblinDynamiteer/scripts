@@ -6,6 +6,7 @@ from typing import Optional
 from base_log import BaseLog
 from printout import fcs, pfcs, cstr, Color
 from wb.helper_methods import get_remote_files_path
+from utils.size_utils import SizeBytes
 
 from media.util import Util as MediaUtil
 from media.episode import Episode
@@ -138,6 +139,10 @@ class FileListItem(BaseLog):
         return self._bytes
 
     @property
+    def size_human_readable(self) -> str:
+        return SizeBytes(self._bytes).to_string()
+
+    @property
     def timestamp(self) -> int:
         return self._timestamp
 
@@ -180,7 +185,18 @@ class FileListItem(BaseLog):
                 print(" " * 7 + cstr("* ", Color.Red) + cstr(_line, color))
 
         def _print_extras_for_episode():
-            pass  # FIXME: implement for episodes
+            _ep = Episode(Path(self.path))
+            _loc = _ep.get_correct_location()
+            _loc_ok = _loc.is_dir()
+            _present: str = " (present)" if _loc_ok else " (not present)"
+            _color = Color.LightGreen if _loc_ok else Color.Orange
+            _print_info_line(str(_loc) + _present, prefix="dest", color=_color)
+            _valid = _ep.is_valid()
+            _valid_color = Color.LightGreen if _valid else Color.Red
+            _print_info_line(str(_valid), prefix="valid", color=_valid_color)
+            _print_info_line(_ep.name, prefix="parsed name")
+            _print_info_line(str(self.size_human_readable), prefix="size")  # FIXME: handle multiple RARs
+            _print_info_line(str(self._path.suffix.replace(".", "")), prefix="ext")
 
         def _print_extras_for_movie():
             _mov = Movie(Path(self.path))
@@ -189,7 +205,8 @@ class FileListItem(BaseLog):
             _valid_color = Color.LightGreen if _valid else Color.Red
             _print_info_line(str(_valid), prefix="matches regex", color=_valid_color)
             _print_info_line(_mov.name, prefix="parsed name")
-            _print_info_line(str(self.size), prefix="size")  # FIXME: handle multiple RARs
+            _print_info_line(str(self.size_human_readable), prefix="size")  # FIXME: handle multiple RARs
+            _print_info_line(str(self._path.suffix.replace(".", "")), prefix="ext")
 
         _name = self.parent_name or self.path.stem
         _type_str = fcs("o[UNKN]")
