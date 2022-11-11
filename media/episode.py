@@ -4,7 +4,7 @@ from pathlib import Path
 
 from media.base import MediaItem, Type, Language
 from media.util import MediaPaths
-from media.regex import parse_season_and_episode
+from media.regex import parse_season_and_episode, parse_show_title_from_episode
 
 
 @dataclass
@@ -22,6 +22,8 @@ class Episode(MediaItem):
         MediaItem.__init__(self, episode_file_path)
         self._tv_dir = MediaPaths().tv_dir()
         self._data: EpisodeData = EpisodeData(name=self.name)
+        self._correct_loc: Optional[Path] = None
+        self._is_in_tv_dir: bool = self._path.is_relative_to(self._tv_dir)
         self._parse()
 
     @property
@@ -46,7 +48,9 @@ class Episode(MediaItem):
 
     @property
     def show_path(self) -> Path:
-        return self.path.parents[1]
+        if self._is_in_tv_dir:
+            return self.path.parents[1]
+        raise ValueError("Cannot yet determine")
 
     @property
     def show_name(self) -> Optional[str]:
@@ -59,7 +63,9 @@ class Episode(MediaItem):
         raise NotImplementedError()
 
     def get_correct_location(self) -> Path:
-        raise NotImplementedError()
+        if self._correct_loc is None:
+            self._determine_correct_location()
+        return self._correct_loc
 
     def is_valid(self) -> bool:
         if self.show_name is None:
@@ -70,11 +76,17 @@ class Episode(MediaItem):
             return False
         return True
 
+    def _determine_correct_location(self) -> None:
+        self._correct_loc = self._tv_dir / self.show_name / f"S{self.season_num:02d}"
+
     def _parse(self) -> None:
         s, e = parse_season_and_episode(self.name)
         self._data.episode_number = e
         self._data.season_number = s
-        self._data.show_title = self.show_path.name
+        if self._is_in_tv_dir:
+            self._data.show_title = self.show_path.name
+            return
+        self._data.show_title = parse_show_title_from_episode(self.name)
 
     def __repr__(self):
         _dict = asdict(self._data)
