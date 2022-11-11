@@ -3,7 +3,7 @@ from string import ascii_letters
 
 from media.movie import Movie, MovieData
 from media.show import Show, ShowData
-from media.regex import parse_season_and_episode, parse_year, parse_quality
+from media.regex import parse_season_and_episode, parse_year, parse_quality, parse_show_title_from_episode
 import config
 
 
@@ -41,6 +41,10 @@ class TestRegex:
 
     def test_parse_quality_720p(self):
         assert parse_quality("Movie.1983.720p.WEB-DL.DD5.1.H264-Grp.mkv") == "720p"
+
+    def test_parse_show_title_from_episode(self):
+        _str = "Tower.of.the.Dragoon.S01E08.The.Lord.of.Flutes.2160p.ZMAX.WEB-DL.DDP5.1.DoVi.HEVC-BTn"
+        assert parse_show_title_from_episode(_str) == "Tower of the Dragoon"
 
 
 class TestShow:

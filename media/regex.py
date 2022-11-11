@@ -39,6 +39,15 @@ def parse_season_and_episode(item: str, replace_whitespace: bool = True) -> Tupl
     return int(_s) if _s is not None else None, int(_e) if _e is not None else None
 
 
+def parse_show_title_from_episode(item: str, replace_whitespace: bool = True) -> Optional[str]:
+    if replace_whitespace:
+        item = item.replace(" ", ".")
+    _splits = re.split(SEASON_EPISODE_REGEX_PATTERN, item)
+    if len(_splits) > 1:
+        return _splits[0].replace(".", " ")
+    return None
+
+
 def parse_year(string: str) -> Optional[int]:
     re_year = re.compile(YEAR_REGEX_PATTERN)
     matches: List[Tuple] = re_year.findall(string)
