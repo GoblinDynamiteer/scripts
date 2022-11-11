@@ -1,12 +1,16 @@
 import re
 from enum import Enum
-from pathlib import PurePosixPath
+from pathlib import PurePosixPath, Path
 from typing import Optional
 
 from base_log import BaseLog
 from printout import fcs, pfcs, cstr, Color
-from media.util import Util as MediaUtil
 from wb.helper_methods import get_remote_files_path
+
+from media.util import Util as MediaUtil
+from media.episode import Episode
+from media.show import Show
+from media.movie import Movie
 
 
 class FileListItem(BaseLog):
@@ -169,6 +173,24 @@ class FileListItem(BaseLog):
         return True
 
     def print(self, show_additional_info: bool = False):
+        def _print_info_line(_line: str, prefix: Optional[str] = None, color: Color = Color.LightGreen):
+            if prefix:
+                print(" " * 7 + cstr("* ", Color.Red) + f"{prefix}: " + cstr(_line, color))
+            else:
+                print(" " * 7 + cstr("* ", Color.Red) + cstr(_line, color))
+
+        def _print_extras_for_episode():
+            pass  # FIXME: implement for episodes
+
+        def _print_extras_for_movie():
+            _mov = Movie(Path(self.path))
+            _print_info_line(str(_mov.get_correct_location()), prefix="dest")
+            _valid = _mov.is_valid(replace_filename_whitespace=False)
+            _valid_color = Color.LightGreen if _valid else Color.Red
+            _print_info_line(str(_valid), prefix="matches regex", color=_valid_color)
+            _print_info_line(_mov.name, prefix="parsed name")
+            _print_info_line(str(self.size), prefix="size")  # FIXME: handle multiple RARs
+
         _name = self.parent_name or self.path.stem
         _type_str = fcs("o[UNKN]")
         if self.is_movie:
@@ -185,3 +207,8 @@ class FileListItem(BaseLog):
             _dl_str = cstr("DL:N", Color.LightYellow)
             _ix_fcs_c = "i"
         pfcs(f"{_ix_fcs_c}<[{self.index:04d}]> [{_type_str}] [{_dl_str}] {_name}", format_chars=("<", ">"))
+        if show_additional_info:
+            if self.is_movie:
+                _print_extras_for_movie()
+            elif self.is_tvshow:
+                _print_extras_for_episode()

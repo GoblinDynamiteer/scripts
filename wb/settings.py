@@ -57,8 +57,6 @@ class WBSettings:
             self.commands.append(Command.List)
         if self.__args.download_items is not None:
             self.commands.append(Command.Download)
-        if self.__args.show_extra_listing_info:
-            raise NotImplementedError("--extra-info not implemented")
 
     @property
     def use_rsa_key(self) -> bool:
