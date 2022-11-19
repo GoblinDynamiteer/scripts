@@ -5,11 +5,14 @@ from typing import List, Callable
 
 from media.scan.show import ShowScanner
 from media.scan.movie import MovieScanner
+from media.util import MediaPaths
 
 from db.db_mov import MovieDatabase
 from db.db_tv import EpisodeDatabase
 
 from config import ConfigurationManager, SettingKeys, SettingSection
+
+from utils.file_utils import FileInfo
 
 SCAN_TYPE_MOV = ("mov", "movie", "film")
 SCAN_TYPE_TV = ("tv", "show", "ep", "episodes")
@@ -78,6 +81,16 @@ def scan_diagnostics_movies(args: Namespace) -> None:
                     print(f" {mov}")
         return _count
 
+    def _check_permissions() -> int:
+        expected = 0o644
+        _count = 0
+        for _mov_file in MediaPaths().movie_files():
+            _fi = FileInfo(_mov_file)
+            if not _fi.has_permissions(expected):
+                print(f"wrong access: {oct(_fi.stat.st_mode)} -> {_mov_file}")
+                _count += 1
+        return _count
+
     print("scanning for removed movies...")
     mov_scan = MovieScanner(update_database=not args.simulate,
                             verbose=args.verbose)
@@ -94,6 +107,12 @@ def scan_diagnostics_movies(args: Namespace) -> None:
         print("no duplicates found")
     else:
         print(f"found {count} duplicates!")
+    print("scanning for wrong access permissions...")
+    count = _check_permissions()
+    if count == 0:
+        print("all movie files have correct permissions!")
+    else:
+        print(f"found {count} files with wrong permissions!")
 
 
 def scan_diagnostics(args: Namespace) -> None:
