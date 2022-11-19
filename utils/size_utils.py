@@ -11,7 +11,10 @@ class SizeBytes:
     def __str__(self) -> str:
         return self.to_string()
 
-    def _to_human_readable(self):
+    def __repr__(self) -> str:
+        return f"SizeBytes(size_bytes={self.size_bytes}),{self._to_human_readable()})"
+
+    def _to_human_readable(self) -> str:
         _val = self.size_bytes
         for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
             if abs(_val) < self.DIV:
