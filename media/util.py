@@ -43,6 +43,12 @@ class MediaPaths(metaclass=Singleton):
             for _movie_dir in _letter_dir.iterdir():
                 yield _movie_dir
 
+    def movie_files(self) -> Generator[Path, None, None]:
+        for _mov_dir in self.movie_dirs():
+            for _file in _mov_dir.rglob("*.*"):
+                if _file.suffix in (".mkv", ".avi", ".mp4"):
+                    yield _file
+
     def show_dirs(self) -> Generator[Path, None, None]:
         for _item in self.tv_dir().iterdir():
             if _item.is_dir():
