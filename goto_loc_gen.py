@@ -1,4 +1,4 @@
-#!/usr/bin/python3.6
+#!/usr/bin/python3
 
 ''' Generates a goto_locs.json file to be used by navigational script goto.py '''
 
