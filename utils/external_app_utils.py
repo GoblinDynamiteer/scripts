@@ -15,9 +15,21 @@ class UnrarOutputParser:
         self._extracted_files: List[str] = []
         self._unrar_version: str = ""
         self._changed: bool = False
+        self._returned_header_str: bool = False
 
-    def to_string(self) -> str:
-        return f"{self.current_file} - {self.percentage_done} %"
+    def to_current_status_string(self) -> Optional[str]:
+        """ Get current status as a string, intended for print(), with end='' """
+        if not self._returned_header_str:
+            if not self.current_rar or self._src_path is None:
+                return None
+            self._returned_header_str = True
+            return f"UNRAR: extracting from {self._src_path / self.current_rar} ...\n"
+        if not self._current_file:
+            return None
+        if self._percentage == 100:
+            _done_str = f"DONE: {self._dest_path}" if self._dest_path is not None else "DONE!"
+            return f" \r{self.current_file}: {self.percentage_done} %\n{_done_str}\n"
+        return f"\r {self.current_file}: {self.percentage_done} %"
 
     def parse_output(self, unrar_output_line: str) -> bool:
         """ Parses the output of the unrar executable

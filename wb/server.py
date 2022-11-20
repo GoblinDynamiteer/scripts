@@ -145,7 +145,10 @@ class Server(BaseLog):
 
         def _cb(line: str):
             if parser.parse_output(line):
-                print(parser.to_string())
+                _str = parser.to_current_status_string()
+                if not _str:
+                    return
+                print(_str, end="")
 
         self._ssh.run_command(_cmd, read_line_cb=_cb)
         if parser.destination is None or not parser.current_file:
