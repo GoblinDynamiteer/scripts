@@ -7,6 +7,11 @@ from singleton import Singleton
 from media.enums import MOVIE_LETTERS
 from media.regex import matches_movie_regex, parse_season_and_episode, matches_season_regex
 
+VALID_VIDEO_FILE_EXTENSIONS = (".mkv", ".avi", ".mp4")
+VALID_SUBTITLE_FILE_EXTENSIONS = (".srt",)
+VALID_NFO_FILE_EXTENSIONS = (".nfo",)
+VALID_FILE_EXTENSIONS = VALID_VIDEO_FILE_EXTENSIONS + VALID_SUBTITLE_FILE_EXTENSIONS + VALID_NFO_FILE_EXTENSIONS
+
 
 class MediaPaths(metaclass=Singleton):
     def __init__(self):
@@ -46,7 +51,7 @@ class MediaPaths(metaclass=Singleton):
     def movie_files(self) -> Generator[Path, None, None]:
         for _mov_dir in self.movie_dirs():
             for _file in _mov_dir.rglob("*.*"):
-                if _file.suffix in (".mkv", ".avi", ".mp4"):
+                if _file.suffix in VALID_VIDEO_FILE_EXTENSIONS:
                     yield _file
 
     def show_dirs(self) -> Generator[Path, None, None]:
@@ -57,7 +62,7 @@ class MediaPaths(metaclass=Singleton):
     def episode_files(self) -> Generator[Path, None, None]:
         for _show_dir in self.show_dirs():
             for _file in _show_dir.rglob("*.*"):
-                if _file.suffix in (".mkv", ".avi", ".mp4"):
+                if _file.suffix in VALID_VIDEO_FILE_EXTENSIONS:
                     yield _file
 
 
