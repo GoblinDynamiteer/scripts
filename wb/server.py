@@ -134,6 +134,15 @@ class Server(BaseLog):
         print()
         return True
 
+    def remove_directory(self, remote_path: PurePosixPath, raise_if_nontmp: bool = True) -> None:
+        if not self.connected:
+            return
+        _tmp = get_remote_tmp_dir()
+        if not remote_path.is_relative_to(_tmp) and raise_if_nontmp:
+            raise RuntimeError("Will not attempt to remove non-temp directory!")
+        self.log_fs(f"removing: w[{remote_path}]")
+        self._ssh.run_command(f"rm -r {remote_path}")
+
     def extract_to_temp_dir(self, rar_file_path: PurePosixPath,
                             dest_path: Optional[PurePosixPath] = None) -> PurePosixPath:
         if not self._ssh.connected:
@@ -222,7 +231,8 @@ class ServerHandler(BaseLog):
                 _remote_path = _item.remote_download_path
                 _local_path = _get_dest()
             server.download_with_scp(_remote_path, _local_path)
-            # TODO: remove temp dir if extracted
+            if _item.is_rar and self._settings.extract:
+                server.remove_directory(_remote_path.parent)
             break
 
     def valid(self) -> bool:
