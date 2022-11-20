@@ -27,6 +27,7 @@ class TestUnrarOutputParser:
         assert parser.extracted_files == []
         assert parser.source_path == Path("/home/user/files/Some.Cool.Movie.2022.1080p.WEB.H264-GRp")
         assert parser.current_rar == "skmv2022.r04"
+        assert parser.destination == Path("/home/user/.tmp/tmp.1Oiveqc5ar/")
         lines = """Extracting from /home/user/files/Some.Cool.Movie.2022.1080p.WEB.H264-GRp/skmv2022.r05
         ...         skmv2022.mkv                   71%
         Extracting from /home/user/files/Some.Cool.Movie.2022.1080p.WEB.H264-GRp/skmv2022.r06
@@ -43,3 +44,4 @@ class TestUnrarOutputParser:
         assert parser.extracted_files == ["skmv2022.mkv"]
         assert parser.source_path == Path("/home/user/files/Some.Cool.Movie.2022.1080p.WEB.H264-GRp")
         assert parser.current_rar == "skmv2022.r08"
+        assert parser.destination == Path("/home/user/.tmp/tmp.1Oiveqc5ar/")
