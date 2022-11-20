@@ -43,6 +43,11 @@ def _get_args():
                          dest="use_system_scp",
                          help="do not use system SCP for transferring files, instead use the "
                               "(potentially slower) python lib SCPClient")
+    _parser.add_argument("--extract",
+                         "-e",
+                         action="store_true",
+                         dest="extract",
+                         help="attempt to extract compressed item before downloading")
     return _parser.parse_args()
 
 
@@ -81,3 +86,7 @@ class WBSettings:
     @property
     def show_extra_info(self) -> bool:
         return self.__args.show_extra_listing_info
+
+    @property
+    def extract(self) -> bool:
+        return self.__args.extract

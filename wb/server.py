@@ -1,5 +1,5 @@
 from pathlib import PurePosixPath, Path
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Callable
 
 from paramiko import SSHClient, AutoAddPolicy
 from scp import SCPClient
@@ -7,8 +7,9 @@ from scp import SCPClient
 from base_log import BaseLog
 from config import ConfigurationManager, SettingKeys, SettingSection
 from util import bytes_to_human_readable
+from utils.external_app_utils import UnrarOutputParser
 
-from wb.helper_methods import gen_find_cmd
+from wb.helper_methods import gen_find_cmd, get_remote_tmp_dir
 from wb.list import FileList
 from wb.settings import WBSettings
 
@@ -52,16 +53,17 @@ class Server(BaseLog):
                 self.error(f"FAIL: {error}")
                 self._connected = False
 
-        def run_command(self, command) -> Optional[List[str]]:
+        def run_command(self, command: str,
+                        read_line_cb: Optional[Callable[[str], None]] = None) -> Optional[List[str]]:
             if not self._connected:
                 return None
-            _, stdout, _ = self._ssh_client.exec_command(command)
-            try:
-                return stdout.readlines()
-            except AttributeError as _:
-                if isinstance(stdout, str):
-                    return stdout.split("\n")
-            return None
+            _, stdout, _ = self._ssh_client.exec_command(command, get_pty=True)
+            _ret = []
+            for line in iter(stdout.readline, ""):
+                _ret.append(line)
+                if read_line_cb:
+                    read_line_cb(line)
+            return _ret
 
         @property
         def connected(self) -> bool:
@@ -130,6 +132,27 @@ class Server(BaseLog):
         print()
         return True
 
+    def extract_to_temp_dir(self, rar_file_path: PurePosixPath,
+                            dest_path: Optional[PurePosixPath] = None) -> PurePosixPath:
+        if not self._ssh.connected:
+            raise ConnectionError("Not connected to server! Cannot do extract operation!")
+        if dest_path is None:
+            _cmd = f"unrar e {rar_file_path} $(mktemp -d --tmpdir={get_remote_tmp_dir()})"
+        else:
+            _cmd = f"unrar e {rar_file_path} {dest_path}"
+
+        parser = UnrarOutputParser()
+
+        def _cb(line: str):
+            if parser.parse_output(line):
+                print(parser.to_string())
+
+        self._ssh.run_command(_cmd, read_line_cb=_cb)
+        if parser.destination is None or not parser.current_file:
+            raise RuntimeError("could not determine destination of extracted file(s)")
+        # TODO: handle several files extracted...
+        return PurePosixPath(parser.destination / parser.current_file)
+
     def _download_with_system_scp(self, remote_path: PurePosixPath, local_path: Path) -> bool:
         from run import local_command
         _remote = str(remote_path)
@@ -178,11 +201,16 @@ class ServerHandler(BaseLog):
         for server in self._servers:
             if server.hostname != _item.server_id:
                 continue
+            if _item.is_rar and self._settings.extract:
+                _remote_path = server.extract_to_temp_dir(_item.path)
+            else:
+                _remote_path = _item.remote_download_path
             server.download_with_scp(_item.remote_download_path,
                                      _item.local_destination() or
                                      ConfigurationManager().path("download",
                                                                  convert_to_path=True,
                                                                  assert_path_exists=True))
+            # TODO: remove temp dir if extracted
             break
 
     def valid(self) -> bool:

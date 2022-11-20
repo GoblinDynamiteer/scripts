@@ -9,6 +9,11 @@ def get_remote_files_path() -> PurePosixPath:
     return PurePosixPath(f"/home/{_username}/files/")
 
 
+def get_remote_tmp_dir() -> PurePosixPath:
+    _username = ConfigurationManager().get(SettingKeys.WB_USERNAME, section=SettingSection.WB)
+    return PurePosixPath(f"/home/{_username}/.tmp/")
+
+
 def gen_find_cmd(extensions: List[str]):
     _files_path = get_remote_files_path()
     _cmd_str = f"find {_files_path} \\("
