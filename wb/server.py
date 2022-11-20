@@ -123,10 +123,12 @@ class Server(BaseLog):
 
     def download_with_scp(self, remote_path: PurePosixPath, local_path: Path) -> bool:
         if self._settings.use_system_scp:
+            local_path.mkdir(exist_ok=True, parents=True)
             return self._download_with_system_scp(remote_path, local_path)
         _scp_client = self._ssh.scp
         if not _scp_client:
             return False
+        local_path.mkdir(exist_ok=True, parents=True)
         self.log_fs(f"downloading i[{remote_path.name}]")
         _scp_client.get(str(remote_path), str(local_path), recursive=True)
         print()
@@ -201,18 +203,25 @@ class ServerHandler(BaseLog):
         if not _item:
             print(f"could not retrieve item with key: {key}")
             return False
+
+        def _get_dest() -> Path:
+            _dest = _item.local_destination(ignore_is_rar=self._settings.extract)
+            if not _dest:  # Fallback to download directory
+                return ConfigurationManager().path("download",
+                                                   convert_to_path=True,
+                                                   assert_path_exists=True)
+            return _dest
+
         for server in self._servers:
             if server.hostname != _item.server_id:
                 continue
             if _item.is_rar and self._settings.extract:
                 _remote_path = server.extract_to_temp_dir(_item.path)
+                _local_path = _get_dest()
             else:
                 _remote_path = _item.remote_download_path
-            server.download_with_scp(_remote_path,
-                                     _item.local_destination() or
-                                     ConfigurationManager().path("download",
-                                                                 convert_to_path=True,
-                                                                 assert_path_exists=True))
+                _local_path = _get_dest()
+            server.download_with_scp(_remote_path, _local_path)
             # TODO: remove temp dir if extracted
             break
 

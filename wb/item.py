@@ -108,14 +108,17 @@ class FileListItem(BaseLog):
             return self._path.parent
         return self._path
 
-    def local_destination(self) -> Optional[Path]:
-        if self.is_rar:
+    def local_destination(self, ignore_is_rar: bool = False) -> Optional[Path]:
+        if not ignore_is_rar and self.is_rar:
             return None
         if self.is_tvshow:
             _ep = Episode(Path(self.path))
             _dest = _ep.get_correct_location()
             if _dest.is_dir():
                 return _dest
+        if self.is_movie:
+            _mov = Movie(Path(self.path))
+            return _mov.get_correct_location()
         return None
 
     @property
