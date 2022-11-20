@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 
 "File renaming functions pass --dir file/dir to process, requires unidecode library"
 
