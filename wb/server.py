@@ -205,7 +205,7 @@ class ServerHandler(BaseLog):
                 _remote_path = server.extract_to_temp_dir(_item.path)
             else:
                 _remote_path = _item.remote_download_path
-            server.download_with_scp(_item.remote_download_path,
+            server.download_with_scp(_remote_path,
                                      _item.local_destination() or
                                      ConfigurationManager().path("download",
                                                                  convert_to_path=True,
