@@ -64,11 +64,11 @@ class Movie(MediaItem):
         """Retrieves data, which contains \"guessed\" Title and Year of movie"""
         return self._data
 
-    def has_external_subtitle(self, language: Language) -> bool: # TODO: implement
-        return False
+    def has_external_subtitle(self, language: Language) -> bool:
+        raise NotImplementedError()
 
     def is_compressed(self) -> bool:
-        return False
+        raise NotImplementedError()
 
     def is_valid(self, replace_filename_whitespace: bool = True) -> bool:
         if not replace_filename_whitespace and " " in self.name:
