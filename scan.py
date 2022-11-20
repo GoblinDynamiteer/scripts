@@ -5,7 +5,7 @@ from typing import List, Callable
 
 from media.scan.show import ShowScanner
 from media.scan.movie import MovieScanner
-from media.util import MediaPaths
+from media.util import MediaPaths, VALID_FILE_EXTENSIONS
 
 from db.db_mov import MovieDatabase
 from db.db_tv import EpisodeDatabase
@@ -91,6 +91,19 @@ def scan_diagnostics_movies(args: Namespace) -> None:
                 _count += 1
         return _count
 
+    def _find_invalid_dir_contents() -> int:
+        _count = 0
+        for _dir in MediaPaths().movie_dirs():
+            _files = _dir.glob("*")
+            for _file in _files:
+                if _file.is_dir():
+                    _count += 1
+                    print(f"found subdir: {_file.name} in: {_dir}")
+                elif _file.suffix not in VALID_FILE_EXTENSIONS:
+                    print(f"invalid extension of {_file.resolve()}")
+                    _count += 1
+        return _count
+
     print("scanning for removed movies...")
     mov_scan = MovieScanner(update_database=not args.simulate,
                             verbose=args.verbose)
@@ -107,6 +120,12 @@ def scan_diagnostics_movies(args: Namespace) -> None:
         print("no duplicates found")
     else:
         print(f"found {count} duplicates!")
+    print("scanning for junk files...")
+    count = _find_invalid_dir_contents()
+    if count == 0:
+        print("found no junk files!")
+    else:
+        print(f"found {count} junk files!")
     print("scanning for wrong access permissions...")
     count = _check_permissions()
     if count == 0:
