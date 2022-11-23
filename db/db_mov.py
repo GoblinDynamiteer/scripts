@@ -87,6 +87,11 @@ class MovieDatabase(MediaDatabase):
         self.export_latest_removed(to_str_func=_to_text_removed, text_file_path=_path)
 
     def find_duplicates(self) -> Dict[str, List[str]]:
+        """
+        Find movies with same IMDb
+            Returns:
+             A dict where the key is the IMDb id the value is a list of the movies
+        """
         _ret = {}
         for _id, mov_list in self._db.find_duplicates(key=Key("imdb")).items():
             if _id is None:
