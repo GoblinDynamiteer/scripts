@@ -1,6 +1,7 @@
 from typing import Optional, List
 from enum import Enum
 import os
+from pathlib import Path
 
 from base_log import BaseLog
 from db.db_mov import MovieDatabase
@@ -16,7 +17,7 @@ class DiagnosticsScanner(BaseLog):
         Movie = "movie"
         TV = "tv"
 
-    def __init__(self, verbose: bool = False, simulate: bool = False):
+    def __init__(self, verbose: bool = False, simulate: bool = False, fix_issues: bool = False):
         BaseLog.__init__(self, verbose=verbose)
         self._verbose_logging: bool = verbose
         self._simulate: bool = simulate
@@ -24,6 +25,7 @@ class DiagnosticsScanner(BaseLog):
         self.set_log_prefix("DIAG_SCAN")
         self._spacer = 23 * " "  # Time stamp str len + log prefix len. TODO: move this feature to printout
         self._use_timestamp = True
+        self._fix_issues: bool = fix_issues
 
     def find_duplicate_movies(self) -> int:
         self.set_log_prefix_2("duplicates")
@@ -77,6 +79,7 @@ class DiagnosticsScanner(BaseLog):
                     self.warn_fs(f"found subdir: w[{_file.name}] in i[{_dir}]", force=True)
                     if ".mkv" in _file.name:
                         pfcs(self._spacer + "dg[----->] movie file is probably in dir, should be moved!")
+                        self._fix(_file)
                 elif _file.suffix not in VALID_FILE_EXTENSIONS:
                     self.warn_fs(f"invalid extension (e[{_file.suffix}]) of i[{_file.resolve()}]", force=True)
                     _count += 1
@@ -106,3 +109,31 @@ class DiagnosticsScanner(BaseLog):
     def _init_movie_db(self) -> None:
         if self._movie_db is None:
             self._movie_db = MovieDatabase()
+
+    def _fix(self, item: Path):
+        if not self._fix_issues:
+            return
+        _sim = "(simulate)" if self._simulate else "\b"
+        if input(f"Attempt to {_sim} fix? [y/n]: ") != "y":
+            return
+        if item.is_dir() and ".mkv" in item.name:
+            self._fix_mkv_subdir(item)
+
+    def _fix_mkv_subdir(self, sub_dir: Path):
+        if self._simulate:
+            pfcs(f"<sim> set mode 755 of: {sub_dir}")
+        else:
+            sub_dir.chmod(0o755)
+        _sub_files = list(sub_dir.glob("*.mkv"))
+        if len(_sub_files) > 1:
+            self.log_fs(f"found more than one file of dir {sub_dir}, e[fix manually!]")
+            return
+        if not _sub_files:
+            self.log_fs(f"found no sub files of dir dir {sub_dir}!")
+            # TODO delete directory ...
+            return
+        _sub_file = _sub_files[0]
+        if self._simulate:
+            pfcs(f"<sim> move i[{_sub_file.name}] ..")
+        else:
+            raise NotImplementedError("not implemented yet....")

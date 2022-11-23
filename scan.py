@@ -62,7 +62,9 @@ def scan_shows(args: Namespace) -> None:
 
 
 def scan_diagnostics_movies(args: Namespace) -> None:
-    diag_scan = DiagnosticsScanner(verbose=args.verbose, simulate=args.simulate)
+    diag_scan = DiagnosticsScanner(verbose=args.verbose,
+                                   simulate=args.simulate,
+                                   fix_issues=args.fix_issues)
 
     if (count := diag_scan.find_duplicate_movies()) == 0:
         print("no duplicates found")
