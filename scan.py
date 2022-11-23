@@ -5,12 +5,11 @@ from typing import List, Callable
 
 from media.scan.show import ShowScanner
 from media.scan.movie import MovieScanner
-from media.util import MediaPaths, VALID_FILE_EXTENSIONS
+from media.scan.diagnostics import DiagnosticsScanner
+from media.util import MediaPaths
 
 from db.db_mov import MovieDatabase
 from db.db_tv import EpisodeDatabase
-
-from config import ConfigurationManager, SettingKeys, SettingSection
 
 from utils.file_utils import FileInfo
 
@@ -28,6 +27,9 @@ def get_args() -> Namespace:
     parser.add_argument("--simulate", "-s",
                         action="store_true",
                         help="do not modify database")
+    parser.add_argument("--fix",
+                        action="store_true",
+                        dest="fix_issues")
     return parser.parse_args()
 
 
@@ -60,75 +62,24 @@ def scan_shows(args: Namespace) -> None:
 
 
 def scan_diagnostics_movies(args: Namespace) -> None:
-    _mdb = MovieDatabase()
-    _allowed: List[str] = ConfigurationManager().get(
-        assert_exists=True,
-        section=SettingSection.MediaScanner,
-        key=SettingKeys.SCANNER_ALLOWED_DUPLICATES).split(",")
+    diag_scan = DiagnosticsScanner(verbose=args.verbose, simulate=args.simulate)
 
-    def _list_duplicate_movs() -> int:
-        _count = 0
-        for imdb_id, movies in _mdb.find_duplicates().items():
-            _is_duplicate: bool = True
-            for _needle in _allowed:
-                _matching = [m for m in movies if _needle.lower() in m.lower()]
-                if len(_matching) == 1:
-                    _is_duplicate = False
-            if _is_duplicate:
-                _count += 1
-                print(imdb_id)
-                for mov in movies:
-                    print(f" {mov}")
-        return _count
-
-    def _check_permissions() -> int:
-        expected = 0o644
-        _count = 0
-        for _mov_file in MediaPaths().movie_files():
-            _fi = FileInfo(_mov_file)
-            if not _fi.has_permissions(expected):
-                print(f"wrong access: {oct(_fi.stat.st_mode)} -> {_mov_file}")
-                _count += 1
-        return _count
-
-    def _find_invalid_dir_contents() -> int:
-        _count = 0
-        for _dir in MediaPaths().movie_dirs():
-            _files = _dir.glob("*")
-            for _file in _files:
-                if _file.is_dir():
-                    _count += 1
-                    print(f"found subdir: {_file.name} in: {_dir}")
-                elif _file.suffix not in VALID_FILE_EXTENSIONS:
-                    print(f"invalid extension of {_file.resolve()}")
-                    _count += 1
-        return _count
-
-    print("scanning for removed movies...")
-    mov_scan = MovieScanner(update_database=not args.simulate,
-                            verbose=args.verbose)
-    count = mov_scan.scan_removed()
-    if count == 0:
-        print("no removed movies found")
-    else:
-        print(f"found {count} removed movies!")
-        if not args.simulate:
-            _mdb.export_latest_removed_movies()
-    print("scanning for duplicate movies...")
-    count = _list_duplicate_movs()
-    if count == 0:
+    if (count := diag_scan.find_duplicate_movies()) == 0:
         print("no duplicates found")
     else:
         print(f"found {count} duplicates!")
-    print("scanning for junk files...")
-    count = _find_invalid_dir_contents()
-    if count == 0:
-        print("found no junk files!")
+
+    if (count := diag_scan.find_removed_movies()) == 0:
+        print("no removed movies found")
     else:
-        print(f"found {count} junk files!")
-    print("scanning for wrong access permissions...")
-    count = _check_permissions()
-    if count == 0:
+        print(f"found {count} duplicates!")
+
+    if (count := diag_scan.find_invalid_directory_contents(DiagnosticsScanner.Type.Movie)) == 0:
+        print("all movie directories are clean!")
+    else:
+        print(f"found {count} invalid files or directories!")
+
+    if (count := diag_scan.check_file_and_directory_permissions(DiagnosticsScanner.Type.Movie)) == 0:
         print("all movie files have correct permissions!")
     else:
         print(f"found {count} files with wrong permissions!")

@@ -27,18 +27,6 @@ class MovieScanner(MediaScanner):
                 _count += 1
         return _count
 
-    def scan_removed(self) -> int:
-        _count = 0
-        existing = [d.name for d in self._media_paths.movie_dirs()]
-        for mov in self._db.all_movies(include_removed=False):
-            folder = mov.get("folder")
-            if folder not in existing:
-                _count += 1
-                self.log_fs(f"found removed: w[{folder}]...", force=True)
-                if self._update_db:
-                    self._db.mark_removed(folder)
-        return _count
-
     @property
     def _omdb(self) -> omdb.OMDb:
         return self.online_search_tool(ScanType.Movie)
