@@ -5,6 +5,7 @@ from typing import Optional
 
 from utils.size_utils import SizeBytes
 
+
 class FileInfo:
     ST_MODE_PERMISSIONS_MASK = 0o777
 
