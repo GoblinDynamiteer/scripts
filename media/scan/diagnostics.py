@@ -93,7 +93,10 @@ class DiagnosticsScanner(BaseLog):
             try:
                 _fi = FileInfo(_mov_file)
             except FileNotFoundError as _:
-                self.warn_fs(f"r[{_mov_file}] is not a file!")
+                self.warn_fs(f"e[{_mov_file}] is not a file!")
+                continue
+            except PermissionError as _:
+                self.warn_fs(f"cannot access e[{_mov_file}]: permission error!")
                 continue
             if not _fi.has_permissions(expected):
                 self.warn_fs(f"wrong access: w[{oct(_fi.stat.st_mode)}] -> i[{_mov_file}]")
