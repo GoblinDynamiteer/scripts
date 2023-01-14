@@ -56,6 +56,10 @@ class Episode(MediaItem):
     def show_name(self) -> Optional[str]:
         return self._data.show_title
 
+    @property
+    def is_special(self) -> bool:
+        return self._data.season_number == 0
+
     def has_external_subtitle(self, language: Language) -> bool:
         raise NotImplementedError()
 
