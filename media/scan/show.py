@@ -1,3 +1,5 @@
+from typing import Optional
+
 from media.scan.scanner import MediaScanner, ScanType
 from db.db_tv import ShowDatabase, EpisodeDatabase
 from media.util import MediaPaths
@@ -48,6 +50,8 @@ class ShowScanner(MediaScanner):
             result = self._tv_maze.show_search(show.data)
         if result and result.valid:
             self.log(f"got: {result}")
+        else:
+            self.log("could not get a valid search result...")
         self._add_show_to_db(show, result)
 
     def _process_new_episode(self, episode: Episode):
@@ -66,9 +70,11 @@ class ShowScanner(MediaScanner):
             result = self._tv_maze.episode_search(episode.data)
         if result and result.valid:
             self.log(f"got: {result}")
+        else:
+            self.log("could not get a valid search result...")
         self._add_episode_to_db(episode, result)
 
-    def _add_episode_to_db(self, ep: Episode, search_result: tvmaze.TvMazeEpisodeSearchResult):
+    def _add_episode_to_db(self, ep: Episode, search_result: Optional[tvmaze.TvMazeEpisodeSearchResult]):
         _db_entry = {
             "tvshow": ep.show_name,
             "filename": ep.name,
@@ -77,7 +83,7 @@ class ShowScanner(MediaScanner):
             "episode_number": ep.episode_num,
             "removed": False,
         }
-        if search_result.valid:
+        if search_result and search_result.valid:
             if search_result.id is not None:
                 _db_entry["tvmaze"] = int(search_result.id)
             if search_result.title is not None:
@@ -91,13 +97,13 @@ class ShowScanner(MediaScanner):
             self.log_fs(f"data: i[{_db_entry}]")
         print_line()
 
-    def _add_show_to_db(self, show: Show, search_result: tvmaze.TvMazeShowSearchResult):
+    def _add_show_to_db(self, show: Show, search_result: Optional[tvmaze.TvMazeShowSearchResult]):
         _db_entry = {
             "folder": show.name,
             "scanned": now_timestamp(),
             "removed": False,
         }
-        if search_result.valid:
+        if search_result and search_result.valid:
             if search_result.id is not None:
                 _db_entry["tvmaze"] = int(search_result.id)
             if search_result.title is not None:
