@@ -103,6 +103,7 @@ class DiagnosticsScanner(BaseLog):
                 continue
             if not _fi.has_permissions(expected):
                 self.warn_fs(f"wrong access: w[{oct(_fi.stat.st_mode)}] -> i[{_mov_file}]")
+                self._fix(_mov_file)
                 _count += 1
         return _count
 
@@ -118,12 +119,22 @@ class DiagnosticsScanner(BaseLog):
             return
         if item.is_dir() and ".mkv" in item.name:
             self._fix_mkv_subdir(item)
+        elif item.is_file():
+            if self._simulate:
+                pfcs(f"<sim> set mode 644 of: {item}")
+            else:
+                item.chmod(0o644)
+                self.log(f"set mode 644 of: {item}]")
 
     def _fix_mkv_subdir(self, sub_dir: Path):
         if self._simulate:
             pfcs(f"<sim> set mode 755 of: {sub_dir}")
         else:
             sub_dir.chmod(0o755)
+            self.log_fs(f"set mode 755 of: o[{sub_dir}]")
+            self.log_fs(f"rename: o[{sub_dir}] -> e[__trash]")
+            sub_dir = sub_dir.rename(sub_dir.with_name("__trash"))
+        assert sub_dir.is_dir()
         _sub_files = list(sub_dir.glob("*.mkv"))
         if len(_sub_files) > 1:
             self.log_fs(f"found more than one file of dir {sub_dir}, e[fix manually!]")
@@ -135,5 +146,14 @@ class DiagnosticsScanner(BaseLog):
         _sub_file = _sub_files[0]
         if self._simulate:
             pfcs(f"<sim> move i[{_sub_file.name}] ..")
-        else:
-            raise NotImplementedError("not implemented yet....")
+            pfcs(f"<sim> del i[{sub_dir}] ..")
+            return
+        _parent_dir: Path = sub_dir.parent
+        _new_loc: Path = _parent_dir / _sub_file.name
+        _sub_file = _sub_file.rename(_new_loc)
+        self.log_fs(f"moved i[{_sub_file}] --> i[{_parent_dir}]")
+        _sub_file.chmod(0o644)
+        self.log_fs(f"set mode 644: {_sub_file}")
+        sub_dir.rmdir()
+        self.log_fs(f"removed: e[{sub_dir}]")
+
