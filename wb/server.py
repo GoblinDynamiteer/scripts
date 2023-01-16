@@ -8,6 +8,7 @@ from base_log import BaseLog
 from config import ConfigurationManager, SettingKeys, SettingSection
 from util import bytes_to_human_readable
 from utils.external_app_utils import UnrarOutputParser
+from utils.file_utils import FileInfo
 
 from wb.helper_methods import gen_find_cmd, get_remote_tmp_dir
 from wb.list import FileList
@@ -122,15 +123,37 @@ class Server(BaseLog):
         return self._ssh.connected
 
     def download_with_scp(self, remote_path: PurePosixPath, local_path: Path) -> bool:
+        def _mkdir():
+            local_path.mkdir(mode=0o755, exist_ok=True, parents=True)
+
+        def _set_perm(file_path: Path):
+            assert file_path.is_file()
+            _fi = FileInfo(file_path)
+            _expected = 0o644
+            if _fi.has_permissions(_expected):
+                return
+            self.log_fs(f"set mode 644: i[{file_path}]")
+            file_path.chmod(_expected)
+
         if self._settings.use_system_scp:
-            local_path.mkdir(exist_ok=True, parents=True)
-            return self._download_with_system_scp(remote_path, local_path)
+            _mkdir()
+            if not self._download_with_system_scp(remote_path, local_path):
+                return False
+
+            for _file in local_path.glob("*.mkv"):  # TODO: only process new file (if season dir..)
+                _set_perm(_file)
+
+            return True
         _scp_client = self._ssh.scp
         if not _scp_client:
             return False
-        local_path.mkdir(exist_ok=True, parents=True)
+        _mkdir()
         self.log_fs(f"downloading i[{remote_path.name}]")
         _scp_client.get(str(remote_path), str(local_path), recursive=True)
+
+        for _file in local_path.glob("*.mkv"):  # TODO: only process new file (if season dir..) + dont duplicate...
+            _set_perm(_file)
+
         print()
         return True
 
