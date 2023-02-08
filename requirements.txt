@@ -8,7 +8,7 @@ certifi==2020.12.5
 cffi==1.15.1
 chardet==4.0.0
 click==7.1.2
-cryptography==39.0.0
+cryptography==39.0.1
 dmenu==0.2.1
 fastapi==0.89.1
 h11==0.12.0
