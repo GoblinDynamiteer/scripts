@@ -8,6 +8,7 @@ from base_log import BaseLog
 from config import ConfigurationManager, SettingKeys, SettingSection
 from util import bytes_to_human_readable
 from utils.external_app_utils import UnrarOutputParser
+from utils.dir_util import DirectoryInfo
 from utils.file_utils import FileInfo
 
 from wb.helper_methods import gen_find_cmd, get_remote_tmp_dir
@@ -123,37 +124,12 @@ class Server(BaseLog):
         return self._ssh.connected
 
     def download_with_scp(self, remote_path: PurePosixPath, local_path: Path) -> bool:
-        def _mkdir():
-            local_path.mkdir(mode=0o755, exist_ok=True, parents=True)
-
-        def _set_perm(file_path: Path):
-            assert file_path.is_file()
-            _fi = FileInfo(file_path)
-            _expected = 0o644
-            if _fi.has_permissions(_expected):
-                return
-            self.log_fs(f"set mode 644: i[{file_path}]")
-            file_path.chmod(_expected)
-
         if self._settings.use_system_scp:
-            _mkdir()
-            if not self._download_with_system_scp(remote_path, local_path):
-                return False
-
-            for _file in local_path.glob("*.mkv"):  # TODO: only process new file (if season dir..)
-                _set_perm(_file)
-
-            return True
-        _scp_client = self._ssh.scp
-        if not _scp_client:
+            return self._download_with_system_scp(remote_path, local_path)
+        if not (_scp_client := self._ssh.scp):
             return False
-        _mkdir()
         self.log_fs(f"downloading i[{remote_path.name}]")
         _scp_client.get(str(remote_path), str(local_path), recursive=True)
-
-        for _file in local_path.glob("*.mkv"):  # TODO: only process new file (if season dir..) + dont duplicate...
-            _set_perm(_file)
-
         print()
         return True
 
@@ -187,7 +163,8 @@ class Server(BaseLog):
         self._ssh.run_command(_cmd, read_line_cb=_cb)
         if parser.destination is None or not parser.current_file:
             raise RuntimeError("could not determine destination of extracted file(s)")
-        # TODO: handle several files extracted...
+        if len(parser.extracted_files) != 1:
+            self.warn_fs("extracted more than one file!")
         return PurePosixPath(parser.destination / parser.current_file)
 
     def _download_with_system_scp(self, remote_path: PurePosixPath, local_path: Path) -> bool:
@@ -244,17 +221,30 @@ class ServerHandler(BaseLog):
                                                    assert_path_exists=True)
             return _dest
 
+        _do_unrar: bool = _item.is_rar and self._settings.extract
+        _is_single_file: bool = _do_unrar or _item.is_video
+
         for server in self._servers:
             if server.hostname != _item.server_id:
                 continue
-            if _item.is_rar and self._settings.extract:
+            if _do_unrar:
                 _remote_path = server.extract_to_temp_dir(_item.path)
                 _local_path = _get_dest()
             else:
                 _remote_path = _item.remote_download_path
                 _local_path = _get_dest()
-            server.download_with_scp(_remote_path, _local_path)
-            if _item.is_rar and self._settings.extract:
+            if not _local_path.is_dir():
+                _local_path.mkdir(mode=0o755, parents=True)
+                self.log(f"created directory: {_local_path}")
+            elif not DirectoryInfo(_local_path).has_permissions(0o755):
+                self.log(f"changing permissions of directory: {_local_path} to 0o755")
+                _local_path.chmod(0o755)
+            if server.download_with_scp(_remote_path, _local_path) and _is_single_file:
+                _file = _local_path / _remote_path.name
+                if not FileInfo(_file).has_permissions(0o644):
+                    self.log(f"changing permissions of file: {_file} to 0o644")
+                    _file.chmod(0o644)
+            if _do_unrar:
                 server.remove_directory(_remote_path.parent)
             break
 
