@@ -8,6 +8,7 @@ from db.db_mov import MovieDatabase
 from config import ConfigurationManager, SettingKeys, SettingSection
 from media.util import MediaPaths, VALID_FILE_EXTENSIONS
 from utils.file_utils import FileInfo
+from utils.dir_util import DirectoryInfo
 
 from printout import pfcs
 
@@ -90,8 +91,14 @@ class DiagnosticsScanner(BaseLog):
             raise NotImplementedError("TV diag scan not implemented...")
         self.set_log_prefix_2("permissions")
         self.log("scanning for wrong access permissions...")
-        expected = 0o644 if os.name != "nt" else 0o666
         _count = 0
+        expected = 0o755
+        for _mov_dir in MediaPaths().movie_dirs():
+            _di = DirectoryInfo(_mov_dir)
+            if not _di.has_permissions(expected):
+                self.warn_fs(f"wrong access: w[{oct(_di.stat.st_mode)}] -> i[{_mov_dir}]")
+                # TODO: fix
+        expected = 0o644
         for _mov_file in MediaPaths().movie_files():
             try:
                 _fi = FileInfo(_mov_file)
