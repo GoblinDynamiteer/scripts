@@ -97,7 +97,7 @@ class DiagnosticsScanner(BaseLog):
             _di = DirectoryInfo(_mov_dir)
             if not _di.has_permissions(expected):
                 self.warn_fs(f"wrong access: w[{oct(_di.stat.st_mode)}] -> i[{_mov_dir}]")
-                # TODO: fix
+                self._fix(_mov_dir)
         expected = 0o644
         for _mov_file in MediaPaths().movie_files():
             try:
@@ -119,19 +119,25 @@ class DiagnosticsScanner(BaseLog):
             self._movie_db = MovieDatabase()
 
     def _fix(self, item: Path):
+        def _set_permission(mod: int):
+            if self._simulate:
+                pfcs(f"<sim> set mode {oct(mod)} of: {item}")
+            else:
+                item.chmod(mod)
+                self.log(f"set mode {oct(mod)} of: {item}")
+
         if not self._fix_issues:
             return
         _sim = "(simulate)" if self._simulate else "\b"
         if input(f"Attempt to {_sim} fix? [y/n]: ") != "y":
             return
-        if item.is_dir() and ".mkv" in item.name:
-            self._fix_mkv_subdir(item)
-        elif item.is_file():
-            if self._simulate:
-                pfcs(f"<sim> set mode 644 of: {item}")
+        if item.is_dir():
+            if ".mkv" in item.name:
+                self._fix_mkv_subdir(item)
             else:
-                item.chmod(0o644)
-                self.log(f"set mode 644 of: {item}]")
+                _set_permission(0o755)
+        elif item.is_file():
+            _set_permission(0o644)
 
     def _fix_mkv_subdir(self, sub_dir: Path):
         if self._simulate:
