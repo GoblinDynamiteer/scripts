@@ -236,7 +236,8 @@ class ServerHandler(BaseLog):
             if not _local_path.is_dir():
                 _local_path.mkdir(mode=0o755, parents=True)
                 self.log(f"created directory: {_local_path}")
-            elif not DirectoryInfo(_local_path).has_permissions(0o755):
+            if not DirectoryInfo(_local_path).has_permissions(0o755):
+                # TODO: Seems setting mode=0o755 in mkdir above set 0o700 ?
                 self.log(f"changing permissions of directory: {_local_path} to 0o755")
                 _local_path.chmod(0o755)
             if server.download_with_scp(_remote_path, _local_path) and _is_single_file:
