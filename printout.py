@@ -68,6 +68,7 @@ class Color(Enum):
     Error = _CLR_DICT["red"]
     Warning = _CLR_DICT["warning"]
     Brown = _CLR_DICT["brown"]
+    White = _CLR_DICT["white"]
 
 
 ColorType = Union[int, str, Color]
