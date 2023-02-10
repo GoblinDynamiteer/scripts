@@ -239,11 +239,13 @@ class FileListItem(BaseLog):
 
         _ix: str = _to_color(f"{self.index:04d}", _grey or Color.LightGreen, hooks=True)
         _name = _to_color(_name, _grey or Color.White)
-        _dl: str = _to_color(f"DL:{'Y' if self._downloaded else 'N'}",
-                             _grey or Color.LightYellow,
-                             hooks=True)
 
-        print(f"{_ix} {_type} {_dl} {_name}")
+        if self.is_rar:
+            _filetype: str = _to_color("RAR", _grey or Color.LightYellow, hooks=True)
+        else:
+            _filetype: str = _to_color("MKV", _grey or Color.Teal, hooks=True)
+
+        print(f"{_ix} {_type} {_filetype} {_name}")
         if show_additional_info:
             if self.is_movie:
                 _print_extras_for_movie()
