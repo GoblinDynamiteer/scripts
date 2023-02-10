@@ -221,22 +221,29 @@ class FileListItem(BaseLog):
             _print_info_line(str(self.size_human_readable), prefix="size")  # FIXME: handle multiple RARs
             _print_info_line(str(self._path.suffix.replace(".", "")), prefix="ext")
 
+        def _to_color(text: str, color: Color, hooks: bool = False) -> str:
+            _colored = cstr(text, color)
+            return f"[{_colored}]" if hooks else _colored
+
         _name = self.parent_name or self.path.stem
-        _type_str = fcs("o[UNKN]")
+        _grey: Optional[Color] = Color.DarkGrey if self._downloaded else None
+
         if self.is_movie:
-            _type_str = fcs("b[MOVI]")
+            _type: str = _to_color("MOVI", _grey or Color.LightBlue, hooks=True)
         elif self.is_tvshow:
-            _type_str = fcs("p[SHOW]")
+            _type: str = _to_color("SHOW", _grey or Color.LightPurple, hooks=True)
             if self.parent_is_season_dir:
                 _name = self.path.stem
-        if self._downloaded:
-            _dl_str = cstr("DL:Y", Color.LightGreen)
-            _ix_fcs_c = "dg"
-            _name = cstr(_name, Color.DarkGrey)
         else:
-            _dl_str = cstr("DL:N", Color.LightYellow)
-            _ix_fcs_c = "i"
-        pfcs(f"{_ix_fcs_c}<[{self.index:04d}]> [{_type_str}] [{_dl_str}] {_name}", format_chars=("<", ">"))
+            _type: str = _to_color("UNKN", _grey or Color.Orange, hooks=True)
+
+        _ix: str = _to_color(f"{self.index:04d}", _grey or Color.LightGreen, hooks=True)
+        _name = _to_color(_name, _grey or Color.White)
+        _dl: str = _to_color(f"DL:{'Y' if self._downloaded else 'N'}",
+                             _grey or Color.LightYellow,
+                             hooks=True)
+
+        print(f"{_ix} {_type} {_dl} {_name}")
         if show_additional_info:
             if self.is_movie:
                 _print_extras_for_movie()
