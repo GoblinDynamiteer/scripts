@@ -222,8 +222,8 @@ class FileListItem(BaseLog):
             _print_info_line(str(self._path.suffix.replace(".", "")), prefix="ext")
 
         def _to_color(text: str, color: Optional[Color], hooks: bool = False) -> str:
-            _ret_str = cstr(text, color) if color else text
-            return f"[{_ret_str}]" if hooks else _ret_str
+            _ret_str = f"[{text}]" if hooks else text
+            return cstr(_ret_str, color) if color else _ret_str
 
         _name = self.parent_name or self.path.stem
         _grey: Optional[Color] = Color.DarkGrey if self._downloaded else None
