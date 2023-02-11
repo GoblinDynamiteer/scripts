@@ -113,10 +113,10 @@ class FileListItem(BaseLog):
         if not ignore_is_rar and self.is_rar:
             return None
         if self.is_tvshow:
-            _ep = Episode(Path(self.path))
-            _dest = _ep.get_correct_location()
-            if _dest.is_dir():
-                return _dest
+            _season_dir = Episode(Path(self.path)).get_correct_location()
+            if _season_dir.is_dir() or _season_dir.parent.is_dir():
+                # Season dir or show dir exists
+                return _season_dir
         if self.is_movie:
             _mov = Movie(Path(self.path))
             return _mov.get_correct_location()
@@ -213,10 +213,18 @@ class FileListItem(BaseLog):
 
         def _print_extras_for_episode():
             _ep = Episode(Path(self.path))
-            _loc = _ep.get_correct_location()
+            _loc: Path = _ep.get_correct_location()
             _loc_ok = _loc.is_dir()
-            _present: str = " (present)" if _loc_ok else " (not present)"
-            _color = Color.LightGreen if _loc_ok else Color.Orange
+            _parent_ok = _loc.parent.is_dir()
+            if _loc_ok:
+                _present: str = " (season dir present)"
+                _color = Color.LightGreen
+            elif _parent_ok:
+                _present: str = " (show dir present)"
+                _color = Color.Orange
+            else:
+                _present: str = " (show dir not present)"
+                _color = Color.Red
             _print_info_line(str(_loc) + _present, prefix="dest", color=_color)
             _valid = _ep.is_valid()
             _valid_color = Color.LightGreen if _valid else Color.Red
