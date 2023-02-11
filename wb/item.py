@@ -1,17 +1,18 @@
 import re
 from enum import Enum
 from pathlib import PurePosixPath, Path
-from typing import Optional
+from typing import Optional, Union, List
 
 from base_log import BaseLog
-from printout import fcs, pfcs, cstr, Color
+from printout import cstr, Color
 from wb.helper_methods import get_remote_files_path
 from utils.size_utils import SizeBytes
 
 from media.util import Util as MediaUtil
 from media.episode import Episode
-from media.show import Show
 from media.movie import Movie
+
+FilterType = Union[str, List[str]]
 
 
 class FileListItem(BaseLog):
@@ -121,6 +122,19 @@ class FileListItem(BaseLog):
             return _mov.get_correct_location()
         return None
 
+    def matches_filter(self, filt: Optional[FilterType] = None, case_sensitive: bool = False) -> bool:
+        if not filt:
+            return True
+
+        def _match(text: str) -> bool:
+            if case_sensitive:
+                return text in self.name
+            return text.lower() in self.name.lower()
+
+        if isinstance(filt, str):
+            filt = [filt]
+        return all([_match(t) for t in filt])
+
     @property
     def is_movie(self):
         if self._type is None:
@@ -190,7 +204,7 @@ class FileListItem(BaseLog):
                 return False
         return True
 
-    def print(self, show_additional_info: bool = False):
+    def print(self, show_additional_info: bool = False) -> None:
         def _print_info_line(_line: str, prefix: Optional[str] = None, color: Color = Color.LightGreen):
             if prefix:
                 print(" " * 7 + cstr("* ", Color.Red) + f"{prefix}: " + cstr(_line, color))

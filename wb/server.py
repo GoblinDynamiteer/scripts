@@ -184,7 +184,7 @@ class ServerHandler(BaseLog):
         self.set_log_prefix("ServerHandler")
         self._settings: WBSettings = settings
         self._servers: List[Server] = []
-        self._file_list: FileList = FileList()
+        self._file_list: FileList = FileList(settings)
 
     def add(self, hostname: str) -> None:
         self._servers.append(Server(hostname, settings=self._settings))
@@ -192,7 +192,7 @@ class ServerHandler(BaseLog):
     def print_file_list(self) -> None:
         if self._file_list.empty():
             self._init_file_list()
-        self._file_list.print(show_additional_info=self._settings.show_extra_info)
+        self._file_list.print()
 
     def _init_file_list(self) -> None:
         self.log("gathering item from server(s)")

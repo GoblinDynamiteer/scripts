@@ -289,6 +289,45 @@ class TestFileListItem:
         with pytest.raises(AssertionError):
             _ = _item.remote_download_path
 
+    def test_matches_filter_none_empty_list_and_empty_str(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/show.s04e02.1080p.web-grpname.rar"
+        _item = FileListItem(_line)
+        assert _item.matches_filter(None) is True
+        assert _item.matches_filter("") is True
+        assert _item.matches_filter([]) is True
+
+    def test_matches_filter_str_non_case_sensitive(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/VeryCoolShow.s04e02.1080p.web-grpname.rar"
+        _item = FileListItem(_line)
+        assert _item.matches_filter("verycool") is True
+        assert _item.matches_filter("VERYCOOLSHOW") is True
+        assert _item.matches_filter("YCooLShoW") is True
+
+    def test_matches_filter_str_case_sensitive(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/VeryCoolShow.s04e02.1080p.web-grpname.rar"
+        _item = FileListItem(_line)
+        assert _item.matches_filter("verycool", case_sensitive=True) is False
+        assert _item.matches_filter("VeryCoolShow", case_sensitive=True) is True
+        assert _item.matches_filter("CoolShow", case_sensitive=True) is True
+
+    def test_matches_filter_list_non_case_sensitive(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/The.AweSome.Cool.Show.S04E01.1080p.WEB-grpname.rar"
+        _item = FileListItem(_line)
+        assert _item.matches_filter(["awesome", "show", "s04e01"]) is True
+        assert _item.matches_filter(["SHOW", "1080p"]) is True
+        assert _item.matches_filter(["awesome", "show", "s04e03"]) is False
+
+    def test_matches_filter_list_case_sensitive(self):
+        _line = r"1623879181.7519188610 | 4025725826 | " \
+                r"/home/johndoe/files/The.AweSome.Cool.Show.S04E01.1080p.WEB-grpname.rar"
+        _item = FileListItem(_line)
+        assert _item.matches_filter(["awesome", "show", "s04e01"], case_sensitive=True) is False
+        assert _item.matches_filter(["AweSome", "1080p"], case_sensitive=True) is True
+
 
 class TestFileList:
     TEMPLATE_SHOW = r"{} | {} | " \

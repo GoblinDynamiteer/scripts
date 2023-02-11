@@ -1,15 +1,17 @@
 import re
-from typing import List
+from typing import List, Optional
 from timeit import default_timer
 
 from wb.item import FileListItem
 from base_log import BaseLog
+from wb.settings import WBSettings
 
 
 class FileList(BaseLog):
-    def __init__(self):
+    def __init__(self, settings: Optional[WBSettings] = None):
         BaseLog.__init__(self, use_global_settings=True)
         self.set_log_prefix("FileList")
+        self._settings: Optional[WBSettings] = settings
         self._items: List[FileListItem] = []
         self._sorted: bool = False
         self._compared_to_database: bool = False
@@ -23,15 +25,18 @@ class FileList(BaseLog):
             if _item.valid:
                 self._items.append(_item)
 
-    def print(self, show_additional_info: bool = False):
+    def print(self):
         _start = default_timer()
         if not self._sorted:
             self._sort()
         if not self._compared_to_database:
             self.log("comparing items to database...")
             self._compare_to_database()
+        _show_additional_info = self._settings and self._settings.show_extra_info
+        _filter = self._settings.filter_list if self._settings else []
         for item in self._items:
-            item.print(show_additional_info)
+            if item.matches_filter(_filter):
+                item.print(show_additional_info=_show_additional_info)
         _elapsed = default_timer() - _start
         self.log(f"listing operation took: {_elapsed}s")
 

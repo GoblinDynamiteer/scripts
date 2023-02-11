@@ -48,6 +48,9 @@ def _get_args():
                          action="store_true",
                          dest="extract",
                          help="attempt to extract compressed item before downloading")
+    _parser.add_argument("--filter",
+                         dest="list_filter",
+                         nargs="+")
     return _parser.parse_args()
 
 
@@ -90,3 +93,7 @@ class WBSettings:
     @property
     def extract(self) -> bool:
         return self.__args.extract
+
+    @property
+    def filter_list(self) -> Optional[List[str]]:
+        return self.__args.list_filter
