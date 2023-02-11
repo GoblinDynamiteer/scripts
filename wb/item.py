@@ -221,9 +221,9 @@ class FileListItem(BaseLog):
             _print_info_line(str(self.size_human_readable), prefix="size")  # FIXME: handle multiple RARs
             _print_info_line(str(self._path.suffix.replace(".", "")), prefix="ext")
 
-        def _to_color(text: str, color: Color, hooks: bool = False) -> str:
-            _colored = cstr(text, color)
-            return f"[{_colored}]" if hooks else _colored
+        def _to_color(text: str, color: Optional[Color], hooks: bool = False) -> str:
+            _ret_str = cstr(text, color) if color else text
+            return f"[{_ret_str}]" if hooks else _ret_str
 
         _name = self.parent_name or self.path.stem
         _grey: Optional[Color] = Color.DarkGrey if self._downloaded else None
@@ -238,7 +238,7 @@ class FileListItem(BaseLog):
             _type: str = _to_color("UNKN", _grey or Color.Orange, hooks=True)
 
         _ix: str = _to_color(f"{self.index:04d}", _grey or Color.LightGreen, hooks=True)
-        _name = _to_color(_name, _grey or Color.White)
+        _name = _to_color(_name, _grey or None)
 
         if self.is_rar:
             _filetype: str = _to_color("RAR", _grey or Color.LightYellow, hooks=True)
