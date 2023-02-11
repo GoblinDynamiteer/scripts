@@ -109,7 +109,6 @@ class Util:
             if _and in show_name:
                 _repl = show_name.replace(_and, " & ")
                 _append(_repl)
-        print(_matchers)
         for _sd in _show_dirs:
             for _m in _matchers:
                 _names = [_sd.name, _sd.name.lower()]
