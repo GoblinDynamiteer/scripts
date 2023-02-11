@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union, List, Dict, Generator
+from typing import Union, List, Dict, Generator, Optional
 
 from config import ConfigurationManager, SettingKeys
 from singleton import Singleton
@@ -91,3 +91,28 @@ class Util:
         elif not isinstance(item, str):
             raise TypeError(f"incorrect type {type(item)}")
         return item
+
+    @staticmethod
+    def find_best_matching_show(show_name: str) -> Optional[Path]:
+        _show_dirs = list(MediaPaths().show_dirs())
+        _matchers = []
+
+        def _append(name: str):
+            _matchers.append(name)
+            if name.islower():
+                return
+            _matchers.append(name.lower())
+
+        _append(show_name)
+
+        for _and in [" and ",  " And "]:
+            if _and in show_name:
+                _repl = show_name.replace(_and, " & ")
+                _append(_repl)
+        print(_matchers)
+        for _sd in _show_dirs:
+            for _m in _matchers:
+                _names = [_sd.name, _sd.name.lower()]
+                if _m in _names:
+                    return _sd
+        return None

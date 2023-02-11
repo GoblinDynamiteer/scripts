@@ -3,7 +3,7 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 
 from media.base import MediaItem, Type, Language
-from media.util import MediaPaths
+from media.util import MediaPaths, Util
 from media.regex import parse_season_and_episode, parse_show_title_from_episode
 
 
@@ -24,6 +24,7 @@ class Episode(MediaItem):
         self._data: EpisodeData = EpisodeData(name=self.name)
         self._correct_loc: Optional[Path] = None
         self._is_in_tv_dir: bool = self._path.is_relative_to(self._tv_dir)
+        self._matched_show: Optional[str] = None
         self._parse()
 
     @property
@@ -81,7 +82,12 @@ class Episode(MediaItem):
         return True
 
     def _determine_correct_location(self) -> None:
-        self._correct_loc = self._tv_dir / self.show_name / f"S{self.season_num:02d}"
+        assert self._data.show_title
+        _season_dir = f"S{self.season_num:02d}"
+        if self._matched_show:
+            self._correct_loc = self._tv_dir / self._matched_show / _season_dir
+            return
+        self._correct_loc = self._tv_dir / self._data.show_title / _season_dir
 
     def _parse(self) -> None:
         s, e = parse_season_and_episode(self.name)
@@ -89,8 +95,10 @@ class Episode(MediaItem):
         self._data.season_number = s
         if self._is_in_tv_dir:
             self._data.show_title = self.show_path.name
+            self._matched_show = self.show_path.name
             return
         self._data.show_title = parse_show_title_from_episode(self.name)
+        self._matched_show = Util.find_best_matching_show(self._data.show_title)
 
     def __repr__(self):
         _dict = asdict(self._data)
