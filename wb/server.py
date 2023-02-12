@@ -98,17 +98,16 @@ class Server(BaseLog):
         self._ssh = self.Connection()
         self._connect()
 
-    def _connect(self):
+    def _connect(self) -> None:
         if self._ssh.connected:
             self.log("already connected")
+        _pw: Optional[str] = None
         if self._settings.use_password:
             _pw = ConfigurationManager().get(SettingKeys.WB_PASSWORD, section=SettingSection.WB)
-        else:
-            _pw = None
         self._user = ConfigurationManager().get(SettingKeys.WB_USERNAME, section=SettingSection.WB)
         self._ssh.connect(self._hostname, username=self._user, password=_pw, use_rsa_key=self._settings.use_rsa_key)
 
-    def list_files(self) -> [FileList, None]:
+    def list_files(self) -> Optional[List[str]]:
         if not self._ssh.connected:
             self.error("cannot retrieve file list, not connected")
             return None
@@ -153,7 +152,7 @@ class Server(BaseLog):
 
         parser = UnrarOutputParser()
 
-        def _cb(line: str):
+        def _cb(line: str) -> None:
             if parser.parse_output(line):
                 _str = parser.to_current_status_string()
                 if not _str:

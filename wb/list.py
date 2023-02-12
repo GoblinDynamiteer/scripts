@@ -1,5 +1,4 @@
-import re
-from typing import List, Optional
+from typing import List, Optional, Union
 from timeit import default_timer
 
 from wb.item import FileListItem
@@ -19,16 +18,16 @@ class FileList(BaseLog):
         self._sorted: bool = False
         self._compared_to_database: bool = False
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len([i for i in self._items if i.valid])
 
-    def parse_find_cmd_output(self, lines: List[str], server_id: str):
+    def parse_find_cmd_output(self, lines: List[str], server_id: str) -> None:
         for line in lines:
             _item = FileListItem(line, server_id)
             if _item.valid:
                 self._items.append(_item)
 
-    def print(self):
+    def print(self) -> None:
         _start = default_timer()
         if not self._sorted:
             self._sort()
@@ -43,32 +42,22 @@ class FileList(BaseLog):
         _elapsed = default_timer() - _start
         self.log(f"listing operation took: {_elapsed}s")
 
-    def empty(self):
+    def empty(self) -> bool:
         return len(self._items) == 0
 
-    def get_regex(self, regex_pattern: str) -> List:
-        if not self._sorted:
-            self._sort()
-        matches = []
-        for item in self._items:
-            _match = re.search(regex_pattern, item.name)
-            if _match:
-                matches.append(item)
-        return matches
-
-    def get(self, key: [str, int]) -> FileListItem:
+    def get(self, key: Union[str, int]) -> FileListItem:
         if isinstance(key, int):
             return self._get_item_from_index(key)
         if isinstance(key, str):
             return self._get_item_from_string(key)
         raise TypeError("key must be str or int")
 
-    def items(self) -> List:
+    def items(self) -> List[FileListItem]:
         if not self._sorted:
             self._sort()
         return self._items
 
-    def _get_item_from_index(self, index: int) -> [FileListItem, None]:
+    def _get_item_from_index(self, index: int) -> Optional[FileListItem]:
         if not self._sorted:
             self._sort()
         for item in self._items:
@@ -76,19 +65,19 @@ class FileList(BaseLog):
                 return item
         return None
 
-    def _get_item_from_string(self, item_name: str) -> [FileListItem, None]:
+    def _get_item_from_string(self, item_name: str) -> Optional[FileListItem]:
         for item in self._items:
             if item.name == item_name:
                 return item
         return None
 
-    def _sort(self):
+    def _sort(self) -> None:
         self._sorted = True
         self._items.sort(key=lambda x: x.timestamp)
         for _ix, _item in enumerate(self._items, 1):
             _item.index = _ix
 
-    def _compare_to_database(self):
+    def _compare_to_database(self) -> None:
         self._compared_to_database = True
         _movdb = MovieDatabase()
         _epdb = EpisodeDatabase()

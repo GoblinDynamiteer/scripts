@@ -1,5 +1,5 @@
 from pathlib import PurePosixPath
-from typing import List
+from typing import List, Union
 
 from config import ConfigurationManager, SettingKeys, SettingSection
 
@@ -14,7 +14,7 @@ def get_remote_tmp_dir() -> PurePosixPath:
     return PurePosixPath(f"/home/{_username}/.tmp/")
 
 
-def gen_find_cmd(extensions: List[str]):
+def gen_find_cmd(extensions: List[str]) -> str:
     _files_path = get_remote_files_path()
     _cmd_str = f"find {_files_path} \\("
     for _ix, _ext in enumerate(extensions, 0):
@@ -24,7 +24,7 @@ def gen_find_cmd(extensions: List[str]):
     return _cmd_str + " \\) -printf \"%T@ | %s | %p\\n\" | sort -n"
 
 
-def parse_download_arg(download_arg: str, number_of_items: int):
+def parse_download_arg(download_arg: str, number_of_items: int) -> List[Union[str, int]]:
     _ret = []
     _splits = download_arg.split(",")
     for _str in _splits:

@@ -5,7 +5,7 @@ from argparse import ArgumentParser, Namespace
 from wb.enums import Command
 
 
-def _get_args():
+def _get_args() -> Namespace:
     _parser = ArgumentParser("WB Handler")
     _parser.add_argument("--download",
                          "-d",
@@ -59,7 +59,7 @@ class WBSettings:
     commands: List[Command] = field(default_factory=list)
     __args: Optional[Namespace] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.__args = _get_args()
         if self.__args.list_items:
             self.commands.append(Command.List)

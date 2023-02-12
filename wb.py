@@ -21,7 +21,7 @@ def get_server_addresses_from_settings() -> List[str]:
     return _ret
 
 
-def main():
+def main() -> None:
     setting = WBSettings()
     BaseLogGlobalSettings().verbose = setting.verbose
     BaseLogGlobalSettings().use_timestamps = True

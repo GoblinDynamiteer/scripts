@@ -380,20 +380,3 @@ class TestFileList:
         _list.parse_find_cmd_output(_find_output, "server1")
         with pytest.raises(TypeError):
             _list.get(123.123)
-
-    def test_get_with_regex(self):
-        _find_output = [self.TEMPLATE_SHOW.format("1", "100000", "S01E01"),
-                        self.TEMPLATE_SHOW.format("2", "100000", "S01E02"),
-                        self.TEMPLATE_MOV.format("3", "100000", "CoolMovie")]
-        _list = FileList()
-        _list.parse_find_cmd_output(_find_output, "server1")
-        _items = _list.items()
-        _show_item1 = _items[0]
-        _show_item2 = _items[1]
-        _movie_item = _items[2]
-        assert _list.get_regex("^Show.S01.+")[0] == _show_item1
-        assert _list.get_regex("^Show.S01.+")[1] == _show_item2
-        assert _list.get_regex("^Show.S01E02.+")[0] == _show_item2
-        assert _list.get_regex("^CoolMovie.+")[0] == _movie_item
-        assert _list.get_regex(r"^.+\.mkv")[2] == _movie_item
-        assert _list.get_regex("NON_MATCHING") == []

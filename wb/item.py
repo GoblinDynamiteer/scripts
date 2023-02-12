@@ -30,13 +30,13 @@ class FileListItem(BaseLog):
         BaseLog.__init__(self, verbose=True)
         self.set_log_prefix("ITEM")
         self._raw = string.replace("\n", "").strip()
-        self._index = None
-        self._server_id = server_id
+        self._index: Optional[int] = None
+        self._server_id: str = server_id
         self._type: Optional[FileListItem.MediaType] = None
         self._downloaded: bool = False
         self._parse()
 
-    def _parse(self):
+    def _parse(self) -> None:
         self._valid = False
         try:
             _stamp, _bytes, _path = self._raw.split(" | ")
@@ -63,7 +63,7 @@ class FileListItem(BaseLog):
             return
         self._valid = True
 
-    def _determine_type(self):
+    def _determine_type(self) -> None:
         self._type = self.MediaType.Unknown
         if MediaUtil.is_movie(self.name):
             self._type = self.MediaType.Movie
@@ -81,7 +81,7 @@ class FileListItem(BaseLog):
         return self._index
 
     @index.setter
-    def index(self, index_val: int):
+    def index(self, index_val: int) -> None:
         self._index = index_val
 
     @property
@@ -139,13 +139,13 @@ class FileListItem(BaseLog):
         return all([_match(t) for t in filt])
 
     @property
-    def is_movie(self):
+    def is_movie(self) -> bool:
         if self._type is None:
             self._determine_type()
         return self._type == self.MediaType.Movie
 
     @property
-    def is_tvshow(self):
+    def is_tvshow(self) -> bool:
         if self._type is None:
             self._determine_type()
         return self._type == self.MediaType.Episode
@@ -235,7 +235,7 @@ class FileListItem(BaseLog):
             else:
                 print(" " * 7 + cstr("* ", Color.Red) + cstr(_line, color))
 
-        def _print_extras_for_episode():
+        def _print_extras_for_episode() -> None:
             _ep = Episode(Path(self.path))
             _loc: Path = _ep.get_correct_location()
             _loc_ok = _loc.is_dir()
@@ -257,7 +257,7 @@ class FileListItem(BaseLog):
             _print_info_line(str(self.size_human_readable), prefix="size")  # FIXME: handle multiple RARs
             _print_info_line(str(self._path.suffix.replace(".", "")), prefix="ext")
 
-        def _print_extras_for_movie():
+        def _print_extras_for_movie() -> None:
             _mov = Movie(Path(self.path))
             _print_info_line(str(_mov.get_correct_location()), prefix="dest")
             _valid = _mov.is_valid(replace_filename_whitespace=False)
