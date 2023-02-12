@@ -6,6 +6,9 @@ from wb.item import FileListItem
 from base_log import BaseLog
 from wb.settings import WBSettings
 
+from db.db_mov import MovieDatabase
+from db.db_tv import EpisodeDatabase
+
 
 class FileList(BaseLog):
     def __init__(self, settings: Optional[WBSettings] = None):
@@ -87,15 +90,10 @@ class FileList(BaseLog):
 
     def _compare_to_database(self):
         self._compared_to_database = True
-        import db.db_mov
-        import db.db_tv
-        _movdb = db.db_mov.MovieDatabase()
-        _epdb = db.db_tv.EpisodeDatabase()
+        _movdb = MovieDatabase()
+        _epdb = EpisodeDatabase()
         for item in self._items:
             if item.is_movie:
-                _folder = item.parent_name or item.path.stem
-                if _folder in _movdb:
-                    item.downloaded = True
+                item.downloaded = item.exists_in_database(_movdb)
             elif item.is_tvshow:
-                if item.name in _epdb:
-                    item.downloaded = True
+                item.downloaded = item.exists_in_database(_epdb)

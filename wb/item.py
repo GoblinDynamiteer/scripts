@@ -12,6 +12,9 @@ from media.util import Util as MediaUtil
 from media.episode import Episode
 from media.movie import Movie
 
+from db.db_mov import MovieDatabase
+from db.db_tv import EpisodeDatabase
+
 FilterType = Union[str, List[str]]
 
 
@@ -29,7 +32,7 @@ class FileListItem(BaseLog):
         self._raw = string.replace("\n", "").strip()
         self._index = None
         self._server_id = server_id
-        self._type = None
+        self._type: Optional[FileListItem.MediaType] = None
         self._downloaded: bool = False
         self._parse()
 
@@ -203,6 +206,27 @@ class FileListItem(BaseLog):
             if "sample" in self._path.parent.name.lower():
                 return False
         return True
+
+    def exists_in_database(self, database: Union[MovieDatabase, EpisodeDatabase]) -> bool:
+        if self._type == FileListItem.MediaType.Movie and not isinstance(database, MovieDatabase):
+            return False
+        if self._type == FileListItem.MediaType.Episode and not isinstance(database, EpisodeDatabase):
+            return False
+        if self._type == FileListItem.MediaType.Movie:
+            _folder = self.parent_name or self.path.stem
+            return _folder in database
+        if self._type == FileListItem.MediaType.Episode:
+            if self.name in database:
+                return True
+            if self.is_rar:
+                _candidates = [
+                    self.parent_name + ".mkv",
+                    self.path.with_suffix(".mkv").name
+                ]
+                for _c in _candidates:
+                    if _c in database:
+                        return True
+        return False
 
     def print(self, show_additional_info: bool = False) -> None:
         def _print_info_line(_line: str, prefix: Optional[str] = None, color: Color = Color.LightGreen):
