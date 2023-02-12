@@ -212,20 +212,22 @@ class FileListItem(BaseLog):
             return False
         if self._type == FileListItem.MediaType.Episode and not isinstance(database, EpisodeDatabase):
             return False
+        _candidates: List[str] = []
         if self._type == FileListItem.MediaType.Movie:
             _folder = self.parent_name or self.path.stem
-            return _folder in database
-        if self._type == FileListItem.MediaType.Episode:
-            if self.name in database:
-                return True
+            _candidates.append(_folder)
+            if " " in _folder:
+                _candidates.append(_folder.replace(" ", "."))
+        elif self._type == FileListItem.MediaType.Episode:
+            _candidates.append(self.name)
             if self.is_rar:
-                _candidates = [
+                _candidates.extend([
                     self.parent_name + ".mkv",
                     self.path.with_suffix(".mkv").name
-                ]
-                for _c in _candidates:
-                    if _c in database:
-                        return True
+                ])
+        for _c in _candidates:
+            if _c in database:
+                return True
         return False
 
     def print(self, show_additional_info: bool = False) -> None:
