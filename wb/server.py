@@ -13,6 +13,7 @@ from utils.file_utils import FileInfo
 
 from wb.helper_methods import gen_find_cmd, get_remote_tmp_dir
 from wb.list import FileList
+from wb.item import FileListItem
 from wb.settings import WBSettings
 
 
@@ -204,10 +205,20 @@ class ServerHandler(BaseLog):
             self._init_file_list()
         return len(self._file_list)
 
-    def download(self, key: Union[str, int]) -> bool:
+    def download_items_matching_filter(self, filt: str) -> bool:
+        for _item in self._file_list.items():
+            if _item.matches_filter(filt):
+                if not self.download(_item):
+                    return False
+        return True
+
+    def download(self, key: Union[str, int, FileListItem]) -> bool:
         if self._file_list.empty():
             self._init_file_list()
-        _item = self._file_list.get(key)
+        if isinstance(key, FileListItem):
+            _item = key
+        else:
+            _item = self._file_list.get(key)
         if not _item:
             print(f"could not retrieve item with key: {key}")
             return False
@@ -247,6 +258,7 @@ class ServerHandler(BaseLog):
             if _do_unrar:
                 server.remove_directory(_remote_path.parent)
             break
+        return True
 
     def valid(self) -> bool:
         for server in self._servers:

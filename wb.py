@@ -37,7 +37,12 @@ def main() -> None:
         if cmd == Command.Download:
             _keys = parse_download_arg(setting.download_items, number_of_items=handler.number_of_items())
             for _key in _keys:
-                handler.download(_key)
+                if isinstance(_key, str) and "*" in _key:
+                    if not handler.download_items_matching_filter(_key.replace("*", "")):
+                        print(f"failed to download item(s) matching: {_key}")
+                else:
+                    if not handler.download(_key):
+                        print(f"failed to download item: {_key}")
         elif cmd == Command.List:
             handler.print_file_list()
 
