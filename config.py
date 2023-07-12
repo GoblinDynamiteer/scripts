@@ -112,7 +112,7 @@ class ConfigurationManager(BaseLog, metaclass=Singleton):
         self.log(f"loading settings: {settings_path}")
         if not settings_path.is_file():
             return False
-        self.SETTINGS = configparser.ConfigParser()
+        self.SETTINGS = configparser.ConfigParser(interpolation=None)
         try:
             self.SETTINGS.read(settings_path)
         except Exception as error:
