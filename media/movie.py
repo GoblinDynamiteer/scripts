@@ -113,7 +113,8 @@ class Movie(MediaItem):
             self._letter = _letter
 
     def _determine_correct_location(self) -> None:
-        self._correct_loc = self._mov_dir / self.letter / self.name
+        _name = self.name.replace(" ", ".")
+        self._correct_loc = self._mov_dir / self.letter / _name
 
 
 def main():
