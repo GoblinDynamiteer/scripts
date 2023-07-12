@@ -252,12 +252,11 @@ class ServerHandler(BaseLog):
                 _local_path.chmod(0o755)
             if " " in _remote_path.name:
                 self.log("replacing spaces in remote file name with dots (for local filename)")
-                _local_path = _local_path / _remote_path.name.replace(" ", ".")
-            if server.download_with_scp(_remote_path, _local_path) and _is_single_file:
-                _file = _local_path / _remote_path.name
-                if not FileInfo(_file).has_permissions(0o644):
-                    self.log(f"changing permissions of file: {_file} to 0o644")
-                    _file.chmod(0o644)
+            _local_path_with_filename = _local_path / _remote_path.name.replace(" ", ".")
+            if server.download_with_scp(_remote_path, _local_path_with_filename) and _is_single_file:
+                if not FileInfo(_local_path_with_filename).has_permissions(0o644):
+                    self.log(f"changing permissions of file: {_local_path_with_filename} to 0o644")
+                    _local_path_with_filename.chmod(0o644)
             if _do_unrar:
                 server.remove_directory(_remote_path.parent)
             break
